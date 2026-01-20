@@ -23,30 +23,456 @@
                 </nav>
                 <div class="header-actions">
                     <button class="btn-secondary">Help</button>
-                    <button class="btn-primary">Request Cart (0)</button>
+                    <a href="request-cart.html" class="btn-primary"
+                        >Request Cart (2)</a
+                    >
                 </div>
             </div>
         </header>
 
-        <main class="main-content" style="grid-template-columns: 1fr">
-            <div style="text-align: center; padding: 4rem 2rem">
-                <h1
-                    style="
-                        font-size: 2.5rem;
-                        color: #232f3e;
-                        margin-bottom: 1rem;
-                    "
-                >
-                    My Requests
-                </h1>
-                <p style="font-size: 1.1rem; color: #666">
-                    This page will show your material request history and
-                    status.
-                </p>
-                <p style="font-size: 0.95rem; color: #999; margin-top: 1rem">
-                    Coming soon...
-                </p>
-            </div>
+        <!-- Main Content -->
+        <main class="main-content requests-page">
+            <!-- Sidebar Filters -->
+            <aside class="sidebar">
+                <div class="filter-section">
+                    <h3>Request Status</h3>
+                    <div class="filter-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked />
+                            <span>Pending</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked />
+                            <span>Approved</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked />
+                            <span>In Use</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked />
+                            <span>Returned</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" />
+                            <span>Rejected</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="filter-section">
+                    <h3>Date Range</h3>
+                    <div class="filter-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked />
+                            <span>Last 7 days</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked />
+                            <span>Last 30 days</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked />
+                            <span>Last 3 months</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" />
+                            <span>Older</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="filter-section">
+                    <h3>Category</h3>
+                    <div class="filter-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked />
+                            <span>Reanimation</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked />
+                            <span>Wound Care</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked />
+                            <span>Accessories</span>
+                        </label>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Requests Section -->
+            <section class="products-section">
+                <div class="products-header">
+                    <h2>My Material Requests</h2>
+                    <div class="products-controls">
+                        <span class="results-count">Showing 6 requests</span>
+                        <select class="sort-select">
+                            <option>Sort by: Most Recent</option>
+                            <option>Due Date</option>
+                            <option>Status</option>
+                            <option>Alphabetical</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="requests-list">
+                    <!-- Request Card 1 - In Use -->
+                    <div class="request-card">
+                        <div class="request-image">
+                            <img
+                                src="../assets/material/Reanimation/AED_Trainer.webp"
+                                alt="AED Trainer"
+                            />
+                        </div>
+                        <div class="request-info">
+                            <div class="request-header">
+                                <h3 class="request-title">AED Trainer</h3>
+                                <span class="status-badge status-in-use"
+                                    >In Use</span
+                                >
+                            </div>
+                            <div class="request-meta">
+                                <span class="category">Practice Kit</span>
+                                <span class="level">Intermediate</span>
+                            </div>
+                            <div class="request-details">
+                                <div class="detail-row">
+                                    <span class="detail-label"
+                                        >Request ID:</span
+                                    >
+                                    <span class="detail-value"
+                                        >#REQ-2026-0042</span
+                                    >
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Requested:</span>
+                                    <span class="detail-value"
+                                        >Jan 10, 2026</span
+                                    >
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Due Date:</span>
+                                    <span class="detail-value due-soon"
+                                        >Jan 24, 2026</span
+                                    >
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Quantity:</span>
+                                    <span class="detail-value">1 unit</span>
+                                </div>
+                            </div>
+                            <div class="request-actions">
+                                <button class="btn-primary">
+                                    Extend Request
+                                </button>
+                                <button class="btn-secondary">
+                                    Return Early
+                                </button>
+                                <button class="btn-details">
+                                    View Details
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Request Card 2 - Approved -->
+                    <div class="request-card">
+                        <div class="request-image">
+                            <img
+                                src="../assets/material/Reanimation/QCPR_Little_Anne.webp"
+                                alt="QCPR Little Anne"
+                            />
+                        </div>
+                        <div class="request-info">
+                            <div class="request-header">
+                                <h3 class="request-title">QCPR Little Anne</h3>
+                                <span class="status-badge status-approved"
+                                    >Approved</span
+                                >
+                            </div>
+                            <div class="request-meta">
+                                <span class="category">Practice Kit</span>
+                                <span class="level">Beginner</span>
+                            </div>
+                            <div class="request-details">
+                                <div class="detail-row">
+                                    <span class="detail-label"
+                                        >Request ID:</span
+                                    >
+                                    <span class="detail-value"
+                                        >#REQ-2026-0051</span
+                                    >
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Requested:</span>
+                                    <span class="detail-value"
+                                        >Jan 18, 2026</span
+                                    >
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label"
+                                        >Pickup Date:</span
+                                    >
+                                    <span class="detail-value"
+                                        >Jan 22, 2026</span
+                                    >
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Quantity:</span>
+                                    <span class="detail-value">2 units</span>
+                                </div>
+                            </div>
+                            <div class="request-actions">
+                                <button class="btn-primary">
+                                    Confirm Pickup
+                                </button>
+                                <button class="btn-secondary">
+                                    Cancel Request
+                                </button>
+                                <button class="btn-details">
+                                    View Details
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Request Card 3 - Pending -->
+                    <div class="request-card">
+                        <div class="request-image">
+                            <img
+                                src="../assets/material/Wundversorgung&Trauma/Tourniquet.webp"
+                                alt="Tourniquet"
+                            />
+                        </div>
+                        <div class="request-info">
+                            <div class="request-header">
+                                <h3 class="request-title">Tourniquet</h3>
+                                <span class="status-badge status-pending"
+                                    >Pending</span
+                                >
+                            </div>
+                            <div class="request-meta">
+                                <span class="category">Practice Kit</span>
+                                <span class="level">Advanced</span>
+                            </div>
+                            <div class="request-details">
+                                <div class="detail-row">
+                                    <span class="detail-label"
+                                        >Request ID:</span
+                                    >
+                                    <span class="detail-value"
+                                        >#REQ-2026-0058</span
+                                    >
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Requested:</span>
+                                    <span class="detail-value"
+                                        >Jan 19, 2026</span
+                                    >
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label"
+                                        >Requested For:</span
+                                    >
+                                    <span class="detail-value"
+                                        >Jan 25, 2026</span
+                                    >
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Quantity:</span>
+                                    <span class="detail-value">5 units</span>
+                                </div>
+                            </div>
+                            <div class="request-actions">
+                                <button class="btn-secondary">
+                                    Cancel Request
+                                </button>
+                                <button class="btn-details">
+                                    View Details
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Request Card 4 - Returned -->
+                    <div class="request-card">
+                        <div class="request-image">
+                            <img
+                                src="../assets/material/Reanimation/Mini-Anne_10er.webp"
+                                alt="Mini Anne 10er"
+                            />
+                        </div>
+                        <div class="request-info">
+                            <div class="request-header">
+                                <h3 class="request-title">Mini Anne 10er</h3>
+                                <span class="status-badge status-returned"
+                                    >Returned</span
+                                >
+                            </div>
+                            <div class="request-meta">
+                                <span class="category">Practice Kit</span>
+                                <span class="level">Beginner</span>
+                            </div>
+                            <div class="request-details">
+                                <div class="detail-row">
+                                    <span class="detail-label"
+                                        >Request ID:</span
+                                    >
+                                    <span class="detail-value"
+                                        >#REQ-2026-0031</span
+                                    >
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Requested:</span>
+                                    <span class="detail-value"
+                                        >Jan 5, 2026</span
+                                    >
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Returned:</span>
+                                    <span class="detail-value"
+                                        >Jan 12, 2026</span
+                                    >
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Quantity:</span>
+                                    <span class="detail-value"
+                                        >1 set (10 units)</span
+                                    >
+                                </div>
+                            </div>
+                            <div class="request-actions">
+                                <button class="btn-request">
+                                    Request Again
+                                </button>
+                                <button class="btn-details">
+                                    View Details
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Request Card 5 - Rejected -->
+                    <div class="request-card request-rejected">
+                        <div class="request-image">
+                            <img
+                                src="../assets/material/Zubehoer/Airwaykopf.webp"
+                                alt="Airwaykopf"
+                            />
+                        </div>
+                        <div class="request-info">
+                            <div class="request-header">
+                                <h3 class="request-title">Airwaykopf</h3>
+                                <span class="status-badge status-rejected"
+                                    >Rejected</span
+                                >
+                            </div>
+                            <div class="request-meta">
+                                <span class="category">Practice Kit</span>
+                                <span class="level">Advanced</span>
+                            </div>
+                            <div class="request-details">
+                                <div class="detail-row">
+                                    <span class="detail-label"
+                                        >Request ID:</span
+                                    >
+                                    <span class="detail-value"
+                                        >#REQ-2026-0028</span
+                                    >
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Requested:</span>
+                                    <span class="detail-value"
+                                        >Jan 3, 2026</span
+                                    >
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Reason:</span>
+                                    <span class="detail-value rejection-reason"
+                                        >Advanced certification required</span
+                                    >
+                                </div>
+                            </div>
+                            <div class="request-actions">
+                                <button class="btn-secondary">
+                                    View Requirements
+                                </button>
+                                <button class="btn-details">
+                                    View Details
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Request Card 6 - In Use (Overdue) -->
+                    <div class="request-card request-overdue">
+                        <div class="request-image">
+                            <img
+                                src="../assets/material/Wundversorgung&Trauma/Dreieckstuch.webp"
+                                alt="Dreieckstuch"
+                            />
+                        </div>
+                        <div class="request-info">
+                            <div class="request-header">
+                                <h3 class="request-title">Dreieckstuch</h3>
+                                <span class="status-badge status-overdue"
+                                    >Overdue</span
+                                >
+                            </div>
+                            <div class="request-meta">
+                                <span class="category">Practice Kit</span>
+                                <span class="level">Intermediate</span>
+                            </div>
+                            <div class="request-details">
+                                <div class="detail-row">
+                                    <span class="detail-label"
+                                        >Request ID:</span
+                                    >
+                                    <span class="detail-value"
+                                        >#REQ-2026-0022</span
+                                    >
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Requested:</span>
+                                    <span class="detail-value"
+                                        >Dec 28, 2025</span
+                                    >
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Due Date:</span>
+                                    <span class="detail-value overdue"
+                                        >Jan 11, 2026 (9 days overdue)</span
+                                    >
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Quantity:</span>
+                                    <span class="detail-value">10 units</span>
+                                </div>
+                            </div>
+                            <div class="request-actions">
+                                <button class="btn-primary btn-urgent">
+                                    Return Now
+                                </button>
+                                <button class="btn-secondary">
+                                    Contact Support
+                                </button>
+                                <button class="btn-details">
+                                    View Details
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pagination -->
+                <div class="pagination">
+                    <button class="page-btn" disabled>Previous</button>
+                    <button class="page-btn active">1</button>
+                    <button class="page-btn">2</button>
+                    <button class="page-btn">Next</button>
+                </div>
+            </section>
         </main>
     </body>
 </html>

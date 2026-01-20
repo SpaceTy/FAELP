@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Request Cart - FALP</title>
+        <link rel="stylesheet" href="../styles/styles.css" />
+    </head>
+    <body>
+        <!-- Header Navigation -->
+        <header class="header">
+            <div class="header-container">
+                <div class="logo">
+                    <h1>FALP</h1>
+                    <p class="tagline">First Aid Learning Platform</p>
+                </div>
+                <nav class="main-nav">
+                    <a href="index.html" class="nav-link">Browse Materials</a>
+                    <a href="my-requests.html" class="nav-link">My Requests</a>
+                    <a href="profile.html" class="nav-link">Profile</a>
+                </nav>
+                <div class="header-actions">
+                    <button class="btn-secondary">Help</button>
+                    <a href="request-cart.html" class="btn-primary active">Request Cart (2)</a>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content cart-page">
+            <!-- Cart Section -->
+            <section class="cart-section">
+                <div class="cart-header">
+                    <h2>Request Cart</h2>
+                    <span class="cart-count">2 items in cart</span>
+                </div>
+
+                <div class="cart-items">
+                    <!-- Cart Item 1 -->
+                    <div class="cart-item">
+                        <div class="cart-item-image">
+                            <img
+                                src="../assets/material/Reanimation/Laerdal_Family_Satz.webp"
+                                alt="Laerdal Family Satz"
+                            />
+                        </div>
+                        <div class="cart-item-info">
+                            <h3 class="cart-item-title">Laerdal Family Satz</h3>
+                            <div class="cart-item-meta">
+                                <span class="category">Practice Kit</span>
+                                <span class="level">All Levels</span>
+                            </div>
+                            <p class="cart-item-description">
+                                Complete family CPR training set including adult, child, and infant manikins.
+                            </p>
+                            <div class="cart-item-availability">
+                                <span class="availability-badge available">Available</span>
+                                <span class="stock-info">3 units in stock</span>
+                            </div>
+                        </div>
+                        <div class="cart-item-controls">
+                            <div class="quantity-control">
+                                <label for="qty-1">Quantity:</label>
+                                <div class="quantity-input">
+                                    <button class="qty-btn qty-decrease">-</button>
+                                    <input type="number" id="qty-1" value="1" min="1" max="3" />
+                                    <button class="qty-btn qty-increase">+</button>
+                                </div>
+                            </div>
+                            <div class="date-control">
+                                <label for="date-1">Request Date:</label>
+                                <input type="date" id="date-1" value="2026-01-25" min="2026-01-21" />
+                            </div>
+                            <div class="duration-control">
+                                <label for="duration-1">Duration:</label>
+                                <select id="duration-1">
+                                    <option value="1">1 week</option>
+                                    <option value="2" selected>2 weeks</option>
+                                    <option value="3">3 weeks</option>
+                                    <option value="4">4 weeks</option>
+                                </select>
+                            </div>
+                            <button class="btn-remove">Remove</button>
+                        </div>
+                    </div>
+
+                    <!-- Cart Item 2 -->
+                    <div class="cart-item">
+                        <div class="cart-item-image">
+                            <img
+                                src="../assets/material/Wundversorgung&Trauma/Sterile_Kompressen-10x10.webp"
+                                alt="Sterile Kompressen 10x10"
+                            />
+                        </div>
+                        <div class="cart-item-info">
+                            <h3 class="cart-item-title">Sterile Kompressen 10x10</h3>
+                            <div class="cart-item-meta">
+                                <span class="category">Practice Kit</span>
+                                <span class="level">Beginner</span>
+                            </div>
+                            <p class="cart-item-description">
+                                Sterile gauze compresses (10x10cm) for wound care practice.
+                            </p>
+                            <div class="cart-item-availability">
+                                <span class="availability-badge available">Available</span>
+                                <span class="stock-info">50+ units in stock</span>
+                            </div>
+                        </div>
+                        <div class="cart-item-controls">
+                            <div class="quantity-control">
+                                <label for="qty-2">Quantity:</label>
+                                <div class="quantity-input">
+                                    <button class="qty-btn qty-decrease">-</button>
+                                    <input type="number" id="qty-2" value="20" min="1" max="50" />
+                                    <button class="qty-btn qty-increase">+</button>
+                                </div>
+                            </div>
+                            <div class="date-control">
+                                <label for="date-2">Request Date:</label>
+                                <input type="date" id="date-2" value="2026-01-25" min="2026-01-21" />
+                            </div>
+                            <div class="duration-control">
+                                <label for="duration-2">Duration:</label>
+                                <select id="duration-2">
+                                    <option value="1" selected>1 week</option>
+                                    <option value="2">2 weeks</option>
+                                    <option value="3">3 weeks</option>
+                                    <option value="4">4 weeks</option>
+                                </select>
+                            </div>
+                            <button class="btn-remove">Remove</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Empty Cart State (hidden by default) -->
+                <div class="cart-empty" style="display: none;">
+                    <div class="empty-cart-icon">
+                        <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <circle cx="9" cy="21" r="1"/>
+                            <circle cx="20" cy="21" r="1"/>
+                            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+                        </svg>
+                    </div>
+                    <h3>Your cart is empty</h3>
+                    <p>Browse our materials and add items to your request cart.</p>
+                    <a href="index.html" class="btn-primary">Browse Materials</a>
+                </div>
+            </section>
+
+            <!-- Cart Summary Sidebar -->
+            <aside class="cart-summary">
+                <div class="summary-card">
+                    <h3>Request Summary</h3>
+
+                    <div class="summary-section">
+                        <h4>Request Details</h4>
+                        <div class="summary-row">
+                            <span>Total Items:</span>
+                            <span>2 materials</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Total Units:</span>
+                            <span>21 units</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Pickup Date:</span>
+                            <span>Jan 25, 2026</span>
+                        </div>
+                    </div>
+
+                    <div class="summary-section">
+                        <h4>Purpose of Request</h4>
+                        <div class="form-group">
+                            <select id="purpose" class="form-select">
+                                <option value="">Select purpose...</option>
+                                <option value="training" selected>Training Session</option>
+                                <option value="workshop">Workshop</option>
+                                <option value="certification">Certification Course</option>
+                                <option value="demonstration">Demonstration</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="summary-section">
+                        <h4>Training Location</h4>
+                        <div class="form-group">
+                            <select id="location" class="form-select">
+                                <option value="">Select location...</option>
+                                <option value="room-a" selected>Training Room A</option>
+                                <option value="room-b">Training Room B</option>
+                                <option value="auditorium">Auditorium</option>
+                                <option value="external">External Location</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="summary-section">
+                        <h4>Expected Participants</h4>
+                        <div class="form-group">
+                            <input type="number" id="participants" class="form-input" value="15" min="1" max="100" />
+                        </div>
+                    </div>
+
+                    <div class="summary-section">
+                        <h4>Additional Notes</h4>
+                        <div class="form-group">
+                            <textarea id="notes" class="form-textarea" rows="3" placeholder="Any special requirements or notes..."></textarea>
+                        </div>
+                    </div>
+
+                    <div class="summary-actions">
+                        <button class="btn-primary btn-submit-request">Submit Request</button>
+                        <button class="btn-secondary btn-save-draft">Save as Draft</button>
+                    </div>
+
+                    <div class="summary-notice">
+                        <p>Requests are typically processed within 1-2 business days. You will receive an email notification once your request is approved.</p>
+                    </div>
+                </div>
+
+                <div class="quick-add-card">
+                    <h4>Recently Viewed</h4>
+                    <div class="quick-add-items">
+                        <div class="quick-add-item">
+                            <img src="../assets/material/Reanimation/AED_Trainer.webp" alt="AED Trainer" />
+                            <div class="quick-add-info">
+                                <span class="quick-add-title">AED Trainer</span>
+                                <button class="btn-add-small">+ Add</button>
+                            </div>
+                        </div>
+                        <div class="quick-add-item">
+                            <img src="../assets/material/Zubehoer/Apollo_Uebungsmatte.webp" alt="Apollo Uebungsmatte" />
+                            <div class="quick-add-info">
+                                <span class="quick-add-title">Apollo Uebungsmatte</span>
+                                <button class="btn-add-small">+ Add</button>
+                            </div>
+                        </div>
+                        <div class="quick-add-item">
+                            <img src="../assets/material/Wundversorgung&Trauma/Rettungsdecke.webp" alt="Rettungsdecke" />
+                            <div class="quick-add-info">
+                                <span class="quick-add-title">Rettungsdecke</span>
+                                <button class="btn-add-small">+ Add</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </main>
+    </body>
+</html>
