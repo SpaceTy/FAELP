@@ -1,0 +1,1043 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Inventory - FALP Logistics</title>
+        <link rel="stylesheet" href="../styles/logistics.css" />
+    </head>
+    <body>
+        <!-- Header Navigation -->
+        <header class="header">
+            <div class="header-container">
+                <div class="logo">
+                    <h1>FALP</h1>
+                    <p class="tagline">Logistics Portal</p>
+                </div>
+                <nav class="main-nav">
+                    <a href="requests.html" class="nav-link"
+                        >Incoming Requests</a
+                    >
+                    <a href="packaging.html" class="nav-link">Packaging</a>
+                    <a href="returns.html" class="nav-link">Returns</a>
+                    <a href="inventory.html" class="nav-link active"
+                        >Inventory</a
+                    >
+                </nav>
+                <div class="header-actions">
+                    <span class="user-info">Stefan Bauer (Inventory)</span>
+                    <button class="btn-secondary">Logout</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Sidebar Filters -->
+            <aside class="sidebar">
+                <div class="filter-section">
+                    <h3>Stock Status</h3>
+                    <div class="filter-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked />
+                            <span>In Stock</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked />
+                            <span>Low Stock</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked />
+                            <span>Out of Stock</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked />
+                            <span>On Loan</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="filter-section">
+                    <h3>Category</h3>
+                    <div class="filter-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked />
+                            <span>Reanimation</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked />
+                            <span>Wound Care & Trauma</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked />
+                            <span>Accessories</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="filter-section">
+                    <h3>Condition</h3>
+                    <div class="filter-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked />
+                            <span>Excellent</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked />
+                            <span>Good</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked />
+                            <span>Fair</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" />
+                            <span>Needs Repair</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="filter-section">
+                    <h3>Location</h3>
+                    <div class="filter-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked />
+                            <span>Warehouse A</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked />
+                            <span>Warehouse B</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked />
+                            <span>On Loan</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="stats-card">
+                    <h3>Inventory Summary</h3>
+                    <div class="stat-row">
+                        <span>Total Items:</span>
+                        <span class="stat-value">847</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>Available:</span>
+                        <span class="stat-value approved">612</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>On Loan:</span>
+                        <span class="stat-value in-progress">198</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>Low Stock:</span>
+                        <span class="stat-value pending">5</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>In Repair:</span>
+                        <span class="stat-value rejected">3</span>
+                    </div>
+                </div>
+
+                <button class="btn-primary btn-full-width">
+                    + Add New Item
+                </button>
+            </aside>
+
+            <!-- Inventory Section -->
+            <section class="content-section">
+                <div class="section-header">
+                    <h2>Distribution Center Inventory</h2>
+                    <div class="section-controls">
+                        <div class="search-box">
+                            <input
+                                type="text"
+                                placeholder="Search inventory..."
+                                class="search-input"
+                            />
+                            <button class="search-btn">Search</button>
+                        </div>
+                        <select class="sort-select">
+                            <option>Sort by: Name (A-Z)</option>
+                            <option>Name (Z-A)</option>
+                            <option>Stock Level</option>
+                            <option>Category</option>
+                            <option>Location</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Inventory Alerts -->
+                <div class="alerts-section">
+                    <div class="alert alert-warning">
+                        <span class="alert-icon">!</span>
+                        <span class="alert-text"
+                            ><strong>Low Stock Alert:</strong> 5 items are
+                            running low and may need reordering.</span
+                        >
+                        <button class="alert-action">View Items</button>
+                    </div>
+                </div>
+
+                <div class="inventory-table-container">
+                    <table class="data-table inventory-table">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>SKU</th>
+                                <th>Category</th>
+                                <th>Location</th>
+                                <th>Total Stock</th>
+                                <th>Available</th>
+                                <th>On Loan</th>
+                                <th>Condition</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Reanimation Items -->
+                            <tr>
+                                <td>
+                                    <div class="item-info">
+                                        <img
+                                            src="../../user/assets/material/Reanimation/AED_Trainer.webp"
+                                            alt="AED Trainer"
+                                            class="item-thumb"
+                                        />
+                                        <span class="item-name"
+                                            >AED Trainer</span
+                                        >
+                                    </div>
+                                </td>
+                                <td><span class="sku">REA-AED-001</span></td>
+                                <td>
+                                    <span class="category-tag reanimation"
+                                        >Reanimation</span
+                                    >
+                                </td>
+                                <td>
+                                    <span class="location">Shelf A-08</span>
+                                </td>
+                                <td><span class="stock-total">12</span></td>
+                                <td>
+                                    <span class="stock-available good">8</span>
+                                </td>
+                                <td><span class="stock-loan">4</span></td>
+                                <td>
+                                    <span class="condition-badge excellent"
+                                        >Excellent</span
+                                    >
+                                </td>
+                                <td>
+                                    <div class="table-actions">
+                                        <button class="btn-icon" title="Edit">
+                                            Edit
+                                        </button>
+                                        <button
+                                            class="btn-icon"
+                                            title="History"
+                                        >
+                                            History
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <td>
+                                    <div class="item-info">
+                                        <img
+                                            src="../../user/assets/material/Reanimation/QCPR_Little_Anne.webp"
+                                            alt="QCPR Little Anne"
+                                            class="item-thumb"
+                                        />
+                                        <span class="item-name"
+                                            >QCPR Little Anne</span
+                                        >
+                                    </div>
+                                </td>
+                                <td><span class="sku">REA-QLA-002</span></td>
+                                <td>
+                                    <span class="category-tag reanimation"
+                                        >Reanimation</span
+                                    >
+                                </td>
+                                <td>
+                                    <span class="location">Shelf A-05</span>
+                                </td>
+                                <td><span class="stock-total">20</span></td>
+                                <td>
+                                    <span class="stock-available good">14</span>
+                                </td>
+                                <td><span class="stock-loan">6</span></td>
+                                <td>
+                                    <span class="condition-badge good"
+                                        >Good</span
+                                    >
+                                </td>
+                                <td>
+                                    <div class="table-actions">
+                                        <button class="btn-icon" title="Edit">
+                                            Edit
+                                        </button>
+                                        <button
+                                            class="btn-icon"
+                                            title="History"
+                                        >
+                                            History
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <tr class="low-stock">
+                                <td>
+                                    <div class="item-info">
+                                        <img
+                                            src="../../user/assets/material/Reanimation/Laerdal_Family_Satz.webp"
+                                            alt="Laerdal Family Satz"
+                                            class="item-thumb"
+                                        />
+                                        <span class="item-name"
+                                            >Laerdal Family Satz</span
+                                        >
+                                    </div>
+                                </td>
+                                <td><span class="sku">REA-LFS-003</span></td>
+                                <td>
+                                    <span class="category-tag reanimation"
+                                        >Reanimation</span
+                                    >
+                                </td>
+                                <td>
+                                    <span class="location">Shelf A-12</span>
+                                </td>
+                                <td><span class="stock-total">5</span></td>
+                                <td>
+                                    <span class="stock-available low">2</span>
+                                </td>
+                                <td><span class="stock-loan">3</span></td>
+                                <td>
+                                    <span class="condition-badge good"
+                                        >Good</span
+                                    >
+                                </td>
+                                <td>
+                                    <div class="table-actions">
+                                        <button class="btn-icon" title="Edit">
+                                            Edit
+                                        </button>
+                                        <button
+                                            class="btn-icon"
+                                            title="History"
+                                        >
+                                            History
+                                        </button>
+                                        <button
+                                            class="btn-icon reorder"
+                                            title="Reorder"
+                                        >
+                                            Reorder
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <td>
+                                    <div class="item-info">
+                                        <img
+                                            src="../../user/assets/material/Reanimation/QCPR_Junior_Puppe.webp"
+                                            alt="QCPR Junior Puppe"
+                                            class="item-thumb"
+                                        />
+                                        <span class="item-name"
+                                            >QCPR Junior Puppe</span
+                                        >
+                                    </div>
+                                </td>
+                                <td><span class="sku">REA-QJP-004</span></td>
+                                <td>
+                                    <span class="category-tag reanimation"
+                                        >Reanimation</span
+                                    >
+                                </td>
+                                <td>
+                                    <span class="location">Shelf A-07</span>
+                                </td>
+                                <td><span class="stock-total">15</span></td>
+                                <td>
+                                    <span class="stock-available good">11</span>
+                                </td>
+                                <td><span class="stock-loan">4</span></td>
+                                <td>
+                                    <span class="condition-badge excellent"
+                                        >Excellent</span
+                                    >
+                                </td>
+                                <td>
+                                    <div class="table-actions">
+                                        <button class="btn-icon" title="Edit">
+                                            Edit
+                                        </button>
+                                        <button
+                                            class="btn-icon"
+                                            title="History"
+                                        >
+                                            History
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <td>
+                                    <div class="item-info">
+                                        <img
+                                            src="../../user/assets/material/Reanimation/QCPR_Junior_Puppe-4er.webp"
+                                            alt="QCPR Junior Puppe 4er"
+                                            class="item-thumb"
+                                        />
+                                        <span class="item-name"
+                                            >QCPR Junior Puppe 4er</span
+                                        >
+                                    </div>
+                                </td>
+                                <td><span class="sku">REA-QJ4-005</span></td>
+                                <td>
+                                    <span class="category-tag reanimation"
+                                        >Reanimation</span
+                                    >
+                                </td>
+                                <td>
+                                    <span class="location">Shelf A-07</span>
+                                </td>
+                                <td><span class="stock-total">8</span></td>
+                                <td>
+                                    <span class="stock-available good">6</span>
+                                </td>
+                                <td><span class="stock-loan">2</span></td>
+                                <td>
+                                    <span class="condition-badge good"
+                                        >Good</span
+                                    >
+                                </td>
+                                <td>
+                                    <div class="table-actions">
+                                        <button class="btn-icon" title="Edit">
+                                            Edit
+                                        </button>
+                                        <button
+                                            class="btn-icon"
+                                            title="History"
+                                        >
+                                            History
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <td>
+                                    <div class="item-info">
+                                        <img
+                                            src="../../user/assets/material/Reanimation/Mini-Anne_10er.webp"
+                                            alt="Mini Anne 10er"
+                                            class="item-thumb"
+                                        />
+                                        <span class="item-name"
+                                            >Mini Anne 10er</span
+                                        >
+                                    </div>
+                                </td>
+                                <td><span class="sku">REA-MA10-006</span></td>
+                                <td>
+                                    <span class="category-tag reanimation"
+                                        >Reanimation</span
+                                    >
+                                </td>
+                                <td>
+                                    <span class="location">Shelf A-10</span>
+                                </td>
+                                <td><span class="stock-total">10</span></td>
+                                <td>
+                                    <span class="stock-available good">7</span>
+                                </td>
+                                <td><span class="stock-loan">3</span></td>
+                                <td>
+                                    <span class="condition-badge excellent"
+                                        >Excellent</span
+                                    >
+                                </td>
+                                <td>
+                                    <div class="table-actions">
+                                        <button class="btn-icon" title="Edit">
+                                            Edit
+                                        </button>
+                                        <button
+                                            class="btn-icon"
+                                            title="History"
+                                        >
+                                            History
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <tr class="low-stock">
+                                <td>
+                                    <div class="item-info">
+                                        <img
+                                            src="../../user/assets/material/Reanimation/Mini-Anne_einzeln.webp"
+                                            alt="Mini Anne einzeln"
+                                            class="item-thumb"
+                                        />
+                                        <span class="item-name"
+                                            >Mini Anne einzeln</span
+                                        >
+                                    </div>
+                                </td>
+                                <td><span class="sku">REA-MA1-007</span></td>
+                                <td>
+                                    <span class="category-tag reanimation"
+                                        >Reanimation</span
+                                    >
+                                </td>
+                                <td>
+                                    <span class="location">Shelf A-10</span>
+                                </td>
+                                <td><span class="stock-total">25</span></td>
+                                <td>
+                                    <span class="stock-available low">5</span>
+                                </td>
+                                <td><span class="stock-loan">20</span></td>
+                                <td>
+                                    <span class="condition-badge good"
+                                        >Good</span
+                                    >
+                                </td>
+                                <td>
+                                    <div class="table-actions">
+                                        <button class="btn-icon" title="Edit">
+                                            Edit
+                                        </button>
+                                        <button
+                                            class="btn-icon"
+                                            title="History"
+                                        >
+                                            History
+                                        </button>
+                                        <button
+                                            class="btn-icon reorder"
+                                            title="Reorder"
+                                        >
+                                            Reorder
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- Wound Care Items -->
+                            <tr class="low-stock">
+                                <td>
+                                    <div class="item-info">
+                                        <img
+                                            src="../../user/assets/material/Wundversorgung&Trauma/Tourniquet.webp"
+                                            alt="Tourniquet"
+                                            class="item-thumb"
+                                        />
+                                        <span class="item-name"
+                                            >Tourniquet</span
+                                        >
+                                    </div>
+                                </td>
+                                <td><span class="sku">WND-TRQ-001</span></td>
+                                <td>
+                                    <span class="category-tag wound-care"
+                                        >Wound Care</span
+                                    >
+                                </td>
+                                <td>
+                                    <span class="location">Shelf B-15</span>
+                                </td>
+                                <td><span class="stock-total">30</span></td>
+                                <td>
+                                    <span class="stock-available low">8</span>
+                                </td>
+                                <td><span class="stock-loan">22</span></td>
+                                <td>
+                                    <span class="condition-badge good"
+                                        >Good</span
+                                    >
+                                </td>
+                                <td>
+                                    <div class="table-actions">
+                                        <button class="btn-icon" title="Edit">
+                                            Edit
+                                        </button>
+                                        <button
+                                            class="btn-icon"
+                                            title="History"
+                                        >
+                                            History
+                                        </button>
+                                        <button
+                                            class="btn-icon reorder"
+                                            title="Reorder"
+                                        >
+                                            Reorder
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <td>
+                                    <div class="item-info">
+                                        <img
+                                            src="../../user/assets/material/Wundversorgung&Trauma/Fixierbinde.webp"
+                                            alt="Fixierbinde"
+                                            class="item-thumb"
+                                        />
+                                        <span class="item-name"
+                                            >Fixierbinde</span
+                                        >
+                                    </div>
+                                </td>
+                                <td><span class="sku">WND-FXB-002</span></td>
+                                <td>
+                                    <span class="category-tag wound-care"
+                                        >Wound Care</span
+                                    >
+                                </td>
+                                <td>
+                                    <span class="location">Shelf B-04</span>
+                                </td>
+                                <td><span class="stock-total">200</span></td>
+                                <td>
+                                    <span class="stock-available good"
+                                        >165</span
+                                    >
+                                </td>
+                                <td><span class="stock-loan">35</span></td>
+                                <td>
+                                    <span class="condition-badge excellent"
+                                        >Excellent</span
+                                    >
+                                </td>
+                                <td>
+                                    <div class="table-actions">
+                                        <button class="btn-icon" title="Edit">
+                                            Edit
+                                        </button>
+                                        <button
+                                            class="btn-icon"
+                                            title="History"
+                                        >
+                                            History
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <td>
+                                    <div class="item-info">
+                                        <img
+                                            src="../../user/assets/material/Wundversorgung&Trauma/Sterile_Kompressen-10x10.webp"
+                                            alt="Sterile Kompressen"
+                                            class="item-thumb"
+                                        />
+                                        <span class="item-name"
+                                            >Sterile Kompressen 10x10</span
+                                        >
+                                    </div>
+                                </td>
+                                <td><span class="sku">WND-SK10-003</span></td>
+                                <td>
+                                    <span class="category-tag wound-care"
+                                        >Wound Care</span
+                                    >
+                                </td>
+                                <td>
+                                    <span class="location">Shelf B-02</span>
+                                </td>
+                                <td><span class="stock-total">500</span></td>
+                                <td>
+                                    <span class="stock-available good"
+                                        >420</span
+                                    >
+                                </td>
+                                <td><span class="stock-loan">80</span></td>
+                                <td>
+                                    <span class="condition-badge excellent"
+                                        >Excellent</span
+                                    >
+                                </td>
+                                <td>
+                                    <div class="table-actions">
+                                        <button class="btn-icon" title="Edit">
+                                            Edit
+                                        </button>
+                                        <button
+                                            class="btn-icon"
+                                            title="History"
+                                        >
+                                            History
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <td>
+                                    <div class="item-info">
+                                        <img
+                                            src="../../user/assets/material/Wundversorgung&Trauma/Rettungsdecke.webp"
+                                            alt="Rettungsdecke"
+                                            class="item-thumb"
+                                        />
+                                        <span class="item-name"
+                                            >Rettungsdecke</span
+                                        >
+                                    </div>
+                                </td>
+                                <td><span class="sku">WND-RD-004</span></td>
+                                <td>
+                                    <span class="category-tag wound-care"
+                                        >Wound Care</span
+                                    >
+                                </td>
+                                <td>
+                                    <span class="location">Shelf B-08</span>
+                                </td>
+                                <td><span class="stock-total">100</span></td>
+                                <td>
+                                    <span class="stock-available good">78</span>
+                                </td>
+                                <td><span class="stock-loan">22</span></td>
+                                <td>
+                                    <span class="condition-badge excellent"
+                                        >Excellent</span
+                                    >
+                                </td>
+                                <td>
+                                    <div class="table-actions">
+                                        <button class="btn-icon" title="Edit">
+                                            Edit
+                                        </button>
+                                        <button
+                                            class="btn-icon"
+                                            title="History"
+                                        >
+                                            History
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <tr class="low-stock">
+                                <td>
+                                    <div class="item-info">
+                                        <img
+                                            src="../../user/assets/material/Wundversorgung&Trauma/Dreieckstuch.webp"
+                                            alt="Dreieckstuch"
+                                            class="item-thumb"
+                                        />
+                                        <span class="item-name"
+                                            >Dreieckstuch</span
+                                        >
+                                    </div>
+                                </td>
+                                <td><span class="sku">WND-DT-005</span></td>
+                                <td>
+                                    <span class="category-tag wound-care"
+                                        >Wound Care</span
+                                    >
+                                </td>
+                                <td>
+                                    <span class="location">Shelf B-06</span>
+                                </td>
+                                <td><span class="stock-total">80</span></td>
+                                <td>
+                                    <span class="stock-available low">12</span>
+                                </td>
+                                <td><span class="stock-loan">68</span></td>
+                                <td>
+                                    <span class="condition-badge good"
+                                        >Good</span
+                                    >
+                                </td>
+                                <td>
+                                    <div class="table-actions">
+                                        <button class="btn-icon" title="Edit">
+                                            Edit
+                                        </button>
+                                        <button
+                                            class="btn-icon"
+                                            title="History"
+                                        >
+                                            History
+                                        </button>
+                                        <button
+                                            class="btn-icon reorder"
+                                            title="Reorder"
+                                        >
+                                            Reorder
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- Accessories -->
+                            <tr>
+                                <td>
+                                    <div class="item-info">
+                                        <img
+                                            src="../../user/assets/material/Zubehoer/Apollo_Uebungsmatte.webp"
+                                            alt="Apollo Uebungsmatte"
+                                            class="item-thumb"
+                                        />
+                                        <span class="item-name"
+                                            >Apollo Uebungsmatte</span
+                                        >
+                                    </div>
+                                </td>
+                                <td><span class="sku">ACC-AUM-001</span></td>
+                                <td>
+                                    <span class="category-tag accessories"
+                                        >Accessories</span
+                                    >
+                                </td>
+                                <td>
+                                    <span class="location">Shelf C-03</span>
+                                </td>
+                                <td><span class="stock-total">50</span></td>
+                                <td>
+                                    <span class="stock-available good">35</span>
+                                </td>
+                                <td><span class="stock-loan">15</span></td>
+                                <td>
+                                    <span class="condition-badge good"
+                                        >Good</span
+                                    >
+                                </td>
+                                <td>
+                                    <div class="table-actions">
+                                        <button class="btn-icon" title="Edit">
+                                            Edit
+                                        </button>
+                                        <button
+                                            class="btn-icon"
+                                            title="History"
+                                        >
+                                            History
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <td>
+                                    <div class="item-info">
+                                        <img
+                                            src="../../user/assets/material/Zubehoer/Airwaykopf.webp"
+                                            alt="Airwaykopf"
+                                            class="item-thumb"
+                                        />
+                                        <span class="item-name"
+                                            >Airwaykopf</span
+                                        >
+                                    </div>
+                                </td>
+                                <td><span class="sku">ACC-AWK-002</span></td>
+                                <td>
+                                    <span class="category-tag accessories"
+                                        >Accessories</span
+                                    >
+                                </td>
+                                <td>
+                                    <span class="location">Shelf A-15</span>
+                                </td>
+                                <td><span class="stock-total">8</span></td>
+                                <td>
+                                    <span class="stock-available good">5</span>
+                                </td>
+                                <td><span class="stock-loan">3</span></td>
+                                <td>
+                                    <span class="condition-badge excellent"
+                                        >Excellent</span
+                                    >
+                                </td>
+                                <td>
+                                    <div class="table-actions">
+                                        <button class="btn-icon" title="Edit">
+                                            Edit
+                                        </button>
+                                        <button
+                                            class="btn-icon"
+                                            title="History"
+                                        >
+                                            History
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- Item needing repair -->
+                            <tr class="needs-repair">
+                                <td>
+                                    <div class="item-info">
+                                        <img
+                                            src="../../user/assets/material/Reanimation/AED_Trainer.webp"
+                                            alt="AED Trainer"
+                                            class="item-thumb"
+                                        />
+                                        <span class="item-name"
+                                            >AED Trainer (Unit #3)</span
+                                        >
+                                    </div>
+                                </td>
+                                <td><span class="sku">REA-AED-001-03</span></td>
+                                <td>
+                                    <span class="category-tag reanimation"
+                                        >Reanimation</span
+                                    >
+                                </td>
+                                <td>
+                                    <span class="location">Repair Bay</span>
+                                </td>
+                                <td><span class="stock-total">1</span></td>
+                                <td>
+                                    <span class="stock-available out">0</span>
+                                </td>
+                                <td><span class="stock-loan">0</span></td>
+                                <td>
+                                    <span class="condition-badge repair"
+                                        >Needs Repair</span
+                                    >
+                                </td>
+                                <td>
+                                    <div class="table-actions">
+                                        <button
+                                            class="btn-icon"
+                                            title="View Repair"
+                                        >
+                                            Repair
+                                        </button>
+                                        <button
+                                            class="btn-icon"
+                                            title="History"
+                                        >
+                                            History
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <!-- Pagination -->
+                    <div class="pagination">
+                        <button class="page-btn" disabled>Previous</button>
+                        <button class="page-btn active">1</button>
+                        <button class="page-btn">2</button>
+                        <button class="page-btn">3</button>
+                        <button class="page-btn">Next</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Add Item Modal (hidden by default) -->
+        <div class="modal-overlay" style="display: none">
+            <div class="modal modal-large">
+                <div class="modal-header">
+                    <h3>Add New Inventory Item</h3>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="item-name">Item Name:</label>
+                            <input
+                                type="text"
+                                id="item-name"
+                                class="form-input"
+                                placeholder="Enter item name..."
+                            />
+                        </div>
+                        <div class="form-group">
+                            <label for="item-sku">SKU:</label>
+                            <input
+                                type="text"
+                                id="item-sku"
+                                class="form-input"
+                                placeholder="e.g., REA-AED-001"
+                            />
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="item-category">Category:</label>
+                            <select id="item-category" class="form-select">
+                                <option value="">Select category...</option>
+                                <option value="reanimation">Reanimation</option>
+                                <option value="wound-care">
+                                    Wound Care & Trauma
+                                </option>
+                                <option value="accessories">Accessories</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="item-location">Storage Location:</label>
+                            <input
+                                type="text"
+                                id="item-location"
+                                class="form-input"
+                                placeholder="e.g., Shelf A-01"
+                            />
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="item-quantity">Initial Quantity:</label>
+                            <input
+                                type="number"
+                                id="item-quantity"
+                                class="form-input"
+                                value="1"
+                                min="1"
+                            />
+                        </div>
+                        <div class="form-group">
+                            <label for="item-condition">Condition:</label>
+                            <select id="item-condition" class="form-select">
+                                <option value="excellent">Excellent</option>
+                                <option value="good">Good</option>
+                                <option value="fair">Fair</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="item-description">Description:</label>
+                        <textarea
+                            id="item-description"
+                            class="form-textarea"
+                            rows="3"
+                            placeholder="Item description..."
+                        ></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="item-image">Image:</label>
+                        <input type="file" id="item-image" accept="image/*" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-secondary">Cancel</button>
+                    <button class="btn-primary">Add Item</button>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>
