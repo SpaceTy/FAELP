@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Pack Order #REQ-2026-0048 - FALP Logistics</title>
+        <link rel="stylesheet" href="../styles/logistics.css" />
+    </head>
+    <body>
+        <!-- Header Navigation -->
+        <header class="header">
+            <div class="header-container">
+                <div class="logo">
+                    <h1>FALP</h1>
+                    <p class="tagline">Logistics Portal</p>
+                </div>
+                <nav class="main-nav">
+                    <a href="requests.html" class="nav-link">Incoming Requests</a>
+                    <a href="packaging.html" class="nav-link active">Packaging</a>
+                    <a href="returns.html" class="nav-link">Returns</a>
+                    <a href="inventory.html" class="nav-link">Inventory</a>
+                </nav>
+                <div class="header-actions">
+                    <span class="user-info">Hans Gruber (Packaging)</span>
+                    <button class="btn-secondary">Logout</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content detail-page">
+            <!-- Back Navigation -->
+            <div class="back-nav">
+                <a href="packaging.html" class="back-link">&larr; Back to Packaging Queue</a>
+            </div>
+
+            <!-- Order Header -->
+            <div class="detail-header">
+                <div class="detail-title">
+                    <h1>Pack Order #REQ-2026-0048</h1>
+                    <span class="status-badge status-in-progress">In Progress</span>
+                </div>
+                <div class="detail-meta">
+                    <span class="ship-deadline urgent">Ship by: Today, Jan 20, 2026</span>
+                    <span class="time-remaining">~2 hours remaining</span>
+                </div>
+            </div>
+
+            <!-- Main Packing Area -->
+            <div class="detail-content">
+                <!-- Left Column: Items to Pack -->
+                <div class="packing-items-section">
+                    <div class="section-card">
+                        <div class="card-header-bar">
+                            <h2>Items to Pack</h2>
+                            <div class="progress-indicator">
+                                <span class="progress-text">2 of 5 items packed</span>
+                                <div class="progress-bar-small">
+                                    <div class="progress-fill" style="width: 40%"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="packing-checklist">
+                            <!-- Item 1 - Packed -->
+                            <div class="packing-item packed">
+                                <div class="item-checkbox">
+                                    <input type="checkbox" id="pack-item-1" checked />
+                                    <label for="pack-item-1"></label>
+                                </div>
+                                <div class="item-image">
+                                    <img src="../../user/assets/material/Reanimation/Laerdal_Family_Satz.webp" alt="Laerdal Family Satz" />
+                                </div>
+                                <div class="item-details">
+                                    <h3>Laerdal Family Satz</h3>
+                                    <p class="item-sku">SKU: REA-LFS-003</p>
+                                    <p class="item-description">Complete family CPR training set</p>
+                                </div>
+                                <div class="item-quantity">
+                                    <span class="qty-label">Quantity</span>
+                                    <span class="qty-value">1</span>
+                                </div>
+                                <div class="item-location">
+                                    <span class="location-label">Location</span>
+                                    <span class="location-value">Shelf A-12</span>
+                                </div>
+                                <div class="item-status">
+                                    <span class="packed-badge">Packed</span>
+                                </div>
+                            </div>
+
+                            <!-- Item 2 - Packed -->
+                            <div class="packing-item packed">
+                                <div class="item-checkbox">
+                                    <input type="checkbox" id="pack-item-2" checked />
+                                    <label for="pack-item-2"></label>
+                                </div>
+                                <div class="item-image">
+                                    <img src="../../user/assets/material/Reanimation/AED_Trainer.webp" alt="AED Trainer" />
+                                </div>
+                                <div class="item-details">
+                                    <h3>AED Trainer</h3>
+                                    <p class="item-sku">SKU: REA-AED-001</p>
+                                    <p class="item-description">Professional AED training device</p>
+                                </div>
+                                <div class="item-quantity">
+                                    <span class="qty-label">Quantity</span>
+                                    <span class="qty-value">2</span>
+                                </div>
+                                <div class="item-location">
+                                    <span class="location-label">Location</span>
+                                    <span class="location-value">Shelf A-08</span>
+                                </div>
+                                <div class="item-status">
+                                    <span class="packed-badge">Packed</span>
+                                </div>
+                            </div>
+
+                            <!-- Item 3 - Current -->
+                            <div class="packing-item current">
+                                <div class="item-checkbox">
+                                    <input type="checkbox" id="pack-item-3" />
+                                    <label for="pack-item-3"></label>
+                                </div>
+                                <div class="item-image">
+                                    <img src="../../user/assets/material/Zubehoer/Apollo_Uebungsmatte.webp" alt="Apollo Uebungsmatte" />
+                                </div>
+                                <div class="item-details">
+                                    <h3>Apollo Uebungsmatte</h3>
+                                    <p class="item-sku">SKU: ACC-AUM-001</p>
+                                    <p class="item-description">Professional training mat</p>
+                                </div>
+                                <div class="item-quantity">
+                                    <span class="qty-label">Quantity</span>
+                                    <span class="qty-value">10</span>
+                                </div>
+                                <div class="item-location">
+                                    <span class="location-label">Location</span>
+                                    <span class="location-value highlight">Shelf C-03</span>
+                                </div>
+                                <div class="item-status">
+                                    <button class="btn-mark-packed">Mark Packed</button>
+                                </div>
+                            </div>
+
+                            <!-- Item 4 - Pending -->
+                            <div class="packing-item pending">
+                                <div class="item-checkbox">
+                                    <input type="checkbox" id="pack-item-4" disabled />
+                                    <label for="pack-item-4"></label>
+                                </div>
+                                <div class="item-image">
+                                    <img src="../../user/assets/material/Wundversorgung&Trauma/Sterile_Kompressen-10x10.webp" alt="Sterile Kompressen" />
+                                </div>
+                                <div class="item-details">
+                                    <h3>Sterile Kompressen 10x10</h3>
+                                    <p class="item-sku">SKU: WND-SK10-003</p>
+                                    <p class="item-description">Sterile gauze compresses</p>
+                                </div>
+                                <div class="item-quantity">
+                                    <span class="qty-label">Quantity</span>
+                                    <span class="qty-value">20</span>
+                                </div>
+                                <div class="item-location">
+                                    <span class="location-label">Location</span>
+                                    <span class="location-value">Shelf B-02</span>
+                                </div>
+                                <div class="item-status">
+                                    <span class="pending-badge">Pending</span>
+                                </div>
+                            </div>
+
+                            <!-- Item 5 - Pending -->
+                            <div class="packing-item pending">
+                                <div class="item-checkbox">
+                                    <input type="checkbox" id="pack-item-5" disabled />
+                                    <label for="pack-item-5"></label>
+                                </div>
+                                <div class="item-image">
+                                    <img src="../../user/assets/material/Wundversorgung&Trauma/Fixierbinde.webp" alt="Fixierbinde" />
+                                </div>
+                                <div class="item-details">
+                                    <h3>Fixierbinde</h3>
+                                    <p class="item-sku">SKU: WND-FXB-002</p>
+                                    <p class="item-description">Medical fixation bandages</p>
+                                </div>
+                                <div class="item-quantity">
+                                    <span class="qty-label">Quantity</span>
+                                    <span class="qty-value">10</span>
+                                </div>
+                                <div class="item-location">
+                                    <span class="location-label">Location</span>
+                                    <span class="location-value">Shelf B-04</span>
+                                </div>
+                                <div class="item-status">
+                                    <span class="pending-badge">Pending</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Issue Reporting -->
+                        <div class="issue-section">
+                            <button class="btn-report-issue">Report Issue with Item</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Order Info & Actions -->
+                <div class="packing-sidebar">
+                    <!-- Destination Card -->
+                    <div class="section-card">
+                        <h3>Shipping Destination</h3>
+                        <div class="destination-details">
+                            <p class="recipient-name">Klaus Becker</p>
+                            <p class="recipient-org">Hospital Training Dept</p>
+                            <p class="recipient-address">
+                                Charité Campus, Building 4<br />
+                                Charitéplatz 1<br />
+                                10117 Berlin
+                            </p>
+                            <p class="recipient-phone">+49 30 450 50</p>
+                            <p class="recipient-email">k.becker@charite.de</p>
+                        </div>
+                        <button class="btn-secondary btn-full-width">Print Address Label</button>
+                    </div>
+
+                    <!-- Order Details Card -->
+                    <div class="section-card">
+                        <h3>Order Details</h3>
+                        <div class="order-details-list">
+                            <div class="detail-row">
+                                <span class="detail-label">Request ID:</span>
+                                <span class="detail-value">#REQ-2026-0048</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Requested:</span>
+                                <span class="detail-value">Jan 15, 2026</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Approved:</span>
+                                <span class="detail-value">Jan 16, 2026</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Purpose:</span>
+                                <span class="detail-value">Workshop</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Loan Duration:</span>
+                                <span class="detail-value">2 weeks</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Return Date:</span>
+                                <span class="detail-value">Feb 3, 2026</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Package Info Card -->
+                    <div class="section-card">
+                        <h3>Package Information</h3>
+                        <div class="form-group">
+                            <label for="package-size">Package Size:</label>
+                            <select id="package-size" class="form-select">
+                                <option value="small">Small Box</option>
+                                <option value="medium">Medium Box</option>
+                                <option value="large" selected>Large Box</option>
+                                <option value="pallet">Pallet</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="package-weight">Estimated Weight:</label>
+                            <div class="input-with-unit">
+                                <input type="number" id="package-weight" class="form-input" value="12.5" step="0.1" />
+                                <span class="unit">kg</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="special-handling">Special Handling:</label>
+                            <div class="checkbox-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" checked />
+                                    <span>Fragile</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" />
+                                    <span>This Side Up</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" />
+                                    <span>Keep Dry</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notes Card -->
+                    <div class="section-card">
+                        <h3>Packing Notes</h3>
+                        <div class="form-group">
+                            <textarea id="packing-notes" class="form-textarea" rows="3" placeholder="Add any notes about this package...">AED trainers packed with protective foam. Mats rolled and secured.</textarea>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="action-buttons-stack">
+                        <button class="btn-success btn-large" disabled>Complete Packing</button>
+                        <button class="btn-primary btn-large">Save Progress</button>
+                        <button class="btn-secondary">Print Packing Slip</button>
+                        <button class="btn-warning">Pause & Return to Queue</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </body>
+</html>
