@@ -1,0 +1,709 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Incoming Requests - FALP Logistics</title>
+        <link rel="stylesheet" href="../styles/logistics.css" />
+    </head>
+    <body>
+        <!-- Header Navigation -->
+        <header class="header">
+            <div class="header-container">
+                <div class="logo">
+                    <h1>FALP</h1>
+                    <p class="tagline">Logistics Portal</p>
+                </div>
+                <nav class="main-nav">
+                    <a href="requests.html" class="nav-link active"
+                        >Incoming Requests</a
+                    >
+                    <a href="packaging.html" class="nav-link">Packaging</a>
+                    <a href="returns.html" class="nav-link">Returns</a>
+                    <a href="inventory.html" class="nav-link">Inventory</a>
+                </nav>
+                <div class="header-actions">
+                    <span class="user-info">Maria Schmidt (Logistics)</span>
+                    <button class="btn-secondary">Logout</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Sidebar Filters -->
+            <aside class="sidebar">
+                <div class="filter-section">
+                    <h3>Request Status</h3>
+                    <div class="filter-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked />
+                            <span>Pending Review</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" />
+                            <span>Approved</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" />
+                            <span>Rejected</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="filter-section">
+                    <h3>Priority</h3>
+                    <div class="filter-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked />
+                            <span>High</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked />
+                            <span>Normal</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked />
+                            <span>Low</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="filter-section">
+                    <h3>Request Date</h3>
+                    <div class="filter-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked />
+                            <span>Today</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked />
+                            <span>This Week</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" />
+                            <span>Older</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="filter-section">
+                    <h3>Category</h3>
+                    <div class="filter-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked />
+                            <span>Reanimation</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked />
+                            <span>Wound Care</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked />
+                            <span>Accessories</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="stats-card">
+                    <h3>Today's Stats</h3>
+                    <div class="stat-row">
+                        <span>Pending:</span>
+                        <span class="stat-value pending">8</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>Approved:</span>
+                        <span class="stat-value approved">12</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>Rejected:</span>
+                        <span class="stat-value rejected">2</span>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Requests Section -->
+            <section class="content-section">
+                <div class="section-header">
+                    <h2>Incoming Requests</h2>
+                    <div class="section-controls">
+                        <span class="results-count">8 pending requests</span>
+                        <select class="sort-select">
+                            <option>Sort by: Oldest First</option>
+                            <option>Newest First</option>
+                            <option>Priority</option>
+                            <option>Requester</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="requests-table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Request ID</th>
+                                <th>Requester</th>
+                                <th>Items</th>
+                                <th>Purpose</th>
+                                <th>Requested For</th>
+                                <th>Priority</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Request Row 1 -->
+                            <tr class="priority-high">
+                                <td>
+                                    <span class="request-id"
+                                        >#REQ-2026-0058</span
+                                    >
+                                    <span class="request-date"
+                                        >Jan 19, 2026</span
+                                    >
+                                </td>
+                                <td>
+                                    <div class="requester-info">
+                                        <span class="requester-name"
+                                            >Thomas Weber</span
+                                        >
+                                        <span class="requester-org"
+                                            >Red Cross Berlin</span
+                                        >
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="items-summary">
+                                        <span class="item-count"
+                                            >5x Tourniquet</span
+                                        >
+                                        <button class="btn-view-items">
+                                            View All
+                                        </button>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="purpose-tag"
+                                        >Training Session</span
+                                    >
+                                </td>
+                                <td>
+                                    <span class="date-needed"
+                                        >Jan 25, 2026</span
+                                    >
+                                    <span class="days-until urgent"
+                                        >6 days</span
+                                    >
+                                </td>
+                                <td>
+                                    <span class="priority-badge priority-high"
+                                        >High</span
+                                    >
+                                </td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <button class="btn-approve">
+                                            Approve
+                                        </button>
+                                        <button class="btn-reject">
+                                            Reject
+                                        </button>
+                                        <button class="btn-details">
+                                            Details
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- Request Row 2 -->
+                            <tr class="priority-normal">
+                                <td>
+                                    <span class="request-id"
+                                        >#REQ-2026-0057</span
+                                    >
+                                    <span class="request-date"
+                                        >Jan 19, 2026</span
+                                    >
+                                </td>
+                                <td>
+                                    <div class="requester-info">
+                                        <span class="requester-name"
+                                            >Anna Müller</span
+                                        >
+                                        <span class="requester-org"
+                                            >First Aid Academy</span
+                                        >
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="items-summary">
+                                        <span class="item-count"
+                                            >2x QCPR Little Anne</span
+                                        >
+                                        <span class="item-count"
+                                            >1x AED Trainer</span
+                                        >
+                                        <button class="btn-view-items">
+                                            View All
+                                        </button>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="purpose-tag"
+                                        >Certification Course</span
+                                    >
+                                </td>
+                                <td>
+                                    <span class="date-needed"
+                                        >Jan 28, 2026</span
+                                    >
+                                    <span class="days-until">9 days</span>
+                                </td>
+                                <td>
+                                    <span class="priority-badge priority-normal"
+                                        >Normal</span
+                                    >
+                                </td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <button class="btn-approve">
+                                            Approve
+                                        </button>
+                                        <button class="btn-reject">
+                                            Reject
+                                        </button>
+                                        <button class="btn-details">
+                                            Details
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- Request Row 3 -->
+                            <tr class="priority-high">
+                                <td>
+                                    <span class="request-id"
+                                        >#REQ-2026-0056</span
+                                    >
+                                    <span class="request-date"
+                                        >Jan 18, 2026</span
+                                    >
+                                </td>
+                                <td>
+                                    <div class="requester-info">
+                                        <span class="requester-name"
+                                            >Klaus Becker</span
+                                        >
+                                        <span class="requester-org"
+                                            >Hospital Training Dept</span
+                                        >
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="items-summary">
+                                        <span class="item-count"
+                                            >1x Laerdal Family Satz</span
+                                        >
+                                        <span class="item-count"
+                                            >10x Apollo Mats</span
+                                        >
+                                        <button class="btn-view-items">
+                                            View All
+                                        </button>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="purpose-tag">Workshop</span>
+                                </td>
+                                <td>
+                                    <span class="date-needed"
+                                        >Jan 22, 2026</span
+                                    >
+                                    <span class="days-until urgent"
+                                        >2 days</span
+                                    >
+                                </td>
+                                <td>
+                                    <span class="priority-badge priority-high"
+                                        >High</span
+                                    >
+                                </td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <button class="btn-approve">
+                                            Approve
+                                        </button>
+                                        <button class="btn-reject">
+                                            Reject
+                                        </button>
+                                        <button class="btn-details">
+                                            Details
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- Request Row 4 -->
+                            <tr class="priority-normal">
+                                <td>
+                                    <span class="request-id"
+                                        >#REQ-2026-0055</span
+                                    >
+                                    <span class="request-date"
+                                        >Jan 18, 2026</span
+                                    >
+                                </td>
+                                <td>
+                                    <div class="requester-info">
+                                        <span class="requester-name"
+                                            >Lisa Hoffmann</span
+                                        >
+                                        <span class="requester-org"
+                                            >Community Center</span
+                                        >
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="items-summary">
+                                        <span class="item-count"
+                                            >20x Sterile Kompressen</span
+                                        >
+                                        <span class="item-count"
+                                            >10x Fixierbinde</span
+                                        >
+                                        <button class="btn-view-items">
+                                            View All
+                                        </button>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="purpose-tag"
+                                        >Training Session</span
+                                    >
+                                </td>
+                                <td>
+                                    <span class="date-needed">Feb 1, 2026</span>
+                                    <span class="days-until">12 days</span>
+                                </td>
+                                <td>
+                                    <span class="priority-badge priority-normal"
+                                        >Normal</span
+                                    >
+                                </td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <button class="btn-approve">
+                                            Approve
+                                        </button>
+                                        <button class="btn-reject">
+                                            Reject
+                                        </button>
+                                        <button class="btn-details">
+                                            Details
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- Request Row 5 -->
+                            <tr class="priority-low">
+                                <td>
+                                    <span class="request-id"
+                                        >#REQ-2026-0054</span
+                                    >
+                                    <span class="request-date"
+                                        >Jan 17, 2026</span
+                                    >
+                                </td>
+                                <td>
+                                    <div class="requester-info">
+                                        <span class="requester-name"
+                                            >Peter Schmidt</span
+                                        >
+                                        <span class="requester-org"
+                                            >School District 5</span
+                                        >
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="items-summary">
+                                        <span class="item-count"
+                                            >1x Mini Anne 10er Set</span
+                                        >
+                                        <button class="btn-view-items">
+                                            View All
+                                        </button>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="purpose-tag"
+                                        >Demonstration</span
+                                    >
+                                </td>
+                                <td>
+                                    <span class="date-needed"
+                                        >Feb 15, 2026</span
+                                    >
+                                    <span class="days-until">26 days</span>
+                                </td>
+                                <td>
+                                    <span class="priority-badge priority-low"
+                                        >Low</span
+                                    >
+                                </td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <button class="btn-approve">
+                                            Approve
+                                        </button>
+                                        <button class="btn-reject">
+                                            Reject
+                                        </button>
+                                        <button class="btn-details">
+                                            Details
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- Request Row 6 -->
+                            <tr class="priority-normal">
+                                <td>
+                                    <span class="request-id"
+                                        >#REQ-2026-0053</span
+                                    >
+                                    <span class="request-date"
+                                        >Jan 17, 2026</span
+                                    >
+                                </td>
+                                <td>
+                                    <div class="requester-info">
+                                        <span class="requester-name"
+                                            >Eva Klein</span
+                                        >
+                                        <span class="requester-org"
+                                            >University Medical</span
+                                        >
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="items-summary">
+                                        <span class="item-count"
+                                            >2x Airwaykopf</span
+                                        >
+                                        <span class="item-count"
+                                            >4x QCPR Junior</span
+                                        >
+                                        <button class="btn-view-items">
+                                            View All
+                                        </button>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="purpose-tag"
+                                        >Certification Course</span
+                                    >
+                                </td>
+                                <td>
+                                    <span class="date-needed"
+                                        >Jan 30, 2026</span
+                                    >
+                                    <span class="days-until">10 days</span>
+                                </td>
+                                <td>
+                                    <span class="priority-badge priority-normal"
+                                        >Normal</span
+                                    >
+                                </td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <button class="btn-approve">
+                                            Approve
+                                        </button>
+                                        <button class="btn-reject">
+                                            Reject
+                                        </button>
+                                        <button class="btn-details">
+                                            Details
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- Request Row 7 -->
+                            <tr class="priority-normal">
+                                <td>
+                                    <span class="request-id"
+                                        >#REQ-2026-0052</span
+                                    >
+                                    <span class="request-date"
+                                        >Jan 16, 2026</span
+                                    >
+                                </td>
+                                <td>
+                                    <div class="requester-info">
+                                        <span class="requester-name"
+                                            >Michael Braun</span
+                                        >
+                                        <span class="requester-org"
+                                            >Fire Department</span
+                                        >
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="items-summary">
+                                        <span class="item-count"
+                                            >15x Dreieckstuch</span
+                                        >
+                                        <span class="item-count"
+                                            >10x Rettungsdecke</span
+                                        >
+                                        <button class="btn-view-items">
+                                            View All
+                                        </button>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="purpose-tag"
+                                        >Training Session</span
+                                    >
+                                </td>
+                                <td>
+                                    <span class="date-needed">Feb 5, 2026</span>
+                                    <span class="days-until">16 days</span>
+                                </td>
+                                <td>
+                                    <span class="priority-badge priority-normal"
+                                        >Normal</span
+                                    >
+                                </td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <button class="btn-approve">
+                                            Approve
+                                        </button>
+                                        <button class="btn-reject">
+                                            Reject
+                                        </button>
+                                        <button class="btn-details">
+                                            Details
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- Request Row 8 -->
+                            <tr class="priority-low">
+                                <td>
+                                    <span class="request-id"
+                                        >#REQ-2026-0051</span
+                                    >
+                                    <span class="request-date"
+                                        >Jan 15, 2026</span
+                                    >
+                                </td>
+                                <td>
+                                    <div class="requester-info">
+                                        <span class="requester-name"
+                                            >Sandra Fischer</span
+                                        >
+                                        <span class="requester-org"
+                                            >Youth Organization</span
+                                        >
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="items-summary">
+                                        <span class="item-count"
+                                            >5x Mini Anne einzeln</span
+                                        >
+                                        <button class="btn-view-items">
+                                            View All
+                                        </button>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="purpose-tag">Workshop</span>
+                                </td>
+                                <td>
+                                    <span class="date-needed"
+                                        >Feb 20, 2026</span
+                                    >
+                                    <span class="days-until">31 days</span>
+                                </td>
+                                <td>
+                                    <span class="priority-badge priority-low"
+                                        >Low</span
+                                    >
+                                </td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <button class="btn-approve">
+                                            Approve
+                                        </button>
+                                        <button class="btn-reject">
+                                            Reject
+                                        </button>
+                                        <button class="btn-details">
+                                            Details
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <!-- Pagination -->
+                    <div class="pagination">
+                        <button class="page-btn" disabled>Previous</button>
+                        <button class="page-btn active">1</button>
+                        <button class="page-btn">2</button>
+                        <button class="page-btn">Next</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Rejection Modal (hidden by default) -->
+        <div class="modal-overlay" style="display: none">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3>Reject Request</h3>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p>Please provide a reason for rejecting this request:</p>
+                    <div class="form-group">
+                        <label for="rejection-reason">Reason:</label>
+                        <select id="rejection-reason" class="form-select">
+                            <option value="">Select a reason...</option>
+                            <option value="stock">Insufficient stock</option>
+                            <option value="certification">
+                                Advanced certification required
+                            </option>
+                            <option value="conflict">
+                                Scheduling conflict
+                            </option>
+                            <option value="incomplete">
+                                Incomplete request information
+                            </option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="rejection-notes">Additional Notes:</label>
+                        <textarea
+                            id="rejection-notes"
+                            class="form-textarea"
+                            rows="3"
+                            placeholder="Optional additional details..."
+                        ></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-secondary">Cancel</button>
+                    <button class="btn-reject">Confirm Rejection</button>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>
