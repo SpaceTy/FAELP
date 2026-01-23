@@ -22,7 +22,7 @@
   warehouseLocation: string,  // "BER-01-A3" (Berlin warehouse, aisle 1, shelf A3)
   currentAssignment: {
     requestId: string | null,
-    schoolId: string | null,
+    customerId: string | null,
     assignedDate: Date | null
   },
   purchaseDate: Date,
@@ -32,12 +32,12 @@
 # Request
 {
   id: string,
-  user: user,
+  customer: customer,
   items: Map<MaterialType, int>
   deliveryDate: Date,
   status: "pending" | "approved" | "rejected" | "prepared" | "shipped" | "delivered" | "returned" | "archived" | "cancelled",
   shippingAddress: {
-    schoolName: string,
+    customerName: string,
     addressLine1: string,
     addressLine2: string | null,
     city: string,
@@ -48,7 +48,7 @@
   notes: string[]
 }
 
-# User
+# Customer
 {
   id: string,
   email: string,
