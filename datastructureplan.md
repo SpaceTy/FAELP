@@ -2,31 +2,20 @@
 {
   id: string,              // "manikin-adult-001"
   name: string,            // "Adult CPR Manikin"
-  category: string,        // "training-equipment"
   description: string,
   imageUrl: string,
-  requiresCertification: boolean,
-  maxUsesBeforeReplace: number,
-  cleaningRequired: boolean,
-  replacementParts: string[]
 }
 
 # Material Instance
 {
   id: string,              // Unique serial number
   typeId: string,          // References MaterialType
-  status: "available" | "reserved" | "rented" | "maintenance" | "retired",
-  condition: "excellent" | "good" | "fair" | "poor",
+  status: "available" | "rented" | "returned",
   useCount: number,
-  lastCleaned: Date,
-  warehouseLocation: string,  // "BER-01-A3" (Berlin warehouse, aisle 1, shelf A3)
+  location: string,  // address of current location
   currentAssignment: {
     requestId: string | null,
-    customerId: string | null,
-    assignedDate: Date | null
   },
-  purchaseDate: Date,
-  notes: string[]          // Specific item history
 }
 
 # Request
@@ -35,7 +24,7 @@
   customer: customer,
   items: Map<MaterialType, int>
   deliveryDate: Date,
-  status: "pending" | "approved" | "rejected" | "prepared" | "shipped" | "delivered" | "returned" | "archived" | "cancelled",
+  status: "pending" | "inAction" | "returned",
   shippingAddress: {
     customerName: string,
     addressLine1: string,
@@ -45,7 +34,6 @@
   }
   createdAt: Date,
   updatedAt: Date,
-  notes: string[]
 }
 
 # Customer
@@ -55,6 +43,4 @@
   name: string,
   token: string,
   createdAt: Date,
-  updatedAt: Date,
-  notes: string[]
 }
