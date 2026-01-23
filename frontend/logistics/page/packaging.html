@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="de">
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Packaging Queue - FALP Logistics</title>
+        <title>Verpackungs-Warteschlange - EHALP Logistik</title>
         <link rel="stylesheet" href="../styles/logistics.css" />
     </head>
     <body>
@@ -11,22 +11,22 @@
         <header class="header">
             <div class="header-container">
                 <div class="logo">
-                    <h1>FALP</h1>
-                    <p class="tagline">Logistics Portal</p>
+                    <h1>EHALP</h1>
+                    <p class="tagline">Erste Hilfe Ausbildung Logistik Plattform</p>
                 </div>
                 <nav class="main-nav">
                     <a href="requests.html" class="nav-link"
-                        >Incoming Requests</a
+                        >Eingehende Anfragen</a
                     >
                     <a href="packaging.html" class="nav-link active"
-                        >Packaging</a
+                        >Verpackung</a
                     >
-                    <a href="returns.html" class="nav-link">Returns</a>
-                    <a href="inventory.html" class="nav-link">Inventory</a>
+                    <a href="returns.html" class="nav-link">Rücksendungen</a>
+                    <a href="inventory.html" class="nav-link">Inventar</a>
                 </nav>
                 <div class="header-actions">
-                    <span class="user-info">Hans Gruber (Packaging)</span>
-                    <button class="btn-secondary">Logout</button>
+                    <span class="user-info">Hans Gruber (Verpackung)</span>
+                    <button class="btn-secondary">Abmelden</button>
                 </div>
             </div>
         </header>
@@ -36,63 +36,63 @@
             <!-- Sidebar Filters -->
             <aside class="sidebar">
                 <div class="filter-section">
-                    <h3>Packaging Status</h3>
+                    <h3>Verpackungsstatus</h3>
                     <div class="filter-group">
                         <label class="checkbox-label">
                             <input type="checkbox" checked />
-                            <span>To Package</span>
+                            <span>Zu verpacken</span>
                         </label>
                         <label class="checkbox-label">
                             <input type="checkbox" checked />
-                            <span>In Progress</span>
+                            <span>In Bearbeitung</span>
                         </label>
                         <label class="checkbox-label">
                             <input type="checkbox" />
-                            <span>Ready to Ship</span>
+                            <span>Versandbereit</span>
                         </label>
                         <label class="checkbox-label">
                             <input type="checkbox" />
-                            <span>Shipped</span>
+                            <span>Versandt</span>
                         </label>
                     </div>
                 </div>
 
                 <div class="filter-section">
-                    <h3>Ship By Date</h3>
+                    <h3>Versanddatum</h3>
                     <div class="filter-group">
                         <label class="checkbox-label">
                             <input type="checkbox" checked />
-                            <span>Today</span>
+                            <span>Heute</span>
                         </label>
                         <label class="checkbox-label">
                             <input type="checkbox" checked />
-                            <span>Tomorrow</span>
+                            <span>Morgen</span>
                         </label>
                         <label class="checkbox-label">
                             <input type="checkbox" checked />
-                            <span>This Week</span>
+                            <span>Diese Woche</span>
                         </label>
                         <label class="checkbox-label">
                             <input type="checkbox" />
-                            <span>Next Week</span>
+                            _span>Nächste Woche</span>
                         </label>
                     </div>
                 </div>
 
                 <div class="filter-section">
-                    <h3>Package Size</h3>
+                    <h3>Paketgröße</h3>
                     <div class="filter-group">
                         <label class="checkbox-label">
                             <input type="checkbox" checked />
-                            <span>Small</span>
+                            <span>Klein</span>
                         </label>
                         <label class="checkbox-label">
                             <input type="checkbox" checked />
-                            <span>Medium</span>
+                            <span>Mittel</span>
                         </label>
                         <label class="checkbox-label">
                             <input type="checkbox" checked />
-                            <span>Large</span>
+                            <span>Groß</span>
                         </label>
                         <label class="checkbox-label">
                             <input type="checkbox" checked />
@@ -101,22 +101,22 @@
                     </div>
                 </div>
 
-                <div class="stats-card">
-                    <h3>Packaging Queue</h3>
+                 <div class="stats-card">
+                    <h3>Verpackungswarteschlange</h3>
                     <div class="stat-row">
-                        <span>To Package:</span>
+                        <span>Zu verpacken:</span>
                         <span class="stat-value pending">6</span>
                     </div>
                     <div class="stat-row">
-                        <span>In Progress:</span>
+                        <span>In Bearbeitung:</span>
                         <span class="stat-value in-progress">2</span>
                     </div>
                     <div class="stat-row">
-                        <span>Ready to Ship:</span>
+                        <span>Versandbereit:</span>
                         <span class="stat-value ready">4</span>
                     </div>
                     <div class="stat-row">
-                        <span>Shipped Today:</span>
+                        <span>Heute versandt:</span>
                         <span class="stat-value approved">8</span>
                     </div>
                 </div>
@@ -124,15 +124,15 @@
 
             <!-- Packaging Section -->
             <section class="content-section">
-                <div class="section-header">
-                    <h2>Packaging Queue</h2>
+                 <div class="section-header">
+                    <h2>Verpackungswarteschlange</h2>
                     <div class="section-controls">
-                        <span class="results-count">6 orders to package</span>
+                        <span class="results-count">6 Bestellungen zu verpacken</span>
                         <select class="sort-select">
-                            <option>Sort by: Ship Date (Urgent First)</option>
-                            <option>Newest First</option>
-                            <option>Package Size</option>
-                            <option>Destination</option>
+                            <option>Sortieren nach: Versanddatum (Dringend zuerst)</option>
+                            <option>Neueste zuerst</option>
+                            <option>Paketgröße</option>
+                            <option>Zielort</option>
                         </select>
                     </div>
                 </div>
@@ -141,13 +141,13 @@
                     <!-- Packaging Card 1 - Urgent -->
                     <div class="packaging-card urgent">
                         <div class="card-header">
-                            <div class="order-info">
-                                <span class="order-id">#REQ-2026-0048</span>
-                                <span class="status-badge status-to-package"
-                                    >To Package</span
-                                >
-                            </div>
-                            <span class="ship-date urgent">Ship by: Today</span>
+                             <div class="order-info">
+                                 <span class="order-id">#REQ-2026-0048</span>
+                                 <span class="status-badge status-to-package"
+                                     >Zu verpacken</span
+                                 >
+                             </div>
+                             <span class="ship-date urgent">Versand bis: Heute</span>
                         </div>
 
                         <div class="destination-info">
@@ -157,8 +157,8 @@
                             <p>10117 Berlin</p>
                         </div>
 
-                        <div class="items-list">
-                            <h4>Items to Pack (3)</h4>
+                         <div class="items-list">
+                            <h4>Zu verpackende Artikel (3)</h4>
                             <div class="pack-item">
                                 <input type="checkbox" id="item-1-1" />
                                 <label for="item-1-1">
@@ -167,7 +167,7 @@
                                         >Laerdal Family Satz</span
                                     >
                                     <span class="item-location"
-                                        >Shelf A-12</span
+                                        >Regal A-12</span
                                     >
                                 </label>
                             </div>
@@ -176,10 +176,10 @@
                                 <label for="item-1-2">
                                     <span class="item-qty">10x</span>
                                     <span class="item-name"
-                                        >Apollo Uebungsmatte</span
+                                        >Apollo Übungsmatte</span
                                     >
                                     <span class="item-location"
-                                        >Shelf C-03</span
+                                        >Regal C-03</span
                                     >
                                 </label>
                             </div>
@@ -187,37 +187,37 @@
                                 <input type="checkbox" id="item-1-3" />
                                 <label for="item-1-3">
                                     <span class="item-qty">2x</span>
-                                    <span class="item-name">AED Trainer</span>
+                                    <span class="item-name">AED-Trainer</span>
                                     <span class="item-location"
-                                        >Shelf A-08</span
+                                        >Regal A-08</span
                                     >
                                 </label>
                             </div>
                         </div>
 
-                        <div class="package-info">
-                            <span class="package-size">Large Package</span>
-                            <span class="total-items">13 items total</span>
+                         <div class="package-info">
+                            <span class="package-size">Großes Paket</span>
+                            <span class="total-items">13 Artikel insgesamt</span>
                         </div>
 
                         <div class="card-actions">
                             <button class="btn-primary btn-start-packing">
-                                Start Packing
+                                Verpacken starten
                             </button>
-                            <button class="btn-secondary">Print Slip</button>
+                            <button class="btn-secondary">Lieferschein drucken</button>
                         </div>
                     </div>
 
                     <!-- Packaging Card 2 - Urgent -->
                     <div class="packaging-card urgent">
                         <div class="card-header">
-                            <div class="order-info">
-                                <span class="order-id">#REQ-2026-0047</span>
-                                <span class="status-badge status-to-package"
-                                    >To Package</span
-                                >
-                            </div>
-                            <span class="ship-date urgent">Ship by: Today</span>
+                             <div class="order-info">
+                                 <span class="order-id">#REQ-2026-0047</span>
+                                 <span class="status-badge status-to-package"
+                                     >Zu verpacken</span
+                                 >
+                             </div>
+                             <span class="ship-date urgent">Versand bis: Heute</span>
                         </div>
 
                         <div class="destination-info">
@@ -227,43 +227,43 @@
                             <p>10715 Berlin</p>
                         </div>
 
-                        <div class="items-list">
-                            <h4>Items to Pack (1)</h4>
+                         <div class="items-list">
+                            <h4>Zu verpackende Artikel (1)</h4>
                             <div class="pack-item">
                                 <input type="checkbox" id="item-2-1" />
                                 <label for="item-2-1">
                                     <span class="item-qty">5x</span>
-                                    <span class="item-name">Tourniquet</span>
+                                    <span class="item-name">Aderpresse</span>
                                     <span class="item-location"
-                                        >Shelf B-15</span
+                                        >Regal B-15</span
                                     >
                                 </label>
                             </div>
                         </div>
 
-                        <div class="package-info">
-                            <span class="package-size">Small Package</span>
-                            <span class="total-items">5 items total</span>
+                         <div class="package-info">
+                            <span class="package-size">Kleines Paket</span>
+                            <span class="total-items">5 Artikel insgesamt</span>
                         </div>
 
                         <div class="card-actions">
                             <button class="btn-primary btn-start-packing">
-                                Start Packing
+                                Verpacken starten
                             </button>
-                            <button class="btn-secondary">Print Slip</button>
+                            <button class="btn-secondary">Lieferschein drucken</button>
                         </div>
                     </div>
 
                     <!-- Packaging Card 3 - In Progress -->
                     <div class="packaging-card in-progress">
                         <div class="card-header">
-                            <div class="order-info">
-                                <span class="order-id">#REQ-2026-0046</span>
-                                <span class="status-badge status-in-progress"
-                                    >In Progress</span
-                                >
-                            </div>
-                            <span class="ship-date">Ship by: Tomorrow</span>
+                             <div class="order-info">
+                                 <span class="order-id">#REQ-2026-0046</span>
+                                 <span class="status-badge status-in-progress"
+                                     >In Bearbeitung</span
+                                 >
+                             </div>
+                             <span class="ship-date">Versand bis: Morgen</span>
                         </div>
 
                         <div class="destination-info">
@@ -273,8 +273,8 @@
                             <p>10117 Berlin</p>
                         </div>
 
-                        <div class="items-list">
-                            <h4>Items to Pack (3)</h4>
+                         <div class="items-list">
+                            <h4>Zu verpackende Artikel (3)</h4>
                             <div class="pack-item checked">
                                 <input type="checkbox" id="item-3-1" checked />
                                 <label for="item-3-1">
@@ -283,7 +283,7 @@
                                         >QCPR Little Anne</span
                                     >
                                     <span class="item-location"
-                                        >Shelf A-05</span
+                                        >Regal A-05</span
                                     >
                                 </label>
                             </div>
@@ -291,9 +291,9 @@
                                 <input type="checkbox" id="item-3-2" checked />
                                 <label for="item-3-2">
                                     <span class="item-qty">1x</span>
-                                    <span class="item-name">AED Trainer</span>
+                                    <span class="item-name">AED-Trainer</span>
                                     <span class="item-location"
-                                        >Shelf A-08</span
+                                        >Regal A-08</span
                                     >
                                 </label>
                             </div>
@@ -302,40 +302,40 @@
                                 <label for="item-3-3">
                                     <span class="item-qty">5x</span>
                                     <span class="item-name"
-                                        >Apollo Uebungsmatte</span
+                                        >Apollo Übungsmatte</span
                                     >
                                     <span class="item-location"
-                                        >Shelf C-03</span
+                                        >Regal C-03</span
                                     >
                                 </label>
                             </div>
                         </div>
 
-                        <div class="progress-bar">
+                         <div class="progress-bar">
                             <div class="progress-fill" style="width: 66%"></div>
                             <span class="progress-text"
-                                >2 of 3 items packed</span
+                                >2 von 3 Artikeln verpackt</span
                             >
                         </div>
 
                         <div class="card-actions">
                             <button class="btn-primary btn-complete">
-                                Mark Complete
+                                Als abgeschlossen markieren
                             </button>
-                            <button class="btn-secondary">Print Slip</button>
+                            <button class="btn-secondary">Lieferschein drucken</button>
                         </div>
                     </div>
 
                     <!-- Packaging Card 4 - To Package -->
                     <div class="packaging-card">
                         <div class="card-header">
-                            <div class="order-info">
-                                <span class="order-id">#REQ-2026-0045</span>
-                                <span class="status-badge status-to-package"
-                                    >To Package</span
-                                >
-                            </div>
-                            <span class="ship-date">Ship by: Jan 22</span>
+                             <div class="order-info">
+                                 <span class="order-id">#REQ-2026-0045</span>
+                                 <span class="status-badge status-to-package"
+                                     >Zu verpacken</span
+                                 >
+                             </div>
+                             <span class="ship-date">Versand bis: 22. Jan</span>
                         </div>
 
                         <div class="destination-info">
@@ -345,8 +345,8 @@
                             <p>12159 Berlin</p>
                         </div>
 
-                        <div class="items-list">
-                            <h4>Items to Pack (2)</h4>
+                         <div class="items-list">
+                            <h4>Zu verpackende Artikel (2)</h4>
                             <div class="pack-item">
                                 <input type="checkbox" id="item-4-1" />
                                 <label for="item-4-1">
@@ -355,7 +355,7 @@
                                         >Sterile Kompressen 10x10</span
                                     >
                                     <span class="item-location"
-                                        >Shelf B-02</span
+                                        >Regal B-02</span
                                     >
                                 </label>
                             </div>
@@ -365,35 +365,35 @@
                                     <span class="item-qty">10x</span>
                                     <span class="item-name">Fixierbinde</span>
                                     <span class="item-location"
-                                        >Shelf B-04</span
+                                        >Regal B-04</span
                                     >
                                 </label>
                             </div>
                         </div>
 
-                        <div class="package-info">
-                            <span class="package-size">Medium Package</span>
-                            <span class="total-items">30 items total</span>
+                         <div class="package-info">
+                            <span class="package-size">Mittleres Paket</span>
+                            <span class="total-items">30 Artikel insgesamt</span>
                         </div>
 
                         <div class="card-actions">
                             <button class="btn-primary btn-start-packing">
-                                Start Packing
+                                Verpacken starten
                             </button>
-                            <button class="btn-secondary">Print Slip</button>
+                            <button class="btn-secondary">Lieferschein drucken</button>
                         </div>
                     </div>
 
                     <!-- Packaging Card 5 - Ready to Ship -->
                     <div class="packaging-card ready">
                         <div class="card-header">
-                            <div class="order-info">
-                                <span class="order-id">#REQ-2026-0044</span>
-                                <span class="status-badge status-ready"
-                                    >Ready to Ship</span
-                                >
-                            </div>
-                            <span class="ship-date">Ship by: Jan 23</span>
+                             <div class="order-info">
+                                 <span class="order-id">#REQ-2026-0044</span>
+                                 <span class="status-badge status-ready"
+                                     >Versandbereit</span
+                                 >
+                             </div>
+                             <span class="ship-date">Versand bis: 23. Jan</span>
                         </div>
 
                         <div class="destination-info">
@@ -403,8 +403,8 @@
                             <p>13187 Berlin</p>
                         </div>
 
-                        <div class="items-list completed">
-                            <h4>Items Packed (1)</h4>
+                         <div class="items-list completed">
+                            <h4>Verpackte Artikel (1)</h4>
                             <div class="pack-item checked">
                                 <input
                                     type="checkbox"
@@ -418,37 +418,37 @@
                                         >Mini Anne 10er Set</span
                                     >
                                     <span class="item-location"
-                                        >Shelf A-10</span
+                                        >Regal A-10</span
                                     >
                                 </label>
                             </div>
                         </div>
 
-                        <div class="package-info">
-                            <span class="package-size">Medium Package</span>
+                         <div class="package-info">
+                            <span class="package-size">Mittleres Paket</span>
                             <span class="tracking-info"
-                                >Package ID: PKG-2026-0892</span
+                                >Paket-ID: PKG-2026-0892</span
                             >
                         </div>
 
                         <div class="card-actions">
                             <button class="btn-success btn-mark-shipped">
-                                Mark as Shipped
+                                Als versandt markieren
                             </button>
-                            <button class="btn-secondary">Print Label</button>
+                            <button class="btn-secondary">Etikett drucken</button>
                         </div>
                     </div>
 
                     <!-- Packaging Card 6 - To Package -->
                     <div class="packaging-card">
                         <div class="card-header">
-                            <div class="order-info">
-                                <span class="order-id">#REQ-2026-0043</span>
-                                <span class="status-badge status-to-package"
-                                    >To Package</span
-                                >
-                            </div>
-                            <span class="ship-date">Ship by: Jan 24</span>
+                             <div class="order-info">
+                                 <span class="order-id">#REQ-2026-0043</span>
+                                 <span class="status-badge status-to-package"
+                                     >Zu verpacken</span
+                                 >
+                             </div>
+                             <span class="ship-date">Versand bis: 24. Jan</span>
                         </div>
 
                         <div class="destination-info">
@@ -458,15 +458,15 @@
                             <p>10099 Berlin</p>
                         </div>
 
-                        <div class="items-list">
-                            <h4>Items to Pack (2)</h4>
+                         <div class="items-list">
+                            <h4>Zu verpackende Artikel (2)</h4>
                             <div class="pack-item">
                                 <input type="checkbox" id="item-6-1" />
                                 <label for="item-6-1">
                                     <span class="item-qty">2x</span>
                                     <span class="item-name">Airwaykopf</span>
                                     <span class="item-location"
-                                        >Shelf A-15</span
+                                        >Regal A-15</span
                                     >
                                 </label>
                             </div>
@@ -478,31 +478,31 @@
                                         >QCPR Junior Puppe</span
                                     >
                                     <span class="item-location"
-                                        >Shelf A-07</span
+                                        >Regal A-07</span
                                     >
                                 </label>
                             </div>
                         </div>
 
-                        <div class="package-info">
-                            <span class="package-size">Large Package</span>
-                            <span class="total-items">6 items total</span>
+                         <div class="package-info">
+                            <span class="package-size">Großes Paket</span>
+                            <span class="total-items">6 Artikel insgesamt</span>
                         </div>
 
                         <div class="card-actions">
                             <button class="btn-primary btn-start-packing">
-                                Start Packing
+                                Verpacken starten
                             </button>
-                            <button class="btn-secondary">Print Slip</button>
+                            <button class="btn-secondary">Lieferschein drucken</button>
                         </div>
                     </div>
 
                     <!-- Pagination -->
-                    <div class="pagination">
-                        <button class="page-btn" disabled>Previous</button>
+                     <div class="pagination">
+                        <button class="page-btn" disabled>Vorherige</button>
                         <button class="page-btn active">1</button>
                         <button class="page-btn">2</button>
-                        <button class="page-btn">Next</button>
+                        <button class="page-btn">Nächste</button>
                     </div>
                 </div>
             </section>
@@ -511,31 +511,31 @@
         <!-- Shipping Modal (hidden by default) -->
         <div class="modal-overlay" style="display: none">
             <div class="modal">
-                <div class="modal-header">
-                    <h3>Confirm Shipment</h3>
+                 <div class="modal-header">
+                    <h3>Versand bestätigen</h3>
                     <button class="modal-close">&times;</button>
                 </div>
                 <div class="modal-body">
                     <div class="form-group">
-                        <label for="carrier">Carrier:</label>
+                        <label for="carrier">Versandunternehmen:</label>
                         <select id="carrier" class="form-select">
                             <option value="dhl">DHL</option>
                             <option value="dpd">DPD</option>
                             <option value="ups">UPS</option>
-                            <option value="internal">Internal Delivery</option>
+                            <option value="internal">Interne Lieferung</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="tracking-number">Tracking Number:</label>
+                        <label for="tracking-number">Sendungsnummer:</label>
                         <input
                             type="text"
                             id="tracking-number"
                             class="form-input"
-                            placeholder="Enter tracking number..."
+                            placeholder="Sendungsnummer eingeben..."
                         />
                     </div>
                     <div class="form-group">
-                        <label for="ship-date">Ship Date:</label>
+                        <label for="ship-date">Versanddatum:</label>
                         <input
                             type="date"
                             id="ship-date"
@@ -544,18 +544,18 @@
                         />
                     </div>
                     <div class="form-group">
-                        <label for="ship-notes">Notes:</label>
+                        <label for="ship-notes">Notizen:</label>
                         <textarea
                             id="ship-notes"
                             class="form-textarea"
                             rows="2"
-                            placeholder="Optional shipping notes..."
+                            placeholder="Optionale Versandnotizen..."
                         ></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn-secondary">Cancel</button>
-                    <button class="btn-success">Confirm Shipment</button>
+                    <button class="btn-secondary">Abbrechen</button>
+                    <button class="btn-success">Versand bestätigen</button>
                 </div>
             </div>
         </div>
