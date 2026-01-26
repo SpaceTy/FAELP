@@ -1,1 +1,1 @@
-DATABASE_URL: "postgresql://app_orgbackend_dev:password@localhost:5432/orgdb_dev"
+DATABASE_URL: "postgresql://app_orgbackend_dev:password@localhost:5432/orgdb_dev?sslmode=disable"
