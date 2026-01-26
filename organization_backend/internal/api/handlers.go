@@ -19,7 +19,7 @@ import (
 
 type Handler struct {
 	Service  *service.RequestService
-	Store    *db.Store
+	Store    service.RequestStore
 	Notifier *db.Notifier
 }
 

@@ -1,0 +1,11 @@
+# Example configuration for organization_backend
+
+# Database mode: "json" (default) or "postgresql"
+DATABASE_MODE: json
+
+# For JSON mode: path to store data files
+DATA_PATH: ./data
+
+# For PostgreSQL mode: connection URL
+# DATABASE_URL: postgres://user:password@localhost:5432/dbname
+# DATABASE_MODE: postgresql

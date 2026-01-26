@@ -10,11 +10,17 @@ import (
 	"organization_backend/internal/domain"
 )
 
-type RequestService struct {
-	store *db.Store
+type RequestStore interface {
+	CreateRequest(context.Context, db.CreateRequestInput) (domain.Request, error)
+	GetRequestByID(context.Context, string) (domain.Request, error)
+	ListRequests(context.Context, db.ListRequestsParams) (db.ListRequestsResult, error)
 }
 
-func NewRequestService(store *db.Store) *RequestService {
+type RequestService struct {
+	store RequestStore
+}
+
+func NewRequestService(store RequestStore) *RequestService {
 	return &RequestService{store: store}
 }
 

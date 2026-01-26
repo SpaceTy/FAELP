@@ -12,6 +12,7 @@ import (
 	"organization_backend/internal/api"
 	"organization_backend/internal/config"
 	"organization_backend/internal/db"
+	"organization_backend/internal/domain"
 	"organization_backend/internal/service"
 )
 
@@ -21,30 +22,38 @@ func main() {
 		log.Fatalf("config load failed: %v", err)
 	}
 
-	log.Printf("connecting to database")
-	conn, err := db.Open(cfg.DatabaseURL)
+	log.Printf("initializing database (mode: %s)", cfg.DatabaseMode)
+
+	var store interface {
+		CreateRequest(context.Context, db.CreateRequestInput) (domain.Request, error)
+		GetRequestByID(context.Context, string) (domain.Request, error)
+		ListRequests(context.Context, db.ListRequestsParams) (db.ListRequestsResult, error)
+		Close() error
+	}
+
+	// Use middleware-based store
+	middlewareStore, err := db.NewMiddlewareStore(cfg)
 	if err != nil {
-		log.Fatalf("db open failed: %v", err)
+		log.Fatalf("failed to initialize database: %v", err)
 	}
-	if err := conn.Ping(); err != nil {
-		log.Fatalf("db ping failed: %v", err)
-	}
-	log.Printf("database connection established")
-	log.Printf("running migrations")
-	if err := db.Migrate(context.Background(), conn); err != nil {
-		log.Fatalf("db migrations failed: %v", err)
-	}
-	log.Printf("migrations complete")
-	defer conn.Close()
+	store = middlewareStore
+	defer store.Close()
 
-	store := db.NewStore(conn)
+	log.Printf("database initialized successfully")
 	requestService := service.NewRequestService(store)
-	notifier := db.NewNotifier(cfg.DatabaseURL)
 
+	// Notifier only works with PostgreSQL
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	if err := notifier.Start(ctx); err != nil {
-		log.Fatalf("notifier start failed: %v", err)
+
+	var notifier *db.Notifier
+	if cfg.DatabaseMode == "postgresql" && cfg.DatabaseURL != "" {
+		notifier = db.NewNotifier(cfg.DatabaseURL)
+		if err := notifier.Start(ctx); err != nil {
+			log.Printf("warning: notifier start failed: %v", err)
+		}
+	} else {
+		log.Printf("notifier disabled (only available in PostgreSQL mode)")
 	}
 
 	handler := &api.Handler{
