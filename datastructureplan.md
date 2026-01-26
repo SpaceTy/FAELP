@@ -44,3 +44,17 @@
   token: string,
   createdAt: Date,
 }
+
+# Material Available
+{
+  materialType: MaterialType,
+  amount: number,
+  location: distributionCenter,
+}
+
+# Distribution Center
+{
+  id: string,
+  name: string,
+  address: string,
+}

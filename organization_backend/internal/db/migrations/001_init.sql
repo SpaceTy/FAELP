@@ -31,6 +31,19 @@ CREATE TABLE IF NOT EXISTS request_items (
   PRIMARY KEY (request_id, material_type_id)
 );
 
+CREATE TABLE IF NOT EXISTS distribution_centers (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  address text NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS material_available (
+  material_type_id text NOT NULL,
+  distribution_center_id uuid NOT NULL REFERENCES distribution_centers(id) ON DELETE CASCADE,
+  amount int NOT NULL CHECK (amount >= 0),
+  PRIMARY KEY (material_type_id, distribution_center_id)
+);
+
 CREATE INDEX IF NOT EXISTS requests_created_at_idx ON requests (created_at DESC, id DESC);
 CREATE INDEX IF NOT EXISTS requests_updated_at_idx ON requests (updated_at DESC, id DESC);
 CREATE INDEX IF NOT EXISTS requests_status_idx ON requests (status);
