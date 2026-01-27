@@ -68,6 +68,34 @@ func (h *Handler) ListRequests(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, result)
 }
 
+// GetMyRequests returns requests for the authenticated customer
+// This endpoint is separate from ListRequests as it will use customer token auth
+func (h *Handler) GetMyRequests(w http.ResponseWriter, r *http.Request) {
+	// TODO: Extract customer ID from auth token when auth is implemented
+	// For now, get customer ID from query param (temporary)
+	customerID := r.URL.Query().Get("customerId")
+	if customerID == "" {
+		writeError(w, http.StatusBadRequest, "missing_customer_id", "customerId is required")
+		return
+	}
+
+	params, err := parseListParams(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_params", err.Error())
+		return
+	}
+
+	// Force customer ID filter to the authenticated customer
+	params.CustomerID = customerID
+
+	result, err := h.Service.ListRequests(r.Context(), params)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "list_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
+}
+
 func (h *Handler) SubscribeRequest(w http.ResponseWriter, r *http.Request) {
 	requestID := chi.URLParam(r, "id")
 	if strings.TrimSpace(requestID) == "" {
