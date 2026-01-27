@@ -14,6 +14,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/lib/pq"
+	"github.com/workos/workos-go/v4/pkg/usermanagement"
 )
 
 type Store struct {
@@ -189,7 +190,7 @@ func (s *Store) ListRequests(ctx context.Context, params ListRequestsParams) (Li
 		SELECT r.id, r.customer_id, r.delivery_date, r.status, r.shipping_customer_name,
 		       r.shipping_address_line1, r.shipping_address_line2, r.shipping_city, r.shipping_zip_code,
 		       r.metadata, r.created_at, r.updated_at,
-		       c.email, c.name, c.token, c.created_at
+		       c.email, c.name, c.token, c.workos_user_id, c.email_verified, c.created_at
 		FROM requests r
 		JOIN customers c ON r.customer_id = c.id
 		WHERE %s
@@ -296,7 +297,7 @@ func (s *Store) getRequestRow(ctx context.Context, id string) (requestRow, error
 		SELECT r.id, r.customer_id, r.delivery_date, r.status, r.shipping_customer_name,
 		       r.shipping_address_line1, r.shipping_address_line2, r.shipping_city, r.shipping_zip_code,
 		       r.metadata, r.created_at, r.updated_at,
-		       c.email, c.name, c.token, c.created_at
+		       c.email, c.name, c.token, c.workos_user_id, c.email_verified, c.created_at
 		FROM requests r
 		JOIN customers c ON r.customer_id = c.id
 		WHERE r.id = $1
@@ -313,7 +314,7 @@ func scanRequestRow(scanner interface {
 		&row.ID, &row.CustomerID, &row.DeliveryDate, &row.Status, &row.ShippingCustomerName,
 		&row.ShippingAddressLine1, &line2, &row.ShippingCity, &row.ShippingZipCode,
 		&row.Metadata, &row.CreatedAt, &row.UpdatedAt,
-		&row.CustomerEmail, &row.CustomerName, &row.CustomerToken, &row.CustomerCreatedAt,
+		&row.CustomerEmail, &row.CustomerName, &row.CustomerToken, &row.CustomerWorkOSUserID, &row.CustomerEmailVerified, &row.CustomerCreatedAt,
 	); err != nil {
 		return requestRow{}, err
 	}
@@ -393,11 +394,13 @@ func mapRequest(row requestRow, items map[string]int) domain.Request {
 	return domain.Request{
 		ID: row.ID,
 		Customer: domain.Customer{
-			ID:        row.CustomerID,
-			Email:     row.CustomerEmail,
-			Name:      row.CustomerName,
-			Token:     row.CustomerToken,
-			CreatedAt: row.CustomerCreatedAt,
+			ID:            row.CustomerID,
+			Email:         row.CustomerEmail,
+			Name:          row.CustomerName,
+			Token:         row.CustomerToken,
+			WorkOSUserID:  row.CustomerWorkOSUserID,
+			EmailVerified: row.CustomerEmailVerified,
+			CreatedAt:     row.CustomerCreatedAt,
 		},
 		Items:                items,
 		DeliveryDate:         row.DeliveryDate,
@@ -408,4 +411,52 @@ func mapRequest(row requestRow, items map[string]int) domain.Request {
 		UpdatedAt:            row.UpdatedAt,
 		Metadata:             metadata,
 	}
+}
+
+func (s *Store) GetOrCreateCustomerByWorkOSUser(ctx context.Context, workosUser *usermanagement.User) (domain.Customer, error) {
+	var customer domain.Customer
+	err := s.db.QueryRowContext(ctx, `
+		SELECT id, email, name, token, workos_user_id, email_verified, created_at
+		FROM customers WHERE workos_user_id = $1
+	`, workosUser.ID).Scan(
+		&customer.ID, &customer.Email, &customer.Name, &customer.Token,
+		&customer.WorkOSUserID, &customer.EmailVerified, &customer.CreatedAt,
+	)
+
+	if err == nil {
+		return customer, nil
+	}
+
+	if !errors.Is(err, sql.ErrNoRows) {
+		return domain.Customer{}, err
+	}
+
+	err = s.db.QueryRowContext(ctx, `
+		INSERT INTO customers (email, name, token, workos_user_id, email_verified)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING id, email, name, token, workos_user_id, email_verified, created_at
+	`,
+		workosUser.Email,
+		workosUser.FirstName+" "+workosUser.LastName,
+		uuid.NewString(),
+		workosUser.ID,
+		true,
+	).Scan(
+		&customer.ID, &customer.Email, &customer.Name, &customer.Token,
+		&customer.WorkOSUserID, &customer.EmailVerified, &customer.CreatedAt,
+	)
+
+	return customer, err
+}
+
+func (s *Store) GetCustomerByID(ctx context.Context, id string) (domain.Customer, error) {
+	var customer domain.Customer
+	err := s.db.QueryRowContext(ctx, `
+		SELECT id, email, name, token, workos_user_id, email_verified, created_at
+		FROM customers WHERE id = $1
+	`, id).Scan(
+		&customer.ID, &customer.Email, &customer.Name, &customer.Token,
+		&customer.WorkOSUserID, &customer.EmailVerified, &customer.CreatedAt,
+	)
+	return customer, err
 }

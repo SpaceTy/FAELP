@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"organization_backend/internal/api"
+	"organization_backend/internal/auth"
 	"organization_backend/internal/config"
 	"organization_backend/internal/db"
 	"organization_backend/internal/service"
@@ -20,6 +21,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("config load failed: %v", err)
 	}
+
+	// Initialize WorkOS
+	auth.InitWorkOS(cfg.WorkOSAPIKey, cfg.WorkOSClientID)
 
 	log.Printf("connecting to database")
 	conn, err := db.Open(cfg.DatabaseURL)
@@ -53,7 +57,12 @@ func main() {
 		Notifier: notifier,
 	}
 
-	router := api.Routes(handler)
+	authHandler := &api.AuthHandler{
+		Store:     store,
+		JWTSecret: cfg.JWTSecret,
+	}
+
+	router := api.Routes(handler, authHandler, cfg.JWTSecret)
 
 	server := &http.Server{
 		Addr:              ":8080",
