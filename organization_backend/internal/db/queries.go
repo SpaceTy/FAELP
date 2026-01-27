@@ -431,13 +431,18 @@ func (s *Store) GetOrCreateCustomerByWorkOSUser(ctx context.Context, workosUser 
 		return domain.Customer{}, err
 	}
 
+	name := strings.TrimSpace(workosUser.FirstName + " " + workosUser.LastName)
+	if name == "" {
+		name = workosUser.Email
+	}
+
 	err = s.db.QueryRowContext(ctx, `
 		INSERT INTO customers (email, name, token, workos_user_id, email_verified)
 		VALUES ($1, $2, $3, $4, $5)
 		RETURNING id, email, name, token, workos_user_id, email_verified, created_at
 	`,
 		workosUser.Email,
-		workosUser.FirstName+" "+workosUser.LastName,
+		name,
 		uuid.NewString(),
 		workosUser.ID,
 		true,

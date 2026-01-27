@@ -14,7 +14,7 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
-const STORAGE_KEY = 'falp_auth_session';
+const STORAGE_KEY = 'faelp_auth_session';
 
 export const authSignal = signal<AuthSession | null>(null);
 
