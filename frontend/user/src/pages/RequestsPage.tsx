@@ -1,5 +1,4 @@
 import { useState } from 'preact/hooks';
-import { Header } from '@/components/Layout/Header';
 import { RequestCard } from '@/components/Request/RequestCard';
 import { useRequests } from '@/hooks/useRequests';
 import { useAuth } from '@/context/AuthContext';
@@ -23,9 +22,7 @@ export function RequestsPage() {
   });
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <main className="flex-1 flex overflow-hidden">
+    <main className="flex-1 flex overflow-hidden">
         {/* Sidebar Filters */}
         <aside className="w-64 bg-white p-6 overflow-y-auto shadow-sm">
           <div className="mb-6">
@@ -109,6 +106,5 @@ export function RequestsPage() {
           )}
         </section>
       </main>
-    </div>
   );
 }

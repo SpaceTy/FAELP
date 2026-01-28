@@ -1,5 +1,5 @@
 import type { Request } from '@/types/request';
-import { MATERIAL_CATALOG } from '@/types/material';
+import { useMaterialTypes } from '@/context/MaterialTypesContext';
 
 interface RequestCardProps {
   request: Request;
@@ -32,8 +32,9 @@ function getStatusClass(status: string): string {
 }
 
 export function RequestCard({ request }: RequestCardProps) {
+  const { materialsById } = useMaterialTypes();
   const firstItemId = Object.keys(request.items)[0];
-  const firstMaterial = MATERIAL_CATALOG.find(m => m.id === firstItemId);
+  const firstMaterial = materialsById.get(firstItemId);
   const totalItems = Object.values(request.items).reduce((sum, qty) => sum + qty, 0);
 
   const formatDate = (dateStr: string) => {

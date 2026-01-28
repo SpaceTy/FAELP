@@ -1,12 +1,12 @@
 import { useState } from 'preact/hooks';
-import { Header } from '@/components/Layout/Header';
 import { useCart } from '@/hooks/useCart';
-import { MATERIAL_CATALOG } from '@/types/material';
+import { useMaterialTypes } from '@/context/MaterialTypesContext';
 import { api } from '@/services/api';
 import type { CreateRequestPayload } from '@/types/request';
 
 export function CartPage() {
   const { items, itemCount, updateQuantity, removeItem, clearCart } = useCart();
+  const { materialsById } = useMaterialTypes();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
@@ -25,7 +25,7 @@ export function CartPage() {
   const [notes, setNotes] = useState('');
 
   const cartMaterials = Object.entries(items).map(([materialId, cartItem]) => {
-    const material = MATERIAL_CATALOG.find(m => m.id === materialId);
+    const material = materialsById.get(materialId);
     return { material, cartItem };
   }).filter(({ material }) => material !== undefined);
 
@@ -61,9 +61,7 @@ export function CartPage() {
 
   if (submitSuccess) {
     return (
-      <div className="min-h-screen flex flex-col">
-        <Header />
-        <main className="flex-1 flex items-center justify-center p-6">
+      <main className="flex-1 flex items-center justify-center p-6">
           <div className="bg-white p-8 rounded-lg shadow-sm text-center max-w-md">
             <div className="text-green-500 text-5xl mb-4">✓</div>
             <h2 className="text-2xl font-semibold text-secondary mb-2">
@@ -80,15 +78,12 @@ export function CartPage() {
             </a>
           </div>
         </main>
-      </div>
     );
   }
 
   if (itemCount === 0) {
     return (
-      <div className="min-h-screen flex flex-col">
-        <Header />
-        <main className="flex-1 flex items-center justify-center p-6">
+      <main className="flex-1 flex items-center justify-center p-6">
           <div className="bg-white p-8 rounded-lg shadow-sm text-center">
             <div className="text-6xl mb-4">🛒</div>
             <h2 className="text-2xl font-semibold text-secondary mb-2">
@@ -105,14 +100,11 @@ export function CartPage() {
             </a>
           </div>
         </main>
-      </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <main className="flex-1 flex overflow-hidden">
+    <main className="flex-1 flex overflow-hidden">
         {/* Cart Items */}
         <section className="flex-1 p-6 overflow-y-auto">
           <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
@@ -316,6 +308,5 @@ export function CartPage() {
           </form>
         </aside>
       </main>
-    </div>
   );
 }

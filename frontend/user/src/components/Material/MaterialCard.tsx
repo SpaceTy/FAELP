@@ -1,6 +1,5 @@
 import type { Material } from '@/types/material';
 import { useCart } from '@/hooks/useCart';
-import { MATERIAL_CATALOG } from '@/types/material';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
@@ -22,6 +21,8 @@ export function MaterialCard({ material }: MaterialCardProps) {
     addItem(material.id, 1);
   };
 
+  const isAvailable = material.availableCount > 0;
+
   return (
     <div className="bg-white rounded-lg overflow-hidden shadow hover:shadow-lg transition-shadow flex flex-col">
       <div className="relative h-44 bg-gray-50 overflow-hidden">
@@ -30,6 +31,16 @@ export function MaterialCard({ material }: MaterialCardProps) {
           alt={material.name}
           className="w-full h-full object-cover"
         />
+        {isAvailable && (
+          <div className="absolute top-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full">
+            {material.availableCount} verfügbar
+          </div>
+        )}
+        {!isAvailable && (
+          <div className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+            Nicht verfügbar
+          </div>
+        )}
       </div>
       <div className="p-4 flex flex-col flex-1">
         <h3 className="text-lg font-semibold text-secondary mb-1">
@@ -52,7 +63,12 @@ export function MaterialCard({ material }: MaterialCardProps) {
         <div className="flex flex-col gap-2">
           <button
             onClick={handleAddToCart}
-            className="w-full py-2 bg-primary text-secondary font-medium rounded hover:bg-primary-hover transition-colors"
+            disabled={!isAvailable}
+            className={`w-full py-2 font-medium rounded transition-colors ${
+              isAvailable
+                ? 'bg-primary text-secondary hover:bg-primary-hover'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
           >
             {cartItem ? `Im Warenkorb (${cartItem.quantity})` : 'Material anfragen'}
           </button>

@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'preact/hooks';
-import { Header } from '@/components/Layout/Header';
 import { MaterialCard } from '@/components/Material/MaterialCard';
-import { MATERIAL_CATALOG, CATEGORY_LABELS, type MaterialCategory } from '@/types/material';
+import { useMaterialTypes } from '@/context/MaterialTypesContext';
+import { CATEGORY_LABELS, type MaterialCategory } from '@/types/material';
 
 export function MaterialsPage() {
+  const { materials, isLoading, error } = useMaterialTypes();
   const [selectedCategories, setSelectedCategories] = useState<MaterialCategory[]>([
     'Reanimation',
     'Wundversorgung&Trauma',
@@ -12,14 +13,14 @@ export function MaterialsPage() {
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredMaterials = useMemo(() => {
-    return MATERIAL_CATALOG.filter(material => {
+    return materials.filter(material => {
       const matchesCategory = selectedCategories.includes(material.category);
       const matchesSearch = searchQuery === '' || 
         material.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         material.description.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesCategory && matchesSearch;
     });
-  }, [selectedCategories, searchQuery]);
+  }, [materials, selectedCategories, searchQuery]);
 
   const toggleCategory = (category: MaterialCategory) => {
     setSelectedCategories(prev => 
@@ -30,9 +31,7 @@ export function MaterialsPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <main className="flex-1 flex overflow-hidden">
+    <main className="flex-1 flex overflow-hidden">
         {/* Sidebar Filters */}
         <aside className="w-64 bg-white p-6 overflow-y-auto shadow-sm">
           <div className="mb-6">
@@ -82,21 +81,37 @@ export function MaterialsPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filteredMaterials.map(material => (
-              <MaterialCard key={material.id} material={material} />
-            ))}
-          </div>
-
-          {filteredMaterials.length === 0 && (
+          {isLoading && (
             <div className="text-center py-12">
-              <p className="text-text-secondary text-lg">
-                Keine Materialien gefunden.
-              </p>
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent"></div>
+              <p className="text-text-secondary mt-4">Materialien werden geladen...</p>
             </div>
+          )}
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg mb-6">
+              <p>Fehler beim Laden der Materialien: {error}</p>
+            </div>
+          )}
+
+          {!isLoading && !error && (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {filteredMaterials.map(material => (
+                  <MaterialCard key={material.id} material={material} />
+                ))}
+              </div>
+
+              {filteredMaterials.length === 0 && (
+                <div className="text-center py-12">
+                  <p className="text-text-secondary text-lg">
+                    Keine Materialien gefunden.
+                  </p>
+                </div>
+              )}
+            </>
           )}
         </section>
       </main>
-    </div>
   );
 }

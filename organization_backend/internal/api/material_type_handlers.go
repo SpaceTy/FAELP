@@ -21,6 +21,7 @@ type MaterialTypeHandler struct {
 // StoreInterface defines the methods needed from Store
 type StoreInterface interface {
 	ListMaterialTypes(ctx context.Context) ([]domain.MaterialType, error)
+	ListMaterialTypesWithAvailability(ctx context.Context) ([]domain.MaterialType, error)
 	GetMaterialTypeByID(ctx context.Context, id string) (domain.MaterialType, error)
 	CreateMaterialType(ctx context.Context, id, name, description, imageURL string) (domain.MaterialType, error)
 	UpdateMaterialType(ctx context.Context, id, name, description string) (domain.MaterialType, error)
@@ -28,9 +29,9 @@ type StoreInterface interface {
 	DeleteMaterialType(ctx context.Context, id string) error
 }
 
-// ListMaterialTypes returns all material types (public)
+// ListMaterialTypes returns all material types with availability counts (public)
 func (h *MaterialTypeHandler) ListMaterialTypes(w http.ResponseWriter, r *http.Request) {
-	materialTypes, err := h.Store.ListMaterialTypes(r.Context())
+	materialTypes, err := h.Store.ListMaterialTypesWithAvailability(r.Context())
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "list_failed", "Failed to fetch material types")
 		return

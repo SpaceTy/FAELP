@@ -4,6 +4,7 @@ import type {
   ListRequestsParams, 
   ListRequestsResult 
 } from '@/types/request';
+import type { Material } from '@/types/material';
 import { authSignal } from '@/context/AuthContext';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080';
@@ -92,6 +93,17 @@ class ApiService {
       headers: getAuthHeaders(),
     });
     return handleResponse<ListRequestsResult>(response);
+  }
+
+  // Material Types API (public)
+  async listMaterialTypes(): Promise<Material[]> {
+    const response = await fetch(`${API_BASE}/material-types`);
+    return handleResponse<Material[]>(response);
+  }
+
+  async getMaterialType(id: string): Promise<Material> {
+    const response = await fetch(`${API_BASE}/material-types/${id}`);
+    return handleResponse<Material>(response);
   }
 }
 

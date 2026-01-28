@@ -501,6 +501,36 @@ func (s *Store) ListMaterialTypes(ctx context.Context) ([]domain.MaterialType, e
 	return result, rows.Err()
 }
 
+// ListMaterialTypesWithAvailability returns all material types with available counts summed from material_available table
+func (s *Store) ListMaterialTypesWithAvailability(ctx context.Context) ([]domain.MaterialType, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT 
+			mt.id, 
+			mt.name, 
+			mt.description, 
+			mt.image_url,
+			COALESCE(SUM(ma.amount), 0) as available_count
+		FROM material_types mt
+		LEFT JOIN material_available ma ON mt.id = ma.material_type_id
+		GROUP BY mt.id, mt.name, mt.description, mt.image_url
+		ORDER BY mt.name ASC
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var result []domain.MaterialType
+	for rows.Next() {
+		var mt domain.MaterialType
+		if err := rows.Scan(&mt.ID, &mt.Name, &mt.Description, &mt.ImageURL, &mt.AvailableCount); err != nil {
+			return nil, err
+		}
+		result = append(result, mt)
+	}
+	return result, rows.Err()
+}
+
 // GetMaterialTypeByID returns a single material type by ID
 func (s *Store) GetMaterialTypeByID(ctx context.Context, id string) (domain.MaterialType, error) {
 	var mt domain.MaterialType
