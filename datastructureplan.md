@@ -4,6 +4,7 @@
   name: string,            // "Adult CPR Manikin"
   description: string,
   imageUrl: string,
+  amountAvailable: number (optional)
 }
 
 # Material Instance
