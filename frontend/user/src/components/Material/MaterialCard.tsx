@@ -2,8 +2,16 @@ import type { Material } from '@/types/material';
 import { useCart } from '@/hooks/useCart';
 import { MATERIAL_CATALOG } from '@/types/material';
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+
 interface MaterialCardProps {
   material: Material;
+}
+
+function getFullImageUrl(imageUrl: string | undefined): string {
+  if (!imageUrl) return '';
+  if (imageUrl.startsWith('http')) return imageUrl;
+  return `${API_BASE}${imageUrl}`;
 }
 
 export function MaterialCard({ material }: MaterialCardProps) {
@@ -18,7 +26,7 @@ export function MaterialCard({ material }: MaterialCardProps) {
     <div className="bg-white rounded-lg overflow-hidden shadow hover:shadow-lg transition-shadow flex flex-col">
       <div className="relative h-44 bg-gray-50 overflow-hidden">
         <img
-          src={material.imageUrl}
+          src={getFullImageUrl(material.imageUrl)}
           alt={material.name}
           className="w-full h-full object-cover"
         />

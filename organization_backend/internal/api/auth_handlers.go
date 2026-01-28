@@ -52,7 +52,7 @@ func (h *AuthHandler) MagicLinkCallback(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	token, err := auth.GenerateToken(customer.ID, customer.Email, customer.WorkOSUserID, h.JWTSecret)
+	token, err := auth.GenerateToken(customer.ID, customer.Email, customer.WorkOSUserID, customer.IsAdmin, h.JWTSecret)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "token_error", "Failed to create session")
 		return

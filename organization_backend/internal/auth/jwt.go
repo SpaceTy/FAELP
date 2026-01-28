@@ -10,14 +10,16 @@ type Claims struct {
 	CustomerID   string `json:"customerId"`
 	Email        string `json:"email"`
 	WorkOSUserID string `json:"workosUserId"`
+	IsAdmin      bool   `json:"isAdmin"`
 	jwt.RegisteredClaims
 }
 
-func GenerateToken(customerID, email, workOSUserID, secret string) (string, error) {
+func GenerateToken(customerID, email, workOSUserID string, isAdmin bool, secret string) (string, error) {
 	claims := Claims{
 		CustomerID:   customerID,
 		Email:        email,
 		WorkOSUserID: workOSUserID,
+		IsAdmin:      isAdmin,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

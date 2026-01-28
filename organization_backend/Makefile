@@ -1,8 +1,9 @@
 APP_NAME=orgbackend
 CMD_PATH=./cmd/server
 USER_FRONTEND_PATH=../frontend/user
+ORGADMIN_FRONTEND_PATH=../frontend/orgadmin
 
-.PHONY: build run test tidy dev-all dev-frontend build-frontend install-frontend
+.PHONY: build run test tidy dev-all dev-frontend dev-orgadmin build-frontend build-orgadmin install-frontend install-orgadmin
 
 # Backend targets
 build:
@@ -30,25 +31,42 @@ run-frontend:
 preview-frontend:
 	cd $(USER_FRONTEND_PATH) && npm run preview
 
+# Orgadmin frontend targets
+install-orgadmin:
+	cd $(ORGADMIN_FRONTEND_PATH) && npm install
+
+build-orgadmin:
+	cd $(ORGADMIN_FRONTEND_PATH) && npm run build
+
+run-orgadmin:
+	cd $(ORGADMIN_FRONTEND_PATH) && npm run dev
+
+preview-orgadmin:
+	cd $(ORGADMIN_FRONTEND_PATH) && npm run preview
+
 # Combined development targets
 dev-frontend:
 	cd $(USER_FRONTEND_PATH) && npm run dev
 
-# Run both backend and user frontend concurrently (development)
-dev-all:
-	@echo "Starting backend and user frontend..."
-	@(trap 'kill 0' SIGINT; go run $(CMD_PATH) & make dev-frontend & wait)
+dev-orgadmin:
+	cd $(ORGADMIN_FRONTEND_PATH) && npm run dev
 
-# Build both backend and frontend
-build-all: build build-frontend
+# Run backend, user frontend, and orgadmin frontend concurrently (development)
+dev-all:
+	@echo "Starting backend, user frontend, and orgadmin frontend..."
+	@(trap 'kill 0' SIGINT; go run $(CMD_PATH) & make dev-frontend & make dev-orgadmin & wait)
+
+# Build both backend and frontends
+build-all: build build-frontend build-orgadmin
 
 # Full setup: install frontend dependencies, tidy go modules
-setup: tidy install-frontend
+setup: tidy install-frontend install-orgadmin
 
 # Clean build artifacts
 clean:
 	rm -rf bin/
 	rm -rf $(USER_FRONTEND_PATH)/dist/ $(USER_FRONTEND_PATH)/node_modules/ .vite/ 2>/dev/null || true
+	rm -rf $(ORGADMIN_FRONTEND_PATH)/dist/ $(ORGADMIN_FRONTEND_PATH)/node_modules/ 2>/dev/null || true
 
 # Help target
 help:

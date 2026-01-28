@@ -9,5 +9,6 @@ type Customer struct {
 	Token         string    `json:"token"`
 	WorkOSUserID  string    `json:"workosUserId"`
 	EmailVerified bool      `json:"emailVerified"`
+	IsAdmin       bool      `json:"isAdmin"`
 	CreatedAt     time.Time `json:"createdAt"`
 }

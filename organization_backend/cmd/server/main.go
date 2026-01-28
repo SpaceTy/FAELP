@@ -62,7 +62,17 @@ func main() {
 		JWTSecret: cfg.JWTSecret,
 	}
 
-	router := api.Routes(handler, authHandler, cfg.JWTSecret)
+	materialTypeHandler := &api.MaterialTypeHandler{
+		Store:      store,
+		UploadPath: "uploads",
+	}
+
+	uploadHandler := &api.UploadHandler{
+		Store:      store,
+		UploadPath: "uploads",
+	}
+
+	router := api.Routes(handler, authHandler, materialTypeHandler, uploadHandler, cfg.JWTSecret)
 
 	server := &http.Server{
 		Addr:              ":8080",

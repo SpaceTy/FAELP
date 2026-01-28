@@ -1,8 +1,13 @@
 package api
 
-import "github.com/go-chi/chi/v5"
+import (
+	"net/http"
+	"os"
 
-func Routes(handler *Handler, authHandler *AuthHandler, jwtSecret string) chi.Router {
+	"github.com/go-chi/chi/v5"
+)
+
+func Routes(handler *Handler, authHandler *AuthHandler, materialTypeHandler *MaterialTypeHandler, uploadHandler *UploadHandler, jwtSecret string) chi.Router {
 	r := chi.NewRouter()
 
 	r.Use(CORS)
@@ -26,6 +31,33 @@ func Routes(handler *Handler, authHandler *AuthHandler, jwtSecret string) chi.Ro
 
 	// My Requests - protected
 	r.With(AuthMiddleware(jwtSecret)).Get("/my-requests", handler.GetMyRequests)
+
+	// Material Types routes
+	r.Route("/material-types", func(r chi.Router) {
+		// Public routes
+		r.Get("/", materialTypeHandler.ListMaterialTypes)
+		r.Get("/{id}", materialTypeHandler.GetMaterialType)
+
+		// Admin only routes
+		r.Group(func(r chi.Router) {
+			r.Use(AuthMiddleware(jwtSecret))
+			r.Use(AdminMiddleware())
+			r.Post("/", materialTypeHandler.CreateMaterialType)
+			r.Put("/{id}", materialTypeHandler.UpdateMaterialType)
+			r.Delete("/{id}", materialTypeHandler.DeleteMaterialType)
+			r.Post("/{id}/image", uploadHandler.UploadMaterialTypeImage)
+		})
+	})
+
+	// Static file serving for uploads
+	uploadsDir := uploadHandler.UploadPath
+	if uploadsDir == "" {
+		uploadsDir = "uploads"
+	}
+	// Ensure uploads directory exists
+	os.MkdirAll(uploadsDir, 0755)
+	fileServer := http.FileServer(http.Dir(uploadsDir))
+	r.Handle("/uploads/*", http.StripPrefix("/uploads/", fileServer))
 
 	return r
 }

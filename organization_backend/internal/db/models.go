@@ -5,13 +5,14 @@ import (
 	"time"
 )
 
-type customerRow struct {
+type userRow struct {
 	ID            string
 	Email         string
 	Name          string
 	Token         string
 	WorkOSUserID  string
 	EmailVerified bool
+	IsAdmin       bool
 	CreatedAt     time.Time
 }
 
@@ -40,4 +41,11 @@ type requestItemRow struct {
 	RequestID      string
 	MaterialTypeID string
 	Quantity       int
+}
+
+type materialTypeRow struct {
+	ID          string
+	Name        string
+	Description string
+	ImageURL    string
 }

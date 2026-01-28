@@ -52,3 +52,23 @@ func GetClaimsFromContext(ctx context.Context) *auth.Claims {
 	claims, _ := ctx.Value(claimsContextKey).(*auth.Claims)
 	return claims
 }
+
+// AdminMiddleware checks if the authenticated user is an admin
+func AdminMiddleware() func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			claims := GetClaimsFromContext(r.Context())
+			if claims == nil {
+				writeError(w, http.StatusUnauthorized, "unauthorized", "Authentication required")
+				return
+			}
+
+			if !claims.IsAdmin {
+				writeError(w, http.StatusForbidden, "forbidden", "Admin access required")
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+}
