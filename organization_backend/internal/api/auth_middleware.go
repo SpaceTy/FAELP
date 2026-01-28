@@ -15,19 +15,28 @@ const claimsContextKey contextKey = "authClaims"
 func AuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var token string
+
+			// First try to get token from Authorization header
 			authHeader := r.Header.Get("Authorization")
-			if authHeader == "" {
-				writeError(w, http.StatusUnauthorized, "missing_auth", "Authorization header required")
+			if authHeader != "" {
+				parts := strings.SplitN(authHeader, " ", 2)
+				if len(parts) == 2 && strings.ToLower(parts[0]) == "bearer" {
+					token = parts[1]
+				}
+			}
+
+			// If no header, try query parameter (for SSE connections)
+			if token == "" {
+				token = r.URL.Query().Get("token")
+			}
+
+			if token == "" {
+				writeError(w, http.StatusUnauthorized, "missing_auth", "Authorization header or token query parameter required")
 				return
 			}
 
-			parts := strings.SplitN(authHeader, " ", 2)
-			if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
-				writeError(w, http.StatusUnauthorized, "invalid_auth", "Invalid authorization header format")
-				return
-			}
-
-			claims, err := auth.ParseToken(parts[1], jwtSecret)
+			claims, err := auth.ParseToken(token, jwtSecret)
 			if err != nil {
 				writeError(w, http.StatusUnauthorized, "invalid_token", "Invalid or expired token")
 				return

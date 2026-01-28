@@ -32,14 +32,15 @@ func (h *AuthHandler) RequestMagicLink(w http.ResponseWriter, r *http.Request) {
 
 func (h *AuthHandler) MagicLinkCallback(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Code string `json:"code"`
+		Code  string `json:"code"`
+		Email string `json:"email"` // Email is now optional but recommended
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid_json", "Invalid JSON body")
 		return
 	}
 
-	authResp, err := auth.AuthenticateWithCode(r.Context(), req.Code)
+	authResp, err := auth.AuthenticateWithCode(r.Context(), req.Code, req.Email)
 	if err != nil {
 		writeError(w, http.StatusUnauthorized, "auth_failed", "Invalid or expired code")
 		return
@@ -59,6 +60,7 @@ func (h *AuthHandler) MagicLinkCallback(w http.ResponseWriter, r *http.Request) 
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"token":    token,
+		"userId":   customer.ID,
 		"customer": customer,
 	})
 }

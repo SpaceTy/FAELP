@@ -19,9 +19,16 @@ func CreateMagicLink(ctx context.Context, email string) error {
 	})
 }
 
-func AuthenticateWithCode(ctx context.Context, code string) (usermanagement.AuthenticateResponse, error) {
-	return usermanagement.AuthenticateWithMagicAuth(ctx, usermanagement.AuthenticateWithMagicAuthOpts{
+func AuthenticateWithCode(ctx context.Context, code, email string) (usermanagement.AuthenticateResponse, error) {
+	opts := usermanagement.AuthenticateWithMagicAuthOpts{
 		ClientID: clientID,
 		Code:     code,
-	})
+	}
+
+	// Email is required by WorkOS for magic auth validation
+	if email != "" {
+		opts.Email = email
+	}
+
+	return usermanagement.AuthenticateWithMagicAuth(ctx, opts)
 }
