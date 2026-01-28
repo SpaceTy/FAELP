@@ -18,13 +18,13 @@ export function DeleteConfirmationModal({ title, message, onConfirm, onCancel }:
               onClick={onCancel}
               className="px-4 py-2 text-text-secondary hover:text-text-primary transition-colors"
             >
-              Cancel
+              Abbrechen
             </button>
             <button
               onClick={onConfirm}
               className="px-4 py-2 bg-red-600 text-white font-medium rounded hover:bg-red-700 transition-colors"
             >
-              Delete
+              Löschen
             </button>
           </div>
         </div>

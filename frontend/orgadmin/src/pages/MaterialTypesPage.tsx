@@ -31,7 +31,7 @@ export function MaterialTypesPage() {
       const types = await materialTypeService.listMaterialTypes();
       setMaterialTypes(types);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load material types');
+      setError(err instanceof Error ? err.message : 'Fehler beim Laden der Materialtypen');
     } finally {
       setIsLoading(false);
     }
@@ -70,25 +70,23 @@ export function MaterialTypesPage() {
       await loadMaterialTypes();
       setDeletingMaterialType(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete material type');
+      setError(err instanceof Error ? err.message : 'Fehler beim Löschen des Materialtyps');
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-secondary">Material Types</h1>
+    <div className="flex-1 overflow-auto bg-background p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold text-text-primary">Materialtypen</h1>
           <button
             onClick={() => setIsFormModalOpen(true)}
-            className="px-4 py-2 bg-primary text-secondary font-medium rounded hover:bg-primary-hover transition-colors"
+            className="px-4 py-2 bg-primary text-white font-medium rounded hover:bg-primary-hover transition-colors"
           >
-            Add New Material Type
+            Neuer Materialtyp
           </button>
         </div>
-      </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {error && (
           <div className="mb-4 bg-red-50 text-red-700 p-4 rounded">
             {error}
@@ -98,7 +96,7 @@ export function MaterialTypesPage() {
         {isLoading ? (
           <div className="text-center py-12">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent"></div>
-            <p className="mt-2 text-text-secondary">Loading...</p>
+            <p className="mt-2 text-text-secondary">Wird geladen...</p>
           </div>
         ) : (
           <div className="bg-white shadow overflow-hidden rounded-lg">
@@ -106,16 +104,16 @@ export function MaterialTypesPage() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                    Image
+                    Bild
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                     Name
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                    Description
+                    Beschreibung
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-text-secondary uppercase tracking-wider">
-                    Actions
+                    Aktionen
                   </th>
                 </tr>
               </thead>
@@ -130,8 +128,8 @@ export function MaterialTypesPage() {
                           className="h-16 w-16 object-cover rounded"
                         />
                       ) : (
-                        <div className="h-16 w-16 bg-gray-200 rounded flex items-center justify-center text-gray-400">
-                          No image
+                        <div className="h-16 w-16 bg-gray-200 rounded flex items-center justify-center text-gray-400 text-xs">
+                          Kein Bild
                         </div>
                       )}
                     </td>
@@ -147,13 +145,13 @@ export function MaterialTypesPage() {
                         onClick={() => setEditingMaterialType(mt)}
                         className="text-primary hover:text-primary-hover mr-4"
                       >
-                        Edit
+                        Bearbeiten
                       </button>
                       <button
                         onClick={() => setDeletingMaterialType(mt)}
                         className="text-red-600 hover:text-red-800"
                       >
-                        Delete
+                        Löschen
                       </button>
                     </td>
                   </tr>
@@ -163,12 +161,12 @@ export function MaterialTypesPage() {
 
             {(!materialTypes || materialTypes.length === 0) && (
               <div className="text-center py-12 text-text-secondary">
-                No material types found. Click "Add New Material Type" to create one.
+                Keine Materialtypen gefunden. Klicken Sie auf "Neuer Materialtyp", um einen zu erstellen.
               </div>
             )}
           </div>
         )}
-      </main>
+      </div>
 
       {(isFormModalOpen || editingMaterialType) && (
         <MaterialTypeFormModal
@@ -186,8 +184,8 @@ export function MaterialTypesPage() {
 
       {deletingMaterialType && (
         <DeleteConfirmationModal
-          title="Delete Material Type"
-          message={`Are you sure you want to delete "${deletingMaterialType.name}"? This action cannot be undone.`}
+          title="Materialtyp löschen"
+          message={`Sind Sie sicher, dass Sie "${deletingMaterialType.name}" löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.`}
           onConfirm={handleDelete}
           onCancel={() => setDeletingMaterialType(null)}
         />

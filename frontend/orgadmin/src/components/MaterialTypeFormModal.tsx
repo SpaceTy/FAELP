@@ -67,7 +67,7 @@ export function MaterialTypeFormModal({ materialType, onSubmit, onClose }: Mater
       const input = { name, description };
       await onSubmit(input, imageFile || undefined);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError(err instanceof Error ? err.message : 'Ein Fehler ist aufgetreten');
     } finally {
       setIsSubmitting(false);
     }
@@ -78,7 +78,7 @@ export function MaterialTypeFormModal({ materialType, onSubmit, onClose }: Mater
       <div className="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <h2 className="text-xl font-bold text-secondary mb-4">
-            {isEditing ? 'Edit Material Type' : 'Create Material Type'}
+            {isEditing ? 'Materialtyp bearbeiten' : 'Materialtyp erstellen'}
           </h2>
 
           {error && (
@@ -98,16 +98,16 @@ export function MaterialTypeFormModal({ materialType, onSubmit, onClose }: Mater
                 value={name}
                 onChange={(e) => setName((e.target as HTMLInputElement).value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="e.g., AED Trainer"
+                placeholder="z.B. AED Trainer"
               />
               <p className="text-xs text-text-secondary mt-1">
-                ID will be generated from name: {name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')}
+                ID wird aus dem Namen generiert: {name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')}
               </p>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-text-primary mb-1">
-                Description
+                Beschreibung
               </label>
               <textarea
                 required
@@ -115,13 +115,13 @@ export function MaterialTypeFormModal({ materialType, onSubmit, onClose }: Mater
                 onChange={(e) => setDescription((e.target as HTMLTextAreaElement).value)}
                 rows={4}
                 className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="Enter a detailed description..."
+                placeholder="Geben Sie eine detaillierte Beschreibung ein..."
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-text-primary mb-1">
-                Image
+                Bild
               </label>
               <div
                 onDrop={handleDrop}
@@ -137,7 +137,7 @@ export function MaterialTypeFormModal({ materialType, onSubmit, onClose }: Mater
                   <div className="relative inline-block">
                     <img
                       src={imagePreview}
-                      alt="Preview"
+                      alt="Vorschau"
                       className="h-32 w-32 object-cover rounded"
                     />
                     <button
@@ -151,7 +151,7 @@ export function MaterialTypeFormModal({ materialType, onSubmit, onClose }: Mater
                 ) : (
                   <>
                     <p className="text-text-secondary mb-2">
-                      Drag and drop an image here, or click to select
+                      Bild hierher ziehen oder zum Auswählen klicken
                     </p>
                     <input
                       type="file"
@@ -164,7 +164,7 @@ export function MaterialTypeFormModal({ materialType, onSubmit, onClose }: Mater
                       htmlFor="image-input"
                       className="inline-block px-4 py-2 bg-gray-100 text-text-primary rounded hover:bg-gray-200 cursor-pointer transition-colors"
                     >
-                      Select File
+                      Datei auswählen
                     </label>
                   </>
                 )}
@@ -178,14 +178,14 @@ export function MaterialTypeFormModal({ materialType, onSubmit, onClose }: Mater
                 disabled={isSubmitting}
                 className="px-4 py-2 text-text-secondary hover:text-text-primary transition-colors"
               >
-                Cancel
+                Abbrechen
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="px-4 py-2 bg-primary text-secondary font-medium rounded hover:bg-primary-hover transition-colors disabled:opacity-50"
+                className="px-4 py-2 bg-primary text-white font-medium rounded hover:bg-primary-hover transition-colors disabled:opacity-50"
               >
-                {isSubmitting ? 'Saving...' : isEditing ? 'Update' : 'Create'}
+                {isSubmitting ? 'Wird gespeichert...' : isEditing ? 'Aktualisieren' : 'Erstellen'}
               </button>
             </div>
           </form>

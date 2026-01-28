@@ -18,7 +18,7 @@ export function LoginPage() {
       await login(email);
       setStep('code');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send magic link');
+      setError(err instanceof Error ? err.message : 'Fehler beim Senden des Magic Links');
     } finally {
       setIsLoading(false);
     }
@@ -32,21 +32,21 @@ export function LoginPage() {
     try {
       await verifyCode(code, email);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Invalid code');
+      setError(err instanceof Error ? err.message : 'Ungültiger Code');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow">
         <div>
           <h2 className="text-3xl font-bold text-center text-secondary">
-            FALP Admin
+            EHALP Verwaltung
           </h2>
           <p className="mt-2 text-center text-text-secondary">
-            {step === 'email' ? 'Sign in to access the admin panel' : 'Enter the code from your email'}
+            {step === 'email' ? 'Anmelden zur Verwaltung der Plattform' : 'Geben Sie den Code aus Ihrer E-Mail ein'}
           </p>
         </div>
 
@@ -60,7 +60,7 @@ export function LoginPage() {
           <form onSubmit={handleEmailSubmit} className="space-y-6">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-text-primary">
-                Email address
+                E-Mail-Adresse
               </label>
               <input
                 id="email"
@@ -69,22 +69,22 @@ export function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail((e.target as HTMLInputElement).value)}
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="admin@example.com"
+                placeholder="admin@beispiel.de"
               />
             </div>
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-2 px-4 bg-primary text-secondary font-medium rounded hover:bg-primary-hover transition-colors disabled:opacity-50"
+              className="w-full py-2 px-4 bg-primary text-white font-medium rounded hover:bg-primary-hover transition-colors disabled:opacity-50"
             >
-              {isLoading ? 'Sending...' : 'Send Magic Link'}
+              {isLoading ? 'Wird gesendet...' : 'Magic Link senden'}
             </button>
           </form>
         ) : (
           <form onSubmit={handleCodeSubmit} className="space-y-6">
             <div>
               <label htmlFor="code" className="block text-sm font-medium text-text-primary">
-                Verification Code
+                Verifizierungscode
               </label>
               <input
                 id="code"
@@ -93,22 +93,22 @@ export function LoginPage() {
                 value={code}
                 onChange={(e) => setCode((e.target as HTMLInputElement).value)}
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="Enter code from email"
+                placeholder="Code aus der E-Mail eingeben"
               />
             </div>
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-2 px-4 bg-primary text-secondary font-medium rounded hover:bg-primary-hover transition-colors disabled:opacity-50"
+              className="w-full py-2 px-4 bg-primary text-white font-medium rounded hover:bg-primary-hover transition-colors disabled:opacity-50"
             >
-              {isLoading ? 'Verifying...' : 'Verify Code'}
+              {isLoading ? 'Wird überprüft...' : 'Code überprüfen'}
             </button>
             <button
               type="button"
               onClick={() => setStep('email')}
               className="w-full py-2 px-4 text-text-secondary hover:text-text-primary transition-colors"
             >
-              Back to email
+              Zurück zur E-Mail
             </button>
           </form>
         )}
