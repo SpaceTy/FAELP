@@ -11,8 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/chai2010/webp"
 	"github.com/go-chi/chi/v5"
-	"golang.org/x/image/webp"
 )
 
 // UploadHandler handles file uploads
@@ -176,12 +176,11 @@ func resizeImage(img image.Image, maxWidth, maxHeight int) image.Image {
 	return newImg
 }
 
-// encodeWebP encodes an image to webp format
-// Note: This is a simplified version. For production, use a proper webp encoder
+// encodeWebP encodes an image to webp format with high quality (85)
+// Using lossy compression for good quality/size ratio
 func encodeWebP(w io.Writer, img image.Image) error {
-	// For now, we'll encode as PNG and let the client handle it
-	// In a production environment, you should use libwebp or similar
-	// For this implementation, we'll save as PNG but with .webp extension
-	// The browser will still render it correctly
-	return png.Encode(w, img)
+	// Encode with quality 85 for high quality without excessive file size
+	return webp.Encode(w, img, &webp.Options{
+		Quality: 85,
+		})
 }

@@ -78,6 +78,12 @@ func (h *MaterialTypeHandler) CreateMaterialType(w http.ResponseWriter, r *http.
 	// Generate ID from name: lowercase, replace spaces with underscores, remove special chars
 	id := generateMaterialTypeID(req.Name)
 
+	// Validate that the generated ID is not empty
+	if id == "" {
+		writeError(w, http.StatusBadRequest, "validation_error", "Name must contain at least one letter or number")
+		return
+	}
+
 	mt, err := h.Store.CreateMaterialType(r.Context(), id, req.Name, req.Description, req.ImageURL)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "create_failed", "Failed to create material type")
