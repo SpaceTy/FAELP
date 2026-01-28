@@ -6,11 +6,13 @@ import (
 )
 
 type customerRow struct {
-	ID        string
-	Email     string
-	Name      string
-	Token     string
-	CreatedAt time.Time
+	ID            string
+	Email         string
+	Name          string
+	Token         string
+	WorkOSUserID  string
+	EmailVerified bool
+	CreatedAt     time.Time
 }
 
 type requestRow struct {
@@ -29,6 +31,8 @@ type requestRow struct {
 	CustomerEmail          string
 	CustomerName           string
 	CustomerToken          string
+	CustomerWorkOSUserID   string
+	CustomerEmailVerified  bool
 	CustomerCreatedAt      time.Time
 }
 

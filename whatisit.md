@@ -1,1 +1,1 @@
-First Aid Logistics Platform (FALP) is a platform for freely and temporarily distributing first aid education material to schools. It is meant to make possible and streamline the process of schools requesting first aid education material for some date, and sending it back.
+First Aid Education Logistics Platform (FAELP) is a platform for freely and temporarily distributing first aid education material to schools. It is meant to make possible and streamline the process of schools requesting first aid education material for some date, and sending it back.

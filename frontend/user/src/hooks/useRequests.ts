@@ -29,7 +29,6 @@ export function useRequests(params: ListRequestsParams): UseRequestsResult {
       let result;
       if (params.customerId) {
         result = await api.getMyRequests({
-          customerId: params.customerId,
           status: params.status,
           cursor,
           limit: params.limit || 20,

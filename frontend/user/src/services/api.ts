@@ -4,6 +4,7 @@ import type {
   ListRequestsParams, 
   ListRequestsResult 
 } from '@/types/request';
+import { authSignal } from '@/context/AuthContext';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
@@ -33,20 +34,29 @@ async function handleResponse<T>(response: Response): Promise<T> {
   return response.json();
 }
 
+function getAuthHeaders(): Record<string, string> {
+  const token = authSignal.value?.token;
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
 class ApiService {
   async createRequest(payload: CreateRequestPayload): Promise<Request> {
     const response = await fetch(`${API_BASE}/requests`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify(payload),
     });
     return handleResponse<Request>(response);
   }
 
   async getRequest(id: string): Promise<Request> {
-    const response = await fetch(`${API_BASE}/requests/${id}`);
+    const response = await fetch(`${API_BASE}/requests/${id}`, {
+      headers: getAuthHeaders(),
+    });
     return handleResponse<Request>(response);
   }
 
@@ -61,16 +71,16 @@ class ApiService {
     if (params.from) query.set('from', params.from);
     if (params.to) query.set('to', params.to);
 
-    const response = await fetch(`${API_BASE}/requests?${query}`);
+    const response = await fetch(`${API_BASE}/requests?${query}`, {
+      headers: getAuthHeaders(),
+    });
     return handleResponse<ListRequestsResult>(response);
   }
 
-  // Get my requests - separate endpoint for customer-specific requests
-  async getMyRequests(params: Omit<ListRequestsParams, 'customerId'> & { customerId: string }): Promise<ListRequestsResult> {
+  // Get my requests - separate endpoint for customer-specific requests (protected)
+  async getMyRequests(params: Omit<ListRequestsParams, 'customerId'>): Promise<ListRequestsResult> {
     const query = new URLSearchParams();
     
-    // customerId is required for this endpoint
-    query.set('customerId', params.customerId);
     if (params.status) query.set('status', params.status);
     if (params.limit) query.set('limit', String(params.limit));
     if (params.cursor) query.set('cursor', params.cursor);
@@ -78,7 +88,9 @@ class ApiService {
     if (params.from) query.set('from', params.from);
     if (params.to) query.set('to', params.to);
 
-    const response = await fetch(`${API_BASE}/my-requests?${query}`);
+    const response = await fetch(`${API_BASE}/my-requests?${query}`, {
+      headers: getAuthHeaders(),
+    });
     return handleResponse<ListRequestsResult>(response);
   }
 }

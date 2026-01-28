@@ -69,13 +69,10 @@ func (h *Handler) ListRequests(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetMyRequests returns requests for the authenticated customer
-// This endpoint is separate from ListRequests as it will use customer token auth
 func (h *Handler) GetMyRequests(w http.ResponseWriter, r *http.Request) {
-	// TODO: Extract customer ID from auth token when auth is implemented
-	// For now, get customer ID from query param (temporary)
-	customerID := r.URL.Query().Get("customerId")
-	if customerID == "" {
-		writeError(w, http.StatusBadRequest, "missing_customer_id", "customerId is required")
+	claims := GetClaimsFromContext(r.Context())
+	if claims == nil {
+		writeError(w, http.StatusUnauthorized, "unauthorized", "Authentication required")
 		return
 	}
 
@@ -86,7 +83,7 @@ func (h *Handler) GetMyRequests(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Force customer ID filter to the authenticated customer
-	params.CustomerID = customerID
+	params.CustomerID = claims.CustomerID
 
 	result, err := h.Service.ListRequests(r.Context(), params)
 	if err != nil {
