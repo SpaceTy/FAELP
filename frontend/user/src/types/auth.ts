@@ -9,5 +9,6 @@ export interface Customer {
 
 export interface AuthSession {
   token: string;
+  userId: string;
   customer: Customer;
 }

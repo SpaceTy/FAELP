@@ -22,11 +22,11 @@ export const authService = {
     }
   },
 
-  async verifyMagicLink(code: string): Promise<AuthSession> {
+  async verifyMagicLink(code: string, email?: string): Promise<AuthSession> {
     const response = await fetch(`${API_BASE}/auth/callback`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code }),
+      body: JSON.stringify({ code, email }),
     });
 
     if (!response.ok) {

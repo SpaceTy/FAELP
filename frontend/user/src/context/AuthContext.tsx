@@ -5,11 +5,12 @@ import type { Customer, AuthSession } from '@/types/auth';
 import { authService } from '@/services/auth';
 
 interface AuthContextType {
+  userId: string | null;
   customer: Customer | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string) => Promise<void>;
-  verifyCode: (code: string) => Promise<void>;
+  verifyCode: (code: string, email?: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -26,10 +27,15 @@ export function AuthProvider({ children }: { children: ComponentChildren }) {
     if (stored) {
       try {
         const parsed: AuthSession = JSON.parse(stored);
-        authSignal.value = parsed;
+        // Ensure userId is set for backwards compatibility with old sessions
+        const sessionWithUserId = {
+          ...parsed,
+          userId: parsed.userId || parsed.customer?.id,
+        };
+        authSignal.value = sessionWithUserId;
 
         authService.getCurrentUser(parsed.token).then(customer => {
-          authSignal.value = { ...parsed, customer };
+          authSignal.value = { ...sessionWithUserId, customer, userId: customer.id };
         }).catch(() => {
           logout();
         });
@@ -44,10 +50,15 @@ export function AuthProvider({ children }: { children: ComponentChildren }) {
     await authService.requestMagicLink(email);
   }, []);
 
-  const verifyCode = useCallback(async (code: string) => {
-    const session = await authService.verifyMagicLink(code);
-    authSignal.value = session;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+  const verifyCode = useCallback(async (code: string, email?: string) => {
+    const session = await authService.verifyMagicLink(code, email);
+    // Ensure userId is set from customer.id
+    const sessionWithUserId = {
+      ...session,
+      userId: session.userId || session.customer.id,
+    };
+    authSignal.value = sessionWithUserId;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(sessionWithUserId));
   }, []);
 
   const logout = useCallback(() => {
@@ -56,6 +67,7 @@ export function AuthProvider({ children }: { children: ComponentChildren }) {
   }, []);
 
   const value: AuthContextType = {
+    userId: authSignal.value?.userId || null,
     customer: authSignal.value?.customer || null,
     isAuthenticated: !!authSignal.value,
     isLoading,

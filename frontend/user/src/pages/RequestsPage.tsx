@@ -2,6 +2,7 @@ import { useState } from 'preact/hooks';
 import { Header } from '@/components/Layout/Header';
 import { RequestCard } from '@/components/Request/RequestCard';
 import { useRequests } from '@/hooks/useRequests';
+import { useAuth } from '@/context/AuthContext';
 import type { RequestStatus } from '@/types/request';
 
 const STATUS_OPTIONS = [
@@ -13,10 +14,8 @@ const STATUS_OPTIONS = [
 
 export function RequestsPage() {
   const [status, setStatus] = useState<RequestStatus | ''>('');
-
-  // TODO: Get actual customer ID from auth context
-  // Using a valid UUID format for testing - this should be replaced with actual auth
-  const customerId = '00000000-0000-0000-0000-000000000000';
+  const { customer } = useAuth();
+  const customerId = customer?.id;
 
   const { requests, loading, error, hasMore, loadMore } = useRequests({
     customerId,
