@@ -13,6 +13,7 @@ import (
 
 	"github.com/chai2010/webp"
 	"github.com/go-chi/chi/v5"
+	"golang.org/x/image/draw"
 )
 
 // UploadHandler handles file uploads
@@ -140,6 +141,7 @@ func decodeImage(r io.Reader, contentType string) (image.Image, string, error) {
 }
 
 // resizeImage resizes an image to fit within maxWidth and maxHeight while maintaining aspect ratio
+// Uses high-quality bilinear interpolation for smooth scaling
 func resizeImage(img image.Image, maxWidth, maxHeight int) image.Image {
 	bounds := img.Bounds()
 	width := bounds.Dx()
@@ -164,23 +166,19 @@ func resizeImage(img image.Image, maxWidth, maxHeight int) image.Image {
 	// Create new image with the calculated size
 	newImg := image.NewRGBA(image.Rect(0, 0, newWidth, newHeight))
 
-	// Simple nearest neighbor scaling
-	for y := 0; y < newHeight; y++ {
-		for x := 0; x < newWidth; x++ {
-			srcX := int(float64(x) / scale)
-			srcY := int(float64(y) / scale)
-			newImg.Set(x, y, img.At(srcX+bounds.Min.X, srcY+bounds.Min.Y))
-		}
-	}
+	// Use high-quality bilinear scaling via draw.CatmullRom (cubic interpolation)
+	// for smoother results than nearest neighbor
+	draw.CatmullRom.Scale(newImg, newImg.Bounds(), img, bounds, draw.Over, nil)
 
 	return newImg
 }
 
-// encodeWebP encodes an image to webp format with high quality (85)
-// Using lossy compression for good quality/size ratio
+// encodeWebP encodes an image to webp format with very high quality (95)
+// Using lossy compression with high quality for excellent visual fidelity
 func encodeWebP(w io.Writer, img image.Image) error {
-	// Encode with quality 85 for high quality without excessive file size
+	// Encode with quality 95 for very high quality
+	// WebP quality 95 provides excellent visual fidelity with reasonable file sizes
 	return webp.Encode(w, img, &webp.Options{
-		Quality: 85,
-		})
+		Quality: 95,
+	})
 }

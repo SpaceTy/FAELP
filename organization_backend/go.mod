@@ -13,4 +13,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 )
 
-require github.com/google/go-querystring v1.2.0 // indirect
+require (
+	github.com/google/go-querystring v1.2.0 // indirect
+	golang.org/x/image v0.35.0 // indirect
+)
