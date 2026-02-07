@@ -1,7 +1,21 @@
 DATABASE_URL: "postgresql://app_distributionbackend_dev:password@localhost:5432/distdb_dev?sslmode=disable"
 
-# JWT secret for signing tokens - CHANGE THIS IN PRODUCTION
+# JWT secret for signing dist-admin tokens
 JWT_SECRET: "your-secure-jwt-secret-change-in-production"
+
+# Shared secret used to verify org-issued interbackend JWTs
+ORG_JWT_SECRET: "change-me-org-shared-secret"
+
+# Org backend and distribution center identity
+ORG_BASE_URL: "http://localhost:8080"
+CENTER_CODE: "dc-001"
+CENTER_NAME: "Distribution Center 001"
+CENTER_ADDRESS: "Example Street 1, City"
+CALLBACK_URL: "http://localhost:8081"
+
+INTERBACKEND_HEARTBEAT_INTERVAL_SECONDS: 60
+INTERBACKEND_INVENTORY_PUSH_INTERVAL_SECONDS: 300
+INTERBACKEND_TOKEN_REFRESH_SKEW_SECONDS: 120
 
 # Initial admin account - required for first setup
 admin:

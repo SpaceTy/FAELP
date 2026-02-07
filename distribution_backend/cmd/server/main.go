@@ -16,6 +16,7 @@ import (
 	"distribution_backend/internal/db"
 	"distribution_backend/internal/domain"
 	"distribution_backend/internal/handlers"
+	"distribution_backend/internal/interbackend"
 )
 
 func main() {
@@ -47,32 +48,33 @@ func main() {
 
 	store := db.NewStore(conn)
 
-	// Initialize admin user from config
 	if err := initAdminUser(context.Background(), store, cfg.Admin); err != nil {
 		log.Fatalf("failed to initialize admin user: %v", err)
 	}
 
-	// Initialize auth services
 	jwtService := auth.NewJWTService(cfg.JWTSecret)
 	authMiddleware := auth.NewMiddleware(jwtService)
 	authHandler := handlers.NewAuthHandler(store, jwtService)
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	ibManager := interbackend.NewManager(store, cfg)
+	if err := ibManager.Start(ctx); err != nil {
+		log.Fatalf("failed to start interbackend manager: %v", err)
+	}
+	ibHandler := handlers.NewInterbackendHandler(store, ibManager, cfg.OrgJWTSecret)
+
 	mux := http.NewServeMux()
 
-	// Health check endpoint (public)
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 	})
 
-	// Auth endpoints (public)
 	mux.HandleFunc("POST /api/auth/login", authHandler.Login)
-
-	// Current user endpoints (authenticated)
 	mux.HandleFunc("GET /api/auth/me", authMiddleware.RequireAuth(authHandler.GetCurrentUser))
 	mux.HandleFunc("PUT /api/auth/password", authMiddleware.RequireAuth(authHandler.UpdatePassword))
 
-	// User management endpoints (admin only)
 	mux.HandleFunc("GET /api/users", authMiddleware.RequireAdmin(authHandler.ListUsers))
 	mux.HandleFunc("POST /api/users", authMiddleware.RequireAdmin(authHandler.CreateUser))
 	mux.HandleFunc("GET /api/users/{id}", authMiddleware.RequireAdmin(authHandler.GetUser))
@@ -80,7 +82,6 @@ func main() {
 	mux.HandleFunc("PUT /api/users/{id}/password", authMiddleware.RequireAdmin(authHandler.ResetUserPassword))
 	mux.HandleFunc("PUT /api/users/{id}/admin", authMiddleware.RequireAdmin(authHandler.SetUserAdmin))
 
-	// Inventory summary endpoint (authenticated)
 	mux.HandleFunc("GET /api/inventory/summary", authMiddleware.RequireAuth(func(w http.ResponseWriter, r *http.Request) {
 		summary, err := store.CountByTypeAndStatus(r.Context())
 		if err != nil {
@@ -90,6 +91,9 @@ func main() {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(summary)
 	}))
+
+	mux.HandleFunc("GET /api/interbackend/inventory/export", ibHandler.ExportInventory)
+	mux.HandleFunc("GET /api/interbackend/link/status", authMiddleware.RequireAdmin(ibHandler.LinkStatus))
 
 	server := &http.Server{
 		Addr:              ":8081",
@@ -107,6 +111,7 @@ func main() {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 	<-stop
+	cancel()
 
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer shutdownCancel()
@@ -115,9 +120,7 @@ func main() {
 	}
 }
 
-// initAdminUser ensures the admin user from config exists in the database
 func initAdminUser(ctx context.Context, store *db.Store, adminCfg config.AdminConfig) error {
-	// Check if admin user already exists
 	_, err := store.GetUserByUsername(ctx, adminCfg.Username)
 	if err == nil {
 		log.Printf("admin user '%s' already exists", adminCfg.Username)
@@ -127,7 +130,6 @@ func initAdminUser(ctx context.Context, store *db.Store, adminCfg config.AdminCo
 		return err
 	}
 
-	// Create admin user
 	passwordHash, err := auth.HashPassword(adminCfg.Password)
 	if err != nil {
 		return err

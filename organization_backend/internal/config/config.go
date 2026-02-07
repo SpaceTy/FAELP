@@ -4,30 +4,30 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/joho/godotenv"
 	"gopkg.in/yaml.v3"
 )
 
 type Config struct {
-	DatabaseURL    string `yaml:"DATABASE_URL"`
-	WorkOSAPIKey   string
-	WorkOSClientID string
-	JWTSecret      string
+	DatabaseURL                    string `yaml:"DATABASE_URL"`
+	WorkOSAPIKey                   string
+	WorkOSClientID                 string
+	JWTSecret                      string
+	InterbackendHibernateAfterMin  int `yaml:"INTERBACKEND_HIBERNATE_AFTER_MINUTES"`
+	InterbackendAdminLockAfterHour int `yaml:"INTERBACKEND_ADMIN_LOCK_AFTER_HOURS"`
 }
 
 func Load() (Config, error) {
-	// Load .env file if it exists
 	_ = godotenv.Load(".env")
 
-	// Load WorkOS and JWT from environment (or .env file)
 	cfg := Config{
 		WorkOSAPIKey:   os.Getenv("WORKOS_API_KEY"),
 		WorkOSClientID: os.Getenv("WORKOS_CLIENT_ID"),
 		JWTSecret:      os.Getenv("JWT_SECRET"),
 	}
 
-	// Load DATABASE_URL from environment or config file
 	if url := os.Getenv("DATABASE_URL"); url != "" {
 		cfg.DatabaseURL = url
 	} else {
@@ -44,6 +44,28 @@ func Load() (Config, error) {
 		if err := yaml.Unmarshal(data, &cfg); err != nil {
 			return Config{}, err
 		}
+	}
+
+	if v := os.Getenv("INTERBACKEND_HIBERNATE_AFTER_MINUTES"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil {
+			return Config{}, errors.New("INTERBACKEND_HIBERNATE_AFTER_MINUTES must be integer")
+		}
+		cfg.InterbackendHibernateAfterMin = n
+	}
+	if v := os.Getenv("INTERBACKEND_ADMIN_LOCK_AFTER_HOURS"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil {
+			return Config{}, errors.New("INTERBACKEND_ADMIN_LOCK_AFTER_HOURS must be integer")
+		}
+		cfg.InterbackendAdminLockAfterHour = n
+	}
+
+	if cfg.InterbackendHibernateAfterMin <= 0 {
+		cfg.InterbackendHibernateAfterMin = 60
+	}
+	if cfg.InterbackendAdminLockAfterHour <= 0 {
+		cfg.InterbackendAdminLockAfterHour = 72
 	}
 
 	if cfg.DatabaseURL == "" {

@@ -7,7 +7,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func Routes(handler *Handler, authHandler *AuthHandler, materialTypeHandler *MaterialTypeHandler, uploadHandler *UploadHandler, jwtSecret string) chi.Router {
+func Routes(handler *Handler, authHandler *AuthHandler, materialTypeHandler *MaterialTypeHandler, uploadHandler *UploadHandler, interbackendHandler *InterbackendHandler, jwtSecret string) chi.Router {
 	r := chi.NewRouter()
 
 	r.Use(CORS)
@@ -48,6 +48,30 @@ func Routes(handler *Handler, authHandler *AuthHandler, materialTypeHandler *Mat
 			r.Post("/{id}/image", uploadHandler.UploadMaterialTypeImage)
 		})
 	})
+
+	if interbackendHandler != nil {
+		r.Route("/interbackend", func(r chi.Router) {
+			// Dist machine/public
+			r.Post("/link-requests", interbackendHandler.CreateLinkRequest)
+			r.Post("/auth/bootstrap", interbackendHandler.BootstrapAuth)
+			r.Post("/heartbeat", interbackendHandler.Heartbeat)
+			r.Post("/inventory/push", interbackendHandler.PushInventory)
+
+			// Org admin routes
+			r.Group(func(r chi.Router) {
+				r.Use(AuthMiddleware(jwtSecret))
+				r.Use(AdminMiddleware())
+				r.Get("/link-requests", interbackendHandler.ListLinkRequests)
+				r.Get("/link-requests/{id}", interbackendHandler.GetLinkRequest)
+				r.Post("/link-requests/find-by-token", interbackendHandler.FindLinkRequestByToken)
+				r.Post("/link-requests/{id}/approve", interbackendHandler.ApproveLinkRequest)
+				r.Post("/link-requests/{id}/reject", interbackendHandler.RejectLinkRequest)
+				r.Get("/centers", interbackendHandler.ListCenters)
+				r.Get("/centers/{id}/status", interbackendHandler.GetCenterStatus)
+				r.Post("/centers/{id}/reactivate", interbackendHandler.ReactivateCenter)
+			})
+		})
+	}
 
 	// Static file serving for uploads
 	uploadsDir := uploadHandler.UploadPath
