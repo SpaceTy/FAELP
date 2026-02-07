@@ -1,0 +1,1 @@
+DATABASE_URL: "postgresql://app_distributionbackend_dev:password@localhost:5432/distdb_dev?sslmode=disable"
