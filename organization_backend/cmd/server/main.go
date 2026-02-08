@@ -72,19 +72,7 @@ func main() {
 		UploadPath: "uploads",
 	}
 
-	interbackendHandler := &api.InterbackendHandler{
-		Store:     store,
-		JWTSecret: cfg.JWTSecret,
-		Nonces:    api.NewNonceStore(),
-	}
-
-	go interbackendHandler.RunLifecycleTicker(
-		ctx,
-		time.Duration(cfg.InterbackendHibernateAfterMin)*time.Minute,
-		time.Duration(cfg.InterbackendAdminLockAfterHour)*time.Hour,
-	)
-
-	router := api.Routes(handler, authHandler, materialTypeHandler, uploadHandler, interbackendHandler, cfg.JWTSecret)
+	router := api.Routes(handler, authHandler, materialTypeHandler, uploadHandler, cfg.JWTSecret)
 
 	server := &http.Server{
 		Addr:              ":8080",

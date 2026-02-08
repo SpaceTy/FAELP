@@ -1,3 +1,1 @@
 DATABASE_URL: "postgresql://app_orgbackend_dev:password@localhost:5432/orgdb_dev?sslmode=disable"
-INTERBACKEND_HIBERNATE_AFTER_MINUTES: 60
-INTERBACKEND_ADMIN_LOCK_AFTER_HOURS: 72

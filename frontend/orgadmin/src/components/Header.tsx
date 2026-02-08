@@ -15,16 +15,10 @@ export function Header() {
 
         <nav className="flex-1 flex gap-2">
           <a
-            href="/material-types"
+            href="/"
             className="px-4 py-2 rounded transition-colors hover:bg-secondary-hover"
           >
             Materialtypen
-          </a>
-          <a
-            href="/distribution-centers"
-            className="px-4 py-2 rounded transition-colors hover:bg-secondary-hover"
-          >
-            Distribution Centers
           </a>
         </nav>
 
