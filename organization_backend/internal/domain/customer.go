@@ -6,7 +6,7 @@ type Customer struct {
 	ID            string    `json:"id"`
 	Email         string    `json:"email"`
 	Name          string    `json:"name"`
-	Token         string    `json:"token"`
+	Token         string    `json:"-"`
 	WorkOSUserID  string    `json:"workosUserId"`
 	EmailVerified bool      `json:"emailVerified"`
 	IsAdmin       bool      `json:"isAdmin"`

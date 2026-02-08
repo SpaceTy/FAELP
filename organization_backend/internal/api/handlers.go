@@ -24,10 +24,30 @@ type Handler struct {
 }
 
 func (h *Handler) CreateRequest(w http.ResponseWriter, r *http.Request) {
+	claims := GetClaimsFromContext(r.Context())
+	if claims == nil {
+		writeError(w, http.StatusUnauthorized, "unauthorized", "Authentication required")
+		return
+	}
+
 	var payload service.CreateRequestPayload
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid_json", "Invalid JSON body")
 		return
+	}
+
+	// Non-admin users can only create requests for themselves.
+	if !claims.IsAdmin {
+		payload.CustomerID = claims.CustomerID
+		payload.CustomerEmail = ""
+		payload.CustomerName = ""
+		payload.CustomerToken = ""
+		payload.Status = ""
+	}
+
+	// Admin callers default to their own account when no customer is provided.
+	if claims.IsAdmin && payload.CustomerID == "" && payload.CustomerEmail == "" {
+		payload.CustomerID = claims.CustomerID
 	}
 
 	req, err := h.Service.CreateRequest(r.Context(), payload)
@@ -45,9 +65,19 @@ func (h *Handler) CreateRequest(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetRequest(w http.ResponseWriter, r *http.Request) {
+	claims := GetClaimsFromContext(r.Context())
+	if claims == nil {
+		writeError(w, http.StatusUnauthorized, "unauthorized", "Authentication required")
+		return
+	}
+
 	id := chi.URLParam(r, "id")
 	req, err := h.Service.GetRequestByID(r.Context(), id)
 	if err != nil {
+		writeError(w, http.StatusNotFound, "not_found", "Request not found")
+		return
+	}
+	if !claims.IsAdmin && req.Customer.ID != claims.CustomerID {
 		writeError(w, http.StatusNotFound, "not_found", "Request not found")
 		return
 	}
@@ -55,10 +85,19 @@ func (h *Handler) GetRequest(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) ListRequests(w http.ResponseWriter, r *http.Request) {
+	claims := GetClaimsFromContext(r.Context())
+	if claims == nil {
+		writeError(w, http.StatusUnauthorized, "unauthorized", "Authentication required")
+		return
+	}
+
 	params, err := parseListParams(r)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid_params", err.Error())
 		return
+	}
+	if !claims.IsAdmin {
+		params.CustomerID = claims.CustomerID
 	}
 	result, err := h.Service.ListRequests(r.Context(), params)
 	if err != nil {
@@ -94,11 +133,28 @@ func (h *Handler) GetMyRequests(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) SubscribeRequest(w http.ResponseWriter, r *http.Request) {
+	claims := GetClaimsFromContext(r.Context())
+	if claims == nil {
+		writeError(w, http.StatusUnauthorized, "unauthorized", "Authentication required")
+		return
+	}
+
 	requestID := chi.URLParam(r, "id")
 	if strings.TrimSpace(requestID) == "" {
 		writeError(w, http.StatusBadRequest, "invalid_request", "id required")
 		return
 	}
+
+	initial, err := h.Service.GetRequestByID(r.Context(), requestID)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "not_found", "Request not found")
+		return
+	}
+	if !claims.IsAdmin && initial.Customer.ID != claims.CustomerID {
+		writeError(w, http.StatusNotFound, "not_found", "Request not found")
+		return
+	}
+
 	events := make(chan []byte, 10)
 	subID, updates := h.Notifier.Subscribe()
 	defer h.Notifier.Unsubscribe(subID)
@@ -106,10 +162,7 @@ func (h *Handler) SubscribeRequest(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		defer close(events)
 		ctx := r.Context()
-		initial, err := h.Service.GetRequestByID(r.Context(), requestID)
-		if err == nil {
-			sendEvent(events, "snapshot", "SNAPSHOT", &initial, requestID, time.Now())
-		}
+		sendEvent(events, "snapshot", "SNAPSHOT", &initial, requestID, time.Now())
 		for {
 			select {
 			case <-ctx.Done():
@@ -130,6 +183,9 @@ func (h *Handler) SubscribeRequest(w http.ResponseWriter, r *http.Request) {
 						sendEvent(events, "deleted", update.Action, nil, update.RequestID, update.UpdatedAt)
 						continue
 					}
+					if !claims.IsAdmin && req.Customer.ID != claims.CustomerID {
+						continue
+					}
 					sendEvent(events, "update", update.Action, &req, update.RequestID, update.UpdatedAt)
 				}
 			}
@@ -140,10 +196,19 @@ func (h *Handler) SubscribeRequest(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) SubscribeRequests(w http.ResponseWriter, r *http.Request) {
+	claims := GetClaimsFromContext(r.Context())
+	if claims == nil {
+		writeError(w, http.StatusUnauthorized, "unauthorized", "Authentication required")
+		return
+	}
+
 	params, err := parseListParams(r)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid_params", err.Error())
 		return
+	}
+	if !claims.IsAdmin {
+		params.CustomerID = claims.CustomerID
 	}
 
 	events := make(chan []byte, 10)
@@ -162,11 +227,17 @@ func (h *Handler) SubscribeRequests(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				if update.Action == "DELETE" {
+					if !claims.IsAdmin {
+						continue
+					}
 					sendEvent(events, "deleted", update.Action, nil, update.RequestID, update.UpdatedAt)
 					continue
 				}
 				req, err := h.Service.GetRequestByID(ctx, update.RequestID)
 				if err != nil {
+					continue
+				}
+				if !claims.IsAdmin && req.Customer.ID != claims.CustomerID {
 					continue
 				}
 				if matchesListQuery(req, params) {
