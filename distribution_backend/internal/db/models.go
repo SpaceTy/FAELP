@@ -8,6 +8,7 @@ import (
 type materialInstanceRow struct {
 	ID               string
 	TypeID           string
+	Description      string
 	Status           string
 	UseCount         int
 	Location         string

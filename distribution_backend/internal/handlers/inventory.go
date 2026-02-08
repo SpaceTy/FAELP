@@ -33,8 +33,8 @@ func (h *InventoryHandler) CreateMaterialInstance(w http.ResponseWriter, r *http
 		return
 	}
 
-	if req.ID == "" || req.TypeID == "" || req.Location == "" {
-		http.Error(w, `{"error":"id, typeId and location are required"}`, http.StatusBadRequest)
+	if req.TypeID == "" || req.Location == "" {
+		http.Error(w, `{"error":"typeId and location are required"}`, http.StatusBadRequest)
 		return
 	}
 

@@ -28,6 +28,16 @@ export function Header({ currentPath }: HeaderProps) {
                 Inventory
               </a>
               <a
+                href="/enter"
+                className={`px-3 py-1.5 text-sm rounded transition-colors ${
+                  currentPath === '/enter'
+                    ? 'bg-primary text-secondary font-medium'
+                    : 'text-gray-200 hover:bg-secondary-hover'
+                }`}
+              >
+                Erfassen
+              </a>
+              <a
                 href="/operations"
                 className={`px-3 py-1.5 text-sm rounded transition-colors ${
                   currentPath === '/operations'

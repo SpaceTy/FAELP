@@ -6,6 +6,7 @@ import "time"
 type MaterialInstance struct {
 	ID               string    `json:"id"`
 	TypeID           string    `json:"typeId"`
+	Description      string    `json:"description"`
 	Status           string    `json:"status"`
 	UseCount         int       `json:"useCount"`
 	Location         string    `json:"location"`
@@ -23,9 +24,10 @@ const (
 
 // CreateMaterialInstanceInput contains fields for creating a new material instance
 type CreateMaterialInstanceInput struct {
-	ID       string `json:"id"`
-	TypeID   string `json:"typeId"`
-	Location string `json:"location"`
+	TypeID      string `json:"typeId"`
+	Description string `json:"description"`
+	UseCount    int    `json:"useCount"`
+	Location    string `json:"location"`
 }
 
 // UpdateMaterialInstanceInput contains fields for updating a material instance

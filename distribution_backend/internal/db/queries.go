@@ -33,15 +33,15 @@ type InventorySummary struct {
 	Count  int    `json:"count"`
 }
 
-// CreateMaterialInstance creates a new material instance
+// CreateMaterialInstance creates a new material instance with an auto-generated ID
 func (s *Store) CreateMaterialInstance(ctx context.Context, input domain.CreateMaterialInstanceInput) (domain.MaterialInstance, error) {
 	var row materialInstanceRow
 	err := s.db.QueryRowContext(ctx, `
-		INSERT INTO material_instances (id, type_id, status, location)
-		VALUES ($1, $2, $3, $4)
-		RETURNING id, type_id, status, use_count, location, current_request_id, created_at, updated_at
-	`, input.ID, input.TypeID, domain.StatusAvailable, input.Location).Scan(
-		&row.ID, &row.TypeID, &row.Status, &row.UseCount, &row.Location,
+		INSERT INTO material_instances (id, type_id, description, status, use_count, location)
+		VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5)
+		RETURNING id, type_id, description, status, use_count, location, current_request_id, created_at, updated_at
+	`, input.TypeID, input.Description, domain.StatusAvailable, input.UseCount, input.Location).Scan(
+		&row.ID, &row.TypeID, &row.Description, &row.Status, &row.UseCount, &row.Location,
 		&row.CurrentRequestID, &row.CreatedAt, &row.UpdatedAt,
 	)
 	if err != nil {
@@ -54,11 +54,11 @@ func (s *Store) CreateMaterialInstance(ctx context.Context, input domain.CreateM
 func (s *Store) GetMaterialInstanceByID(ctx context.Context, id string) (domain.MaterialInstance, error) {
 	var row materialInstanceRow
 	err := s.db.QueryRowContext(ctx, `
-		SELECT id, type_id, status, use_count, location, current_request_id, created_at, updated_at
+		SELECT id, type_id, description, status, use_count, location, current_request_id, created_at, updated_at
 		FROM material_instances
 		WHERE id = $1
 	`, id).Scan(
-		&row.ID, &row.TypeID, &row.Status, &row.UseCount, &row.Location,
+		&row.ID, &row.TypeID, &row.Description, &row.Status, &row.UseCount, &row.Location,
 		&row.CurrentRequestID, &row.CreatedAt, &row.UpdatedAt,
 	)
 	if err != nil {
@@ -96,7 +96,7 @@ func (s *Store) ListMaterialInstances(ctx context.Context, params ListMaterialIn
 
 	args = append(args, limit, offset)
 	query := fmt.Sprintf(`
-		SELECT id, type_id, status, use_count, location, current_request_id, created_at, updated_at
+		SELECT id, type_id, description, status, use_count, location, current_request_id, created_at, updated_at
 		FROM material_instances
 		WHERE %s
 		ORDER BY updated_at DESC
@@ -113,7 +113,7 @@ func (s *Store) ListMaterialInstances(ctx context.Context, params ListMaterialIn
 	for rows.Next() {
 		var row materialInstanceRow
 		if err := rows.Scan(
-			&row.ID, &row.TypeID, &row.Status, &row.UseCount, &row.Location,
+			&row.ID, &row.TypeID, &row.Description, &row.Status, &row.UseCount, &row.Location,
 			&row.CurrentRequestID, &row.CreatedAt, &row.UpdatedAt,
 		); err != nil {
 			return nil, err
@@ -130,9 +130,9 @@ func (s *Store) UpdateMaterialInstance(ctx context.Context, id string, input dom
 		UPDATE material_instances
 		SET status = $2, location = $3
 		WHERE id = $1
-		RETURNING id, type_id, status, use_count, location, current_request_id, created_at, updated_at
+		RETURNING id, type_id, description, status, use_count, location, current_request_id, created_at, updated_at
 	`, id, input.Status, input.Location).Scan(
-		&row.ID, &row.TypeID, &row.Status, &row.UseCount, &row.Location,
+		&row.ID, &row.TypeID, &row.Description, &row.Status, &row.UseCount, &row.Location,
 		&row.CurrentRequestID, &row.CreatedAt, &row.UpdatedAt,
 	)
 	if err != nil {
@@ -157,9 +157,9 @@ func (s *Store) AssignToRequest(ctx context.Context, instanceID string, requestI
 		UPDATE material_instances
 		SET status = $2, current_request_id = $3
 		WHERE id = $1 AND status = $4
-		RETURNING id, type_id, status, use_count, location, current_request_id, created_at, updated_at
+		RETURNING id, type_id, description, status, use_count, location, current_request_id, created_at, updated_at
 	`, instanceID, domain.StatusRented, requestID, domain.StatusAvailable).Scan(
-		&row.ID, &row.TypeID, &row.Status, &row.UseCount, &row.Location,
+		&row.ID, &row.TypeID, &row.Description, &row.Status, &row.UseCount, &row.Location,
 		&row.CurrentRequestID, &row.CreatedAt, &row.UpdatedAt,
 	)
 	if err != nil {
@@ -175,9 +175,9 @@ func (s *Store) ReleaseFromRequest(ctx context.Context, instanceID string) (doma
 		UPDATE material_instances
 		SET status = $2, current_request_id = NULL, use_count = use_count + 1
 		WHERE id = $1 AND status = $3
-		RETURNING id, type_id, status, use_count, location, current_request_id, created_at, updated_at
+		RETURNING id, type_id, description, status, use_count, location, current_request_id, created_at, updated_at
 	`, instanceID, domain.StatusReturned, domain.StatusRented).Scan(
-		&row.ID, &row.TypeID, &row.Status, &row.UseCount, &row.Location,
+		&row.ID, &row.TypeID, &row.Description, &row.Status, &row.UseCount, &row.Location,
 		&row.CurrentRequestID, &row.CreatedAt, &row.UpdatedAt,
 	)
 	if err != nil {
@@ -217,7 +217,7 @@ func (s *Store) GetAvailableByType(ctx context.Context, typeID string, limit int
 	}
 
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT id, type_id, status, use_count, location, current_request_id, created_at, updated_at
+		SELECT id, type_id, description, status, use_count, location, current_request_id, created_at, updated_at
 		FROM material_instances
 		WHERE type_id = $1 AND status = $2
 		ORDER BY use_count ASC, updated_at ASC
@@ -232,7 +232,7 @@ func (s *Store) GetAvailableByType(ctx context.Context, typeID string, limit int
 	for rows.Next() {
 		var row materialInstanceRow
 		if err := rows.Scan(
-			&row.ID, &row.TypeID, &row.Status, &row.UseCount, &row.Location,
+			&row.ID, &row.TypeID, &row.Description, &row.Status, &row.UseCount, &row.Location,
 			&row.CurrentRequestID, &row.CreatedAt, &row.UpdatedAt,
 		); err != nil {
 			return nil, err
@@ -244,13 +244,14 @@ func (s *Store) GetAvailableByType(ctx context.Context, typeID string, limit int
 
 func mapMaterialInstance(row materialInstanceRow) domain.MaterialInstance {
 	instance := domain.MaterialInstance{
-		ID:        row.ID,
-		TypeID:    row.TypeID,
-		Status:    row.Status,
-		UseCount:  row.UseCount,
-		Location:  row.Location,
-		CreatedAt: row.CreatedAt,
-		UpdatedAt: row.UpdatedAt,
+		ID:          row.ID,
+		TypeID:      row.TypeID,
+		Description: row.Description,
+		Status:      row.Status,
+		UseCount:    row.UseCount,
+		Location:    row.Location,
+		CreatedAt:   row.CreatedAt,
+		UpdatedAt:   row.UpdatedAt,
 	}
 	if row.CurrentRequestID.Valid {
 		instance.CurrentRequestID = &row.CurrentRequestID.String

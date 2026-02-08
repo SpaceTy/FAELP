@@ -6,6 +6,7 @@ import { Header } from '@/components/Header';
 import { LoginPage } from '@/pages/LoginPage';
 import { InventoryPage } from '@/pages/InventoryPage';
 import { OperationsPage } from '@/pages/OperationsPage';
+import { EnterInventoryPage } from '@/pages/EnterInventoryPage';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 
 const LoginPageWrapper = (_props: RoutableProps) => <LoginPage />;
@@ -17,6 +18,11 @@ const InventoryPageWrapper = (_props: RoutableProps) => (
 const OperationsPageWrapper = (_props: RoutableProps) => (
   <ProtectedRoute>
     <OperationsPage />
+  </ProtectedRoute>
+);
+const EnterInventoryPageWrapper = (_props: RoutableProps) => (
+  <ProtectedRoute>
+    <EnterInventoryPage />
   </ProtectedRoute>
 );
 
@@ -44,6 +50,7 @@ function AppContent() {
           <InventoryPageWrapper path="/" />
           <InventoryPageWrapper path="/inventory" />
           <OperationsPageWrapper path="/operations" />
+          <EnterInventoryPageWrapper path="/enter" />
         </Router>
       </div>
     </div>

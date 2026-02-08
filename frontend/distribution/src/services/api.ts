@@ -2,6 +2,7 @@ import { authSignal } from '@/context/AuthContext';
 import type { LoginRequest, LoginResponse, User } from '@/types/auth';
 import type {
   AssignMaterialInput,
+  CreateMaterialInput,
   InventorySummaryItem,
   ListMaterialInstancesParams,
   MaterialInstance,
@@ -33,6 +34,21 @@ class ApiService {
 
     if (!response.ok) {
       throw new Error('Failed to get current user');
+    }
+
+    return response.json();
+  }
+
+  async createMaterialInstance(input: CreateMaterialInput): Promise<MaterialInstance> {
+    const response = await fetch(`${API_BASE}/api/inventory`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(input),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(error.error || 'Failed to create material instance');
     }
 
     return response.json();
