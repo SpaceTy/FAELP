@@ -4,19 +4,19 @@ import { useState } from 'preact/hooks';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { Header } from '@/components/Header';
 import { LoginPage } from '@/pages/LoginPage';
-import { AccountsPage } from '@/pages/AccountsPage';
-import { InventoryAdminPage } from '@/pages/InventoryAdminPage';
+import { InventoryPage } from '@/pages/InventoryPage';
+import { OperationsPage } from '@/pages/OperationsPage';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 
 const LoginPageWrapper = (_props: RoutableProps) => <LoginPage />;
-const AccountsPageWrapper = (_props: RoutableProps) => (
-  <ProtectedRoute requireAdmin>
-    <AccountsPage />
+const InventoryPageWrapper = (_props: RoutableProps) => (
+  <ProtectedRoute>
+    <InventoryPage />
   </ProtectedRoute>
 );
-const InventoryAdminPageWrapper = (_props: RoutableProps) => (
-  <ProtectedRoute requireAdmin>
-    <InventoryAdminPage />
+const OperationsPageWrapper = (_props: RoutableProps) => (
+  <ProtectedRoute>
+    <OperationsPage />
   </ProtectedRoute>
 );
 
@@ -41,9 +41,9 @@ function AppContent() {
       <div className="flex-1 overflow-hidden">
         <Router onChange={({ url }: { url: string }) => setCurrentPath(url.split('?')[0])}>
           <LoginPageWrapper path="/login" />
-          <AccountsPageWrapper path="/" />
-          <AccountsPageWrapper path="/accounts" />
-          <InventoryAdminPageWrapper path="/inventory-admin" />
+          <InventoryPageWrapper path="/" />
+          <InventoryPageWrapper path="/inventory" />
+          <OperationsPageWrapper path="/operations" />
         </Router>
       </div>
     </div>

@@ -56,6 +56,7 @@ func main() {
 	jwtService := auth.NewJWTService(cfg.JWTSecret)
 	authMiddleware := auth.NewMiddleware(jwtService)
 	authHandler := handlers.NewAuthHandler(store, jwtService)
+	inventoryHandler := handlers.NewInventoryHandler(store)
 
 	mux := http.NewServeMux()
 
@@ -80,16 +81,16 @@ func main() {
 	mux.HandleFunc("PUT /api/users/{id}/password", authMiddleware.RequireAdmin(authHandler.ResetUserPassword))
 	mux.HandleFunc("PUT /api/users/{id}/admin", authMiddleware.RequireAdmin(authHandler.SetUserAdmin))
 
-	// Inventory summary endpoint (authenticated)
-	mux.HandleFunc("GET /api/inventory/summary", authMiddleware.RequireAuth(func(w http.ResponseWriter, r *http.Request) {
-		summary, err := store.CountByTypeAndStatus(r.Context())
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(summary)
-	}))
+	// Inventory endpoints (authenticated)
+	mux.HandleFunc("POST /api/inventory", authMiddleware.RequireAuth(inventoryHandler.CreateMaterialInstance))
+	mux.HandleFunc("GET /api/inventory", authMiddleware.RequireAuth(inventoryHandler.ListMaterialInstances))
+	mux.HandleFunc("GET /api/inventory/{id}", authMiddleware.RequireAuth(inventoryHandler.GetMaterialInstance))
+	mux.HandleFunc("PUT /api/inventory/{id}", authMiddleware.RequireAuth(inventoryHandler.UpdateMaterialInstance))
+	mux.HandleFunc("DELETE /api/inventory/{id}", authMiddleware.RequireAuth(inventoryHandler.DeleteMaterialInstance))
+	mux.HandleFunc("POST /api/inventory/{id}/assign", authMiddleware.RequireAuth(inventoryHandler.AssignToRequest))
+	mux.HandleFunc("POST /api/inventory/{id}/release", authMiddleware.RequireAuth(inventoryHandler.ReleaseFromRequest))
+	mux.HandleFunc("GET /api/inventory/summary", authMiddleware.RequireAuth(inventoryHandler.CountByTypeAndStatus))
+	mux.HandleFunc("GET /api/inventory/available", authMiddleware.RequireAuth(inventoryHandler.GetAvailableByType))
 
 	server := &http.Server{
 		Addr:              ":8081",

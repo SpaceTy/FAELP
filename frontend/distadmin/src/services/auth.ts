@@ -7,6 +7,12 @@ import type {
   ResetPasswordInput,
   SetAdminInput
 } from '@/types/auth';
+import type {
+  AssignMaterialInstanceInput,
+  CreateMaterialInstanceInput,
+  MaterialInstance,
+  UpdateMaterialInstanceInput,
+} from '@/types/inventory';
 import { authSignal } from '@/context/AuthContext';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -134,6 +140,80 @@ class ApiService {
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'Unknown error' }));
       throw new Error(error.error || 'Failed to update admin status');
+    }
+
+    return response.json();
+  }
+
+  // Inventory endpoints
+  async createMaterialInstance(input: CreateMaterialInstanceInput): Promise<MaterialInstance> {
+    const response = await fetch(`${API_BASE}/api/inventory`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(input),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(error.error || 'Failed to create inventory item');
+    }
+
+    return response.json();
+  }
+
+  async updateMaterialInstance(id: string, input: UpdateMaterialInstanceInput): Promise<MaterialInstance> {
+    const response = await fetch(`${API_BASE}/api/inventory/${id}`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(input),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(error.error || 'Failed to update inventory item');
+    }
+
+    return response.json();
+  }
+
+  async deleteMaterialInstance(id: string): Promise<{ message: string }> {
+    const response = await fetch(`${API_BASE}/api/inventory/${id}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(error.error || 'Failed to delete inventory item');
+    }
+
+    return response.json();
+  }
+
+  async assignMaterialInstance(id: string, input: AssignMaterialInstanceInput): Promise<MaterialInstance> {
+    const response = await fetch(`${API_BASE}/api/inventory/${id}/assign`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(input),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(error.error || 'Failed to assign inventory item');
+    }
+
+    return response.json();
+  }
+
+  async releaseMaterialInstance(id: string): Promise<MaterialInstance> {
+    const response = await fetch(`${API_BASE}/api/inventory/${id}/release`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(error.error || 'Failed to release inventory item');
     }
 
     return response.json();
