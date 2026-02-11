@@ -1,222 +1,336 @@
-import { useEffect, useMemo, useState } from 'preact/hooks';
+import { useState, useEffect, useCallback } from 'preact/hooks';
 import { api } from '@/services/auth';
 import type { User } from '@/types/auth';
+import { UserFormModal } from '@/components/UserFormModal';
+import { ConfirmModal } from '@/components/ConfirmModal';
+import { Modal } from '@/components/Modal';
 
-function formatDate(input: string): string {
-  const parsed = new Date(input);
-  if (Number.isNaN(parsed.getTime())) {
-    return input;
-  }
-  return parsed.toLocaleString('de-DE');
+function formatDate(dateString: string): string {
+  const date = new Date(dateString);
+  return date.toLocaleString('de-DE', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 export function AccountsPage() {
+  // State
   const [users, setUsers] = useState<User[]>([]);
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const passwordError = useMemo(() => {
-    if (!password || !confirmPassword) {
-      return null;
-    }
-    if (password !== confirmPassword) {
-      return 'Passwörter stimmen nicht überein.';
-    }
-    if (password.length < 8) {
-      return 'Das Passwort muss mindestens 8 Zeichen lang sein.';
-    }
-    return null;
-  }, [password, confirmPassword]);
+  // Modal state
+  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deletingUser, setDeletingUser] = useState<User | null>(null);
+  const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
+  const [resettingUser, setResettingUser] = useState<User | null>(null);
+  const [newPassword, setNewPassword] = useState('');
 
-  const loadUsers = async () => {
-    setIsLoadingUsers(true);
+  // Load users
+  const loadUsers = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
     try {
       const data = await api.listUsers();
       setUsers(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Benutzerliste konnte nicht geladen werden.');
+      setError(err instanceof Error ? err.message : 'Fehler beim Laden der Benutzer');
     } finally {
-      setIsLoadingUsers(false);
+      setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadUsers();
-  }, []);
+  }, [loadUsers]);
 
-  const resetForm = () => {
-    setUsername('');
-    setPassword('');
-    setConfirmPassword('');
-    setIsAdmin(false);
+  // Actions
+  const handleCreateUser = async (data: { username: string; password: string; isAdmin: boolean }) => {
+    await api.createUser(data);
+    setSuccess(`Benutzer "${data.username}" wurde erstellt`);
+    setTimeout(() => setSuccess(null), 3000);
+    await loadUsers();
   };
 
-  const handleCreateAccount = async (e: Event) => {
-    e.preventDefault();
-    setError(null);
-    setSuccess(null);
+  const handleDeleteUser = async () => {
+    if (!deletingUser) return;
+    await api.deleteUser(deletingUser.id);
+    setIsDeleteModalOpen(false);
+    setDeletingUser(null);
+    setSuccess(`Benutzer "${deletingUser.username}" wurde gelöscht`);
+    setTimeout(() => setSuccess(null), 3000);
+    await loadUsers();
+  };
 
-    if (passwordError) {
-      setError(passwordError);
+  const handleToggleAdmin = async (user: User) => {
+    await api.setUserAdmin(user.id, { isAdmin: !user.isAdmin });
+    setSuccess(`Admin-Status für "${user.username}" wurde ${!user.isAdmin ? 'aktiviert' : 'deaktiviert'}`);
+    setTimeout(() => setSuccess(null), 3000);
+    await loadUsers();
+  };
+
+  const handleResetPassword = async () => {
+    if (!resettingUser || !newPassword) return;
+    if (newPassword.length < 8) {
+      setError('Das Passwort muss mindestens 8 Zeichen lang sein');
       return;
     }
+    await api.resetUserPassword(resettingUser.id, { newPassword });
+    setIsResetPasswordModalOpen(false);
+    setResettingUser(null);
+    setNewPassword('');
+    setSuccess(`Passwort für "${resettingUser.username}" wurde zurückgesetzt`);
+    setTimeout(() => setSuccess(null), 3000);
+  };
 
-    setIsSubmitting(true);
-    try {
-      await api.createUser({
-        username: username.trim(),
-        password,
-        isAdmin,
-      });
-      setSuccess(`Account "${username.trim()}" wurde erstellt.`);
-      resetForm();
-      await loadUsers();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Account konnte nicht erstellt werden.');
-    } finally {
-      setIsSubmitting(false);
-    }
+  // Open modals
+  const openCreateModal = () => {
+    setEditingUser(null);
+    setIsFormModalOpen(true);
+  };
+
+  const openDeleteModal = (user: User) => {
+    setDeletingUser(user);
+    setIsDeleteModalOpen(true);
+  };
+
+  const openResetPasswordModal = (user: User) => {
+    setResettingUser(user);
+    setNewPassword('');
+    setIsResetPasswordModalOpen(true);
   };
 
   return (
-    <main className="h-full overflow-auto bg-background">
-      <div className="max-w-6xl mx-auto p-6 space-y-6">
-        <section className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold text-text-primary">Neuen Account erstellen</h2>
-          <p className="text-sm text-text-secondary mt-1">
-            Erstellt einen neuen Login für das Distribution-Backend unter <code>/api/users</code>.
-          </p>
+    <div className="h-full flex overflow-hidden bg-[#f0f2f5]">
+      {/* Sidebar */}
+      <aside className="w-64 bg-white p-4 overflow-y-auto border-r border-gray-200 flex-shrink-0">
+        <div className="mb-6">
+          <button
+            onClick={openCreateModal}
+            className="w-full btn-logistics btn-logistics-primary"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Neuer Benutzer
+          </button>
+        </div>
 
-          {error && (
-            <div className="mt-4 p-3 rounded border border-red-300 bg-red-50 text-red-700 text-sm">
+        {/* Stats */}
+        <div className="stats-card">
+          <h3>Übersicht</h3>
+          <div className="stat-row">
+            <span>Gesamt Benutzer</span>
+            <span className="stat-value">{users.length}</span>
+          </div>
+          <div className="stat-row">
+            <span>Admins</span>
+            <span className="stat-value text-logistics-accent">
+              {users.filter((u) => u.isAdmin).length}
+            </span>
+          </div>
+          <div className="stat-row">
+            <span>Normale Benutzer</span>
+            <span className="stat-value">
+              {users.filter((u) => !u.isAdmin).length}
+            </span>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 overflow-y-auto p-6">
+        {/* Header */}
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-800">Benutzerverwaltung</h1>
+          <p className="text-gray-600 mt-1">
+            Verwalten Sie Benutzeraccounts für das Distribution-Backend.
+          </p>
+        </div>
+
+        {/* Alerts */}
+        {error && (
+          <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
               {error}
             </div>
-          )}
-          {success && (
-            <div className="mt-4 p-3 rounded border border-green-300 bg-green-50 text-green-700 text-sm">
+          </div>
+        )}
+
+        {success && (
+          <div className="mb-4 p-4 bg-green-50 border border-green-200 text-green-700 rounded-lg">
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
               {success}
             </div>
-          )}
-
-          <form className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={handleCreateAccount}>
-            <div className="md:col-span-2">
-              <label htmlFor="username" className="block text-sm font-medium text-text-primary mb-1">
-                Benutzername
-              </label>
-              <input
-                id="username"
-                type="text"
-                required
-                minLength={3}
-                value={username}
-                onInput={(e) => setUsername((e.target as HTMLInputElement).value)}
-                placeholder="z. B. lager.team.nord"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-text-primary mb-1">
-                Passwort
-              </label>
-              <input
-                id="password"
-                type="password"
-                required
-                minLength={8}
-                value={password}
-                onInput={(e) => setPassword((e.target as HTMLInputElement).value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-text-primary mb-1">
-                Passwort bestätigen
-              </label>
-              <input
-                id="confirmPassword"
-                type="password"
-                required
-                minLength={8}
-                value={confirmPassword}
-                onInput={(e) => setConfirmPassword((e.target as HTMLInputElement).value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="inline-flex items-center gap-2 text-sm text-text-primary">
-                <input
-                  type="checkbox"
-                  checked={isAdmin}
-                  onChange={(e) => setIsAdmin((e.target as HTMLInputElement).checked)}
-                  className="rounded border-gray-300 text-primary focus:ring-primary"
-                />
-                Admin-Rechte vergeben
-              </label>
-            </div>
-
-            <div className="md:col-span-2 flex justify-end">
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="px-5 py-2 bg-primary hover:bg-primary-hover text-white font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSubmitting ? 'Erstelle...' : 'Account erstellen'}
-              </button>
-            </div>
-          </form>
-        </section>
-
-        <section className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-text-primary">Bestehende Accounts</h3>
-            <button
-              type="button"
-              onClick={loadUsers}
-              disabled={isLoadingUsers}
-              className="px-3 py-1.5 text-sm bg-secondary text-white rounded hover:bg-secondary-hover transition-colors disabled:opacity-50"
-            >
-              {isLoadingUsers ? 'Aktualisiere...' : 'Neu laden'}
-            </button>
           </div>
+        )}
 
-          <div className="mt-4 overflow-x-auto">
-            <table className="min-w-full border-collapse">
-              <thead>
-                <tr className="border-b border-gray-200 text-left text-sm text-text-secondary">
-                  <th className="py-2 pr-4 font-medium">Benutzername</th>
-                  <th className="py-2 pr-4 font-medium">Rolle</th>
-                  <th className="py-2 pr-4 font-medium">Erstellt</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((user) => (
-                  <tr key={user.id} className="border-b border-gray-100 text-sm text-text-primary">
-                    <td className="py-2 pr-4">{user.username}</td>
-                    <td className="py-2 pr-4">{user.isAdmin ? 'Admin' : 'User'}</td>
-                    <td className="py-2 pr-4">{formatDate(user.createdAt)}</td>
-                  </tr>
-                ))}
-                {users.length === 0 && !isLoadingUsers && (
+        {/* Loading */}
+        {isLoading && (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-4 border-logistics-accent border-t-transparent"></div>
+            <span className="ml-3 text-gray-600">Wird geladen...</span>
+          </div>
+        )}
+
+        {/* Users Table */}
+        {!isLoading && (
+          <div className="logistics-card overflow-hidden">
+            {users.length === 0 ? (
+              <div className="text-center py-12">
+                <svg className="w-12 h-12 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+                <p className="text-gray-500">Keine Benutzer gefunden</p>
+                <button
+                  onClick={openCreateModal}
+                  className="mt-4 text-logistics-accent hover:underline"
+                >
+                  Ersten Benutzer erstellen
+                </button>
+              </div>
+            ) : (
+              <table className="logistics-table">
+                <thead>
                   <tr>
-                    <td className="py-6 text-center text-text-secondary" colSpan={3}>
-                      Keine Accounts gefunden.
-                    </td>
+                    <th>Benutzername</th>
+                    <th>Admin</th>
+                    <th>Erstellt am</th>
+                    <th className="text-right">Aktionen</th>
                   </tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {users.map((user) => (
+                    <tr key={user.id}>
+                      <td>
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-medium">
+                            {user.username.charAt(0).toUpperCase()}
+                          </div>
+                          <span className="font-medium">{user.username}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <button
+                          onClick={() => handleToggleAdmin(user)}
+                          className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                            user.isAdmin
+                              ? 'bg-logistics-accent text-white'
+                              : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                          }`}
+                        >
+                          {user.isAdmin ? 'Admin' : 'User'}
+                        </button>
+                      </td>
+                      <td className="text-gray-600">{formatDate(user.createdAt)}</td>
+                      <td className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => openResetPasswordModal(user)}
+                            className="btn-logistics btn-logistics-outline text-xs py-1.5 px-3"
+                            title="Passwort zurücksetzen"
+                          >
+                            Passwort
+                          </button>
+                          <button
+                            onClick={() => openDeleteModal(user)}
+                            className="btn-logistics btn-logistics-danger text-xs py-1.5 px-3"
+                            title="Benutzer löschen"
+                          >
+                            Löschen
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
-        </section>
-      </div>
-    </main>
+        )}
+      </main>
+
+      {/* Form Modal */}
+      <UserFormModal
+        isOpen={isFormModalOpen}
+        onClose={() => setIsFormModalOpen(false)}
+        onSubmit={handleCreateUser}
+        user={editingUser}
+      />
+
+      {/* Delete Confirmation */}
+      <ConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleDeleteUser}
+        title="Benutzer löschen"
+        message={`Möchten Sie den Benutzer "${deletingUser?.username}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`}
+        confirmText="Löschen"
+        variant="danger"
+      />
+
+      {/* Reset Password Modal */}
+      <Modal
+        isOpen={isResetPasswordModalOpen}
+        onClose={() => setIsResetPasswordModalOpen(false)}
+        title="Passwort zurücksetzen"
+        maxWidth="sm"
+        footer={
+          <>
+            <button
+              onClick={() => setIsResetPasswordModalOpen(false)}
+              className="btn-logistics btn-logistics-outline"
+            >
+              Abbrechen
+            </button>
+            <button
+              onClick={handleResetPassword}
+              disabled={!newPassword || newPassword.length < 8}
+              className="btn-logistics btn-logistics-primary"
+            >
+              Zurücksetzen
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Setzen Sie ein neues Passwort für <strong>{resettingUser?.username}</strong>.
+          </p>
+          <div>
+            <label className="logistics-label" htmlFor="newPassword">
+              Neues Passwort *
+            </label>
+            <input
+              type="password"
+              id="newPassword"
+              value={newPassword}
+              onInput={(e) => setNewPassword((e.target as HTMLInputElement).value)}
+              className="logistics-input"
+              placeholder="Mindestens 8 Zeichen"
+              minLength={8}
+              autoFocus
+            />
+            {newPassword && newPassword.length < 8 && (
+              <p className="mt-1 text-xs text-red-600">
+                Das Passwort muss mindestens 8 Zeichen lang sein
+              </p>
+            )}
+          </div>
+        </div>
+      </Modal>
+    </div>
   );
 }

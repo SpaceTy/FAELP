@@ -7,57 +7,73 @@ interface HeaderProps {
 export function Header({ currentPath }: HeaderProps) {
   const { user, logout } = useAuth();
 
+  const isActive = (path: string) => {
+    if (path === '/' && (currentPath === '/' || currentPath === '/inventory')) {
+      return true;
+    }
+    return currentPath === path;
+  };
+
   return (
-    <header className="bg-secondary text-white shadow-md">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          <div className="flex items-center gap-6">
-            <h1 className="text-xl font-bold text-primary">EHALP</h1>
-            <span className="text-sm text-gray-300">Distribution Admin</span>
-            {user?.isAdmin && (
-              <nav className="flex items-center gap-2">
-                <a
-                  href="/accounts"
-                  className={`px-3 py-1.5 text-sm rounded transition-colors ${
-                    currentPath === '/' || currentPath === '/accounts'
-                      ? 'bg-primary text-secondary font-medium'
-                      : 'text-gray-200 hover:bg-secondary-hover'
-                  }`}
-                >
-                  Accounts
-                </a>
-                <a
-                  href="/inventory-admin"
-                  className={`px-3 py-1.5 text-sm rounded transition-colors ${
-                    currentPath === '/inventory-admin'
-                      ? 'bg-primary text-secondary font-medium'
-                      : 'text-gray-200 hover:bg-secondary-hover'
-                  }`}
-                >
-                  Inventory Admin
-                </a>
-              </nav>
-            )}
-          </div>
-          
+    <header className="bg-logistics-header text-white shadow-md flex-shrink-0 z-50">
+      <div className="flex items-center justify-between px-6 py-3 gap-8">
+        {/* Logo */}
+        <div className="flex-shrink-0">
+          <a href="/" className="block">
+            <h1 className="text-2xl font-bold text-logistics-accent">EHALP</h1>
+            <p className="text-xs text-gray-400">Distribution Admin</p>
+          </a>
+        </div>
+
+        {/* Navigation */}
+        <nav className="flex-1 flex gap-2">
+          <a
+            href="/"
+            className={`px-4 py-2 rounded transition-colors text-sm font-medium ${
+              isActive('/')
+                ? 'bg-logistics-secondary text-white'
+                : 'text-gray-300 hover:bg-logistics-secondary hover:text-white'
+            }`}
+          >
+            Inventar
+          </a>
+          {user?.isAdmin && (
+            <a
+              href="/accounts"
+              className={`px-4 py-2 rounded transition-colors text-sm font-medium ${
+                isActive('/accounts')
+                  ? 'bg-logistics-secondary text-white'
+                  : 'text-gray-300 hover:bg-logistics-secondary hover:text-white'
+              }`}
+            >
+              Accounts
+            </a>
+          )}
+        </nav>
+
+        {/* User Actions */}
+        <div className="flex items-center gap-4">
           {user && (
-            <div className="flex items-center gap-4">
-              <div className="text-sm">
-                <span className="text-gray-300">Angemeldet als:</span>
-                <span className="ml-1 font-medium">{user.username}</span>
-                {user.isAdmin && (
-                  <span className="ml-2 px-2 py-0.5 bg-primary text-secondary text-xs rounded-full">
-                    Admin
-                  </span>
-                )}
+            <>
+              <div className="flex items-center gap-3">
+                <div className="text-right">
+                  <div className="text-sm font-medium text-white">{user.username}</div>
+                  <div className="flex items-center gap-2">
+                    {user.isAdmin && (
+                      <span className="text-xs bg-logistics-accent text-white px-2 py-0.5 rounded-full">
+                        Admin
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
               <button
                 onClick={logout}
-                className="px-3 py-1.5 text-sm bg-secondary-hover hover:bg-opacity-80 rounded transition-colors"
+                className="btn-logistics btn-logistics-secondary text-sm"
               >
                 Abmelden
               </button>
-            </div>
+            </>
           )}
         </div>
       </div>

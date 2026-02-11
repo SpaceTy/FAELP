@@ -3,6 +3,7 @@ export type MaterialStatus = 'available' | 'rented' | 'returned';
 export interface MaterialInstance {
   id: string;
   typeId: string;
+  description: string;
   status: MaterialStatus;
   useCount: number;
   location: string;
@@ -12,8 +13,8 @@ export interface MaterialInstance {
 }
 
 export interface CreateMaterialInstanceInput {
-  id: string;
   typeId: string;
+  description?: string;
   location: string;
 }
 
@@ -24,4 +25,16 @@ export interface UpdateMaterialInstanceInput {
 
 export interface AssignMaterialInstanceInput {
   requestId: string;
+}
+
+export interface InventorySummary {
+  typeId: string;
+  status: MaterialStatus;
+  count: number;
+}
+
+export interface InventoryFilters {
+  typeId?: string;
+  status?: MaterialStatus;
+  location?: string;
 }

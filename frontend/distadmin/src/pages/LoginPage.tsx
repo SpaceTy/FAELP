@@ -24,23 +24,31 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="min-h-screen flex items-center justify-center bg-[#f0f2f5]">
       <div className="max-w-md w-full mx-4">
-        <div className="bg-white rounded-lg shadow-md p-8">
+        <div className="bg-white rounded-lg shadow-lg p-8">
+          {/* Logo */}
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-primary">EHALP</h1>
-            <p className="text-text-secondary mt-1">Distribution Admin</p>
+            <h1 className="text-3xl font-bold text-logistics-accent">EHALP</h1>
+            <p className="text-gray-500 mt-1">Distribution Admin</p>
           </div>
 
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Error */}
             {error && (
-              <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-                {error}
+              <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded text-sm">
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {error}
+                </div>
               </div>
             )}
 
-            <div className="mb-4">
-              <label htmlFor="username" className="block text-sm font-medium text-text-primary mb-1">
+            {/* Username */}
+            <div>
+              <label htmlFor="username" className="logistics-label">
                 Benutzername
               </label>
               <input
@@ -48,14 +56,17 @@ export function LoginPage() {
                 id="username"
                 value={username}
                 onInput={(e) => setUsername((e.target as HTMLInputElement).value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                className="logistics-input"
+                placeholder="Benutzername eingeben"
                 required
                 autoComplete="username"
+                autoFocus
               />
             </div>
 
-            <div className="mb-6">
-              <label htmlFor="password" className="block text-sm font-medium text-text-primary mb-1">
+            {/* Password */}
+            <div>
+              <label htmlFor="password" className="logistics-label">
                 Passwort
               </label>
               <input
@@ -63,20 +74,39 @@ export function LoginPage() {
                 id="password"
                 value={password}
                 onInput={(e) => setPassword((e.target as HTMLInputElement).value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                className="logistics-input"
+                placeholder="Passwort eingeben"
                 required
                 autoComplete="current-password"
               />
             </div>
 
+            {/* Submit */}
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-2 px-4 bg-primary hover:bg-primary-hover text-white font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full btn-logistics btn-logistics-primary py-2.5"
             >
-              {isLoading ? 'Wird angemeldet...' : 'Anmelden'}
+              {isLoading ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Wird angemeldet...
+                </>
+              ) : (
+                'Anmelden'
+              )}
             </button>
           </form>
+
+          {/* Footer */}
+          <div className="mt-6 text-center">
+            <p className="text-xs text-gray-500">
+              Distribution Center Management System
+            </p>
+          </div>
         </div>
       </div>
     </div>
