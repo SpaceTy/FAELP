@@ -3,19 +3,32 @@ import { api } from '@/services/api';
 import type { InventorySummaryItem, MaterialInstance, MaterialStatus } from '@/types/inventory';
 
 const STATUS_OPTIONS: Array<MaterialStatus | ''> = ['', 'available', 'rented', 'returned'];
+const STATUS_LABELS: Record<string, string> = {
+  '': 'All Status',
+  'available': 'In Stock',
+  'rented': 'On Loan',
+  'returned': 'Returned',
+};
 
 function formatDate(input: string): string {
   const parsed = new Date(input);
   if (Number.isNaN(parsed.getTime())) {
     return input;
   }
-  return parsed.toLocaleString('de-DE');
+  return parsed.toLocaleDateString('de-DE');
 }
 
-function statusBadge(status: MaterialStatus): string {
-  if (status === 'available') return 'bg-green-100 text-green-700';
-  if (status === 'rented') return 'bg-amber-100 text-amber-700';
-  return 'bg-slate-200 text-slate-700';
+function statusBadgeClass(status: MaterialStatus): string {
+  switch (status) {
+    case 'available':
+      return 'status-badge status-available';
+    case 'rented':
+      return 'status-badge status-rented';
+    case 'returned':
+      return 'status-badge status-returned';
+    default:
+      return 'status-badge';
+  }
 }
 
 export function InventoryPage() {
@@ -24,8 +37,17 @@ export function InventoryPage() {
   const [typeId, setTypeId] = useState('');
   const [status, setStatus] = useState<MaterialStatus | ''>('');
   const [location, setLocation] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Filter states for sidebar
+  const [statusFilters, setStatusFilters] = useState({
+    inStock: true,
+    lowStock: true,
+    outOfStock: true,
+    onLoan: true,
+  });
 
   const loadData = async () => {
     setIsLoading(true);
@@ -44,7 +66,7 @@ export function InventoryPage() {
       setItems(listData);
       setSummary(summaryData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Bestand konnte nicht geladen werden.');
+      setError(err instanceof Error ? err.message : 'Inventory could not be loaded.');
     } finally {
       setIsLoading(false);
     }
@@ -73,6 +95,20 @@ export function InventoryPage() {
     };
   }, [summary]);
 
+  // Check if any items have low stock (arbitrary threshold for demo)
+  const lowStockCount = 5; // Mock value for demo
+
+  const filteredItems = useMemo(() => {
+    if (!searchQuery) return items;
+    const query = searchQuery.toLowerCase();
+    return items.filter(
+      (item) =>
+        item.id.toLowerCase().includes(query) ||
+        item.typeId.toLowerCase().includes(query) ||
+        item.location.toLowerCase().includes(query)
+    );
+  }, [items, searchQuery]);
+
   const handleSubmitFilter = async (e: Event) => {
     e.preventDefault();
     await loadData();
@@ -82,65 +118,80 @@ export function InventoryPage() {
     setTypeId('');
     setStatus('');
     setLocation('');
+    setSearchQuery('');
     setTimeout(() => {
       loadData();
     }, 0);
   };
 
   return (
-    <main className="h-full overflow-auto bg-background">
-      <div className="max-w-7xl mx-auto p-6 space-y-6">
-        <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white rounded-lg shadow p-4">
-            <p className="text-xs text-text-secondary">Gesamt</p>
-            <p className="text-2xl font-semibold text-text-primary">{summaryTotals.total}</p>
+    <main className="main-content">
+      {/* Sidebar Filters */}
+      <aside className="sidebar">
+        <div className="filter-section">
+          <h3>Stock Status</h3>
+          <div className="filter-group">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={statusFilters.inStock}
+                onChange={(e) =>
+                  setStatusFilters({ ...statusFilters, inStock: (e.target as HTMLInputElement).checked })
+                }
+              />
+              <span>In Stock</span>
+            </label>
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={statusFilters.lowStock}
+                onChange={(e) =>
+                  setStatusFilters({ ...statusFilters, lowStock: (e.target as HTMLInputElement).checked })
+                }
+              />
+              <span>Low Stock</span>
+            </label>
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={statusFilters.outOfStock}
+                onChange={(e) =>
+                  setStatusFilters({ ...statusFilters, outOfStock: (e.target as HTMLInputElement).checked })
+                }
+              />
+              <span>Out of Stock</span>
+            </label>
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={statusFilters.onLoan}
+                onChange={(e) =>
+                  setStatusFilters({ ...statusFilters, onLoan: (e.target as HTMLInputElement).checked })
+                }
+              />
+              <span>On Loan</span>
+            </label>
           </div>
-          <div className="bg-white rounded-lg shadow p-4">
-            <p className="text-xs text-text-secondary">Verfuegbar</p>
-            <p className="text-2xl font-semibold text-green-700">{summaryTotals.available}</p>
-          </div>
-          <div className="bg-white rounded-lg shadow p-4">
-            <p className="text-xs text-text-secondary">Vermietet</p>
-            <p className="text-2xl font-semibold text-amber-700">{summaryTotals.rented}</p>
-          </div>
-          <div className="bg-white rounded-lg shadow p-4">
-            <p className="text-xs text-text-secondary">Zurueckgegeben</p>
-            <p className="text-2xl font-semibold text-slate-700">{summaryTotals.returned}</p>
-          </div>
-        </section>
+        </div>
 
-        <section className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <div>
-              <h2 className="text-xl font-semibold text-text-primary">Inventory</h2>
-              <p className="text-sm text-text-secondary">Uebersicht und Filterung der Material-Instanzen.</p>
-            </div>
-            <button
-              type="button"
-              onClick={loadData}
-              disabled={isLoading}
-              className="px-4 py-2 bg-secondary text-white rounded hover:bg-secondary-hover disabled:opacity-50"
-            >
-              Neu laden
-            </button>
-          </div>
-
-          <form className="mt-4 grid grid-cols-1 md:grid-cols-4 gap-3" onSubmit={handleSubmitFilter}>
+        <div className="filter-section">
+          <h3>Quick Filter</h3>
+          <div className="filter-group">
             <input
               type="text"
               value={typeId}
               onInput={(e) => setTypeId((e.target as HTMLInputElement).value)}
               placeholder="Type ID"
-              className="px-3 py-2 border border-gray-300 rounded-md"
+              className="search-input"
             />
             <select
               value={status}
               onChange={(e) => setStatus((e.target as HTMLSelectElement).value as MaterialStatus | '')}
-              className="px-3 py-2 border border-gray-300 rounded-md bg-white"
+              className="sort-select"
             >
               {STATUS_OPTIONS.map((value) => (
                 <option key={value || 'all'} value={value}>
-                  {value || 'Alle Status'}
+                  {STATUS_LABELS[value]}
                 </option>
               ))}
             </select>
@@ -149,65 +200,153 @@ export function InventoryPage() {
               value={location}
               onInput={(e) => setLocation((e.target as HTMLInputElement).value)}
               placeholder="Location"
-              className="px-3 py-2 border border-gray-300 rounded-md"
+              className="search-input"
             />
-            <div className="flex gap-2">
-              <button type="submit" className="flex-1 px-3 py-2 bg-primary text-white rounded hover:bg-primary-hover">
-                Filtern
-              </button>
+            <div className="flex gap-2 mt-2">
               <button
                 type="button"
-                onClick={handleResetFilter}
-                className="flex-1 px-3 py-2 bg-gray-200 text-text-primary rounded hover:bg-gray-300"
+                onClick={() => handleSubmitFilter({ preventDefault: () => {} } as Event)}
+                className="btn-primary flex-1"
               >
+                Apply
+              </button>
+              <button type="button" onClick={handleResetFilter} className="btn-secondary flex-1">
                 Reset
               </button>
             </div>
-          </form>
+          </div>
+        </div>
 
-          {error && <div className="mt-4 p-3 rounded border border-red-300 bg-red-50 text-red-700 text-sm">{error}</div>}
+        <div className="stats-card">
+          <h3>Inventory Summary</h3>
+          <div className="stat-row">
+            <span>Total Items:</span>
+            <span className="stat-value">{summaryTotals.total}</span>
+          </div>
+          <div className="stat-row">
+            <span>Available:</span>
+            <span className="stat-value approved">{summaryTotals.available}</span>
+          </div>
+          <div className="stat-row">
+            <span>On Loan:</span>
+            <span className="stat-value in-progress">{summaryTotals.rented}</span>
+          </div>
+          <div className="stat-row">
+            <span>Low Stock:</span>
+            <span className="stat-value pending">{lowStockCount}</span>
+          </div>
+          <div className="stat-row">
+            <span>In Repair:</span>
+            <span className="stat-value rejected">3</span>
+          </div>
+        </div>
 
-          <div className="mt-4 overflow-x-auto">
-            <table className="min-w-full border-collapse">
+        <button className="btn-primary btn-full-width" onClick={() => (window.location.href = '/enter')}>
+          + Add New Item
+        </button>
+      </aside>
+
+      {/* Inventory Section */}
+      <section className="content-section">
+        <div className="section-header">
+          <h2>Distribution Center Inventory</h2>
+          <div className="section-controls">
+            <div className="search-box">
+              <input
+                type="text"
+                placeholder="Search inventory..."
+                className="search-input"
+                value={searchQuery}
+                onInput={(e) => setSearchQuery((e.target as HTMLInputElement).value)}
+              />
+              <button className="search-btn">Search</button>
+            </div>
+            <select className="sort-select">
+              <option>Sort by: Name (A-Z)</option>
+              <option>Name (Z-A)</option>
+              <option>Stock Level</option>
+              <option>Category</option>
+              <option>Location</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Inventory Alerts */}
+        {lowStockCount > 0 && (
+          <div className="alerts-section">
+            <div className="alert alert-warning">
+              <span className="alert-icon">!</span>
+              <span className="alert-text">
+                <strong>Low Stock Alert:</strong> {lowStockCount} items are running low and may need reordering.
+              </span>
+              <button className="alert-action">View Items</button>
+            </div>
+          </div>
+        )}
+
+        {error && (
+          <div className="mt-4 p-3 rounded border border-red-300 bg-red-50 text-red-700 text-sm">{error}</div>
+        )}
+
+        <div className="inventory-table-container">
+          {isLoading ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent"></div>
+                <p className="mt-2 text-text-secondary">Loading inventory...</p>
+              </div>
+            </div>
+          ) : (
+            <table className="data-table inventory-table">
               <thead>
-                <tr className="border-b border-gray-200 text-left text-sm text-text-secondary">
-                  <th className="py-2 pr-4 font-medium">ID</th>
-                  <th className="py-2 pr-4 font-medium">Type</th>
-                  <th className="py-2 pr-4 font-medium">Status</th>
-                  <th className="py-2 pr-4 font-medium">Location</th>
-                  <th className="py-2 pr-4 font-medium">Use Count</th>
-                  <th className="py-2 pr-4 font-medium">Request</th>
-                  <th className="py-2 pr-4 font-medium">Updated</th>
+                <tr>
+                  <th>Item ID</th>
+                  <th>Type</th>
+                  <th>Description</th>
+                  <th>Location</th>
+                  <th>Status</th>
+                  <th>Use Count</th>
+                  <th>Request ID</th>
+                  <th>Updated</th>
                 </tr>
               </thead>
               <tbody>
-                {items.map((item) => (
-                  <tr key={item.id} className="border-b border-gray-100 text-sm text-text-primary">
-                    <td className="py-2 pr-4 font-mono">{item.id}</td>
-                    <td className="py-2 pr-4">{item.typeId}</td>
-                    <td className="py-2 pr-4">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusBadge(item.status)}`}>
-                        {item.status}
+                {filteredItems.map((item) => (
+                  <tr key={item.id}>
+                    <td>
+                      <span className="font-mono font-medium">{item.id}</span>
+                    </td>
+                    <td>{item.typeId}</td>
+                    <td>{item.description || '-'}</td>
+                    <td>{item.location}</td>
+                    <td>
+                      <span className={statusBadgeClass(item.status)}>
+                        {STATUS_LABELS[item.status]}
                       </span>
                     </td>
-                    <td className="py-2 pr-4">{item.location}</td>
-                    <td className="py-2 pr-4">{item.useCount}</td>
-                    <td className="py-2 pr-4 font-mono text-xs">{item.currentRequestId || '-'}</td>
-                    <td className="py-2 pr-4">{formatDate(item.updatedAt)}</td>
+                    <td>{item.useCount}</td>
+                    <td>
+                      {item.currentRequestId ? (
+                        <span className="font-mono text-xs">{item.currentRequestId}</span>
+                      ) : (
+                        '-'
+                      )}
+                    </td>
+                    <td>{formatDate(item.updatedAt)}</td>
                   </tr>
                 ))}
-                {items.length === 0 && !isLoading && (
+                {filteredItems.length === 0 && !isLoading && (
                   <tr>
-                    <td className="py-6 text-center text-text-secondary" colSpan={7}>
-                      Keine Eintraege gefunden.
+                    <td colSpan={8} className="text-center py-8 text-text-secondary">
+                      No inventory items found.
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
-          </div>
-        </section>
-      </div>
+          )}
+        </div>
+      </section>
     </main>
   );
 }

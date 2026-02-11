@@ -15,65 +15,68 @@ export function LoginPage() {
 
     try {
       await login(username, password);
-      window.location.href = '/inventory';
+      window.location.href = '/requests';
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login fehlgeschlagen');
+      setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="max-w-md w-full mx-4">
-        <div className="bg-white rounded-lg shadow-md p-8">
-          <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-primary">EHALP</h1>
-            <p className="text-text-secondary mt-1">Distribution Center</p>
-          </div>
+    <div className="login-page">
+      <div className="login-container">
+        <div className="login-logo">
+          <h1>EHALP</h1>
+          <p className="tagline">Logistics Portal</p>
+        </div>
 
-          <form onSubmit={handleSubmit}>
-            {error && <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">{error}</div>}
+        <div className="login-card">
+          <h2>Sign In</h2>
+          <p className="login-subtitle">Distribution Center Access</p>
 
-            <div className="mb-4">
-              <label htmlFor="username" className="block text-sm font-medium text-text-primary mb-1">
-                Benutzername
-              </label>
+          {error && (
+            <div className="alert alert-error">
+              <span>{error}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="login-form">
+            <div className="form-group">
+              <label htmlFor="username">Username</label>
               <input
                 type="text"
                 id="username"
                 value={username}
                 onInput={(e) => setUsername((e.target as HTMLInputElement).value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                placeholder="Enter your username"
                 required
                 autoComplete="username"
               />
             </div>
 
-            <div className="mb-6">
-              <label htmlFor="password" className="block text-sm font-medium text-text-primary mb-1">
-                Passwort
-              </label>
+            <div className="form-group">
+              <label htmlFor="password">Password</label>
               <input
                 type="password"
                 id="password"
                 value={password}
                 onInput={(e) => setPassword((e.target as HTMLInputElement).value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                placeholder="Enter your password"
                 required
                 autoComplete="current-password"
               />
             </div>
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full py-2 px-4 bg-primary hover:bg-primary-hover text-white font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? 'Wird angemeldet...' : 'Anmelden'}
+            <button type="submit" disabled={isLoading} className="btn-login">
+              {isLoading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
         </div>
+
+        <p className="login-footer">
+          First Aid Training Logistics Platform
+        </p>
       </div>
     </div>
   );

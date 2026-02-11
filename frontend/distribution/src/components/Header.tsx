@@ -7,69 +7,51 @@ interface HeaderProps {
 export function Header({ currentPath }: HeaderProps) {
   const { user, logout } = useAuth();
 
-  return (
-    <header className="bg-secondary text-white shadow-md">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          <div className="flex items-center gap-6">
-            <div>
-              <h1 className="text-xl font-bold text-primary">EHALP</h1>
-              <p className="text-xs text-gray-300">Distribution Center</p>
-            </div>
-            <nav className="flex items-center gap-2">
-              <a
-                href="/inventory"
-                className={`px-3 py-1.5 text-sm rounded transition-colors ${
-                  currentPath === '/' || currentPath === '/inventory'
-                    ? 'bg-primary text-secondary font-medium'
-                    : 'text-gray-200 hover:bg-secondary-hover'
-                }`}
-              >
-                Inventory
-              </a>
-              <a
-                href="/enter"
-                className={`px-3 py-1.5 text-sm rounded transition-colors ${
-                  currentPath === '/enter'
-                    ? 'bg-primary text-secondary font-medium'
-                    : 'text-gray-200 hover:bg-secondary-hover'
-                }`}
-              >
-                Erfassen
-              </a>
-              <a
-                href="/operations"
-                className={`px-3 py-1.5 text-sm rounded transition-colors ${
-                  currentPath === '/operations'
-                    ? 'bg-primary text-secondary font-medium'
-                    : 'text-gray-200 hover:bg-secondary-hover'
-                }`}
-              >
-                Operations
-              </a>
-            </nav>
-          </div>
+  const isActive = (path: string) => {
+    if (path === '/' || path === '/requests') {
+      return currentPath === '/' || currentPath === '/requests';
+    }
+    return currentPath === path;
+  };
 
-          {user && (
-            <div className="flex items-center gap-4">
-              <div className="text-sm">
-                <span className="text-gray-300">Angemeldet als:</span>
-                <span className="ml-1 font-medium">{user.username}</span>
-                {user.isAdmin && (
-                  <span className="ml-2 px-2 py-0.5 bg-primary text-secondary text-xs rounded-full">
-                    Admin
-                  </span>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={logout}
-                className="px-3 py-1.5 text-sm bg-secondary-hover hover:bg-opacity-80 rounded transition-colors"
-              >
-                Abmelden
-              </button>
-            </div>
-          )}
+  return (
+    <header className="header">
+      <div className="header-container">
+        <div className="logo">
+          <h1>EHALP</h1>
+          <p className="tagline">Logistics Portal</p>
+        </div>
+        <nav className="main-nav">
+          <a
+            href="/requests"
+            className={`nav-link ${isActive('/requests') ? 'active' : ''}`}
+          >
+            Incoming Requests
+          </a>
+          <a
+            href="/packaging"
+            className={`nav-link ${isActive('/packaging') ? 'active' : ''}`}
+          >
+            Packaging
+          </a>
+          <a
+            href="/returns"
+            className={`nav-link ${isActive('/returns') ? 'active' : ''}`}
+          >
+            Returns
+          </a>
+          <a
+            href="/inventory"
+            className={`nav-link ${isActive('/inventory') ? 'active' : ''}`}
+          >
+            Inventory
+          </a>
+        </nav>
+        <div className="header-actions">
+          <span className="user-info">{user?.username || 'User'} (Logistics)</span>
+          <button className="btn-secondary" onClick={logout}>
+            Logout
+          </button>
         </div>
       </div>
     </header>
