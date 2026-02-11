@@ -1,5 +1,13 @@
 export type MaterialStatus = 'available' | 'rented' | 'returned';
 
+export interface MaterialType {
+  id: string;
+  name: string;
+  description: string;
+  imageUrl: string;
+  availableCount: number;
+}
+
 export interface MaterialInstance {
   id: string;
   typeId: string;

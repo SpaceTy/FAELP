@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { api } from '@/services/api';
-import type { InventorySummaryItem, MaterialInstance, MaterialStatus } from '@/types/inventory';
+import { materialTypesService } from '@/services/materialTypes';
+import type { InventorySummaryItem, MaterialInstance, MaterialStatus, MaterialType } from '@/types/inventory';
 
 const STATUS_OPTIONS: Array<MaterialStatus | ''> = ['', 'available', 'rented', 'returned'];
 const STATUS_LABELS: Record<string, string> = {
@@ -31,15 +32,26 @@ function statusBadgeClass(status: MaterialStatus): string {
   }
 }
 
+async function copyToClipboard(text: string): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch (err) {
+    console.error('Failed to copy:', err);
+  }
+}
+
 export function InventoryPage() {
   const [items, setItems] = useState<MaterialInstance[]>([]);
   const [summary, setSummary] = useState<InventorySummaryItem[]>([]);
+  const [materialTypes, setMaterialTypes] = useState<MaterialType[]>([]);
   const [typeId, setTypeId] = useState('');
   const [status, setStatus] = useState<MaterialStatus | ''>('');
   const [location, setLocation] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingTypes, setIsLoadingTypes] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [typeFilterDropdownOpen, setTypeFilterDropdownOpen] = useState(false);
 
   // Filter states for sidebar
   const [statusFilters, setStatusFilters] = useState({
@@ -63,14 +75,30 @@ export function InventoryPage() {
         }),
         api.getInventorySummary(),
       ]);
-      setItems(listData);
-      setSummary(summaryData);
+      setItems(listData || []);
+      setSummary(summaryData || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Inventory could not be loaded.');
     } finally {
       setIsLoading(false);
     }
   };
+
+  // Load material types on mount
+  useEffect(() => {
+    const loadMaterialTypes = async () => {
+      setIsLoadingTypes(true);
+      try {
+        const types = await materialTypesService.getMaterialTypes();
+        setMaterialTypes(types);
+      } catch (err) {
+        console.error('Failed to load material types:', err);
+      } finally {
+        setIsLoadingTypes(false);
+      }
+    };
+    loadMaterialTypes();
+  }, []);
 
   useEffect(() => {
     loadData();
@@ -99,9 +127,10 @@ export function InventoryPage() {
   const lowStockCount = 5; // Mock value for demo
 
   const filteredItems = useMemo(() => {
-    if (!searchQuery) return items;
+    const safeItems = items || [];
+    if (!searchQuery) return safeItems;
     const query = searchQuery.toLowerCase();
-    return items.filter(
+    return safeItems.filter(
       (item) =>
         item.id.toLowerCase().includes(query) ||
         item.typeId.toLowerCase().includes(query) ||
@@ -177,13 +206,73 @@ export function InventoryPage() {
         <div className="filter-section">
           <h3>Quick Filter</h3>
           <div className="filter-group">
-            <input
-              type="text"
-              value={typeId}
-              onInput={(e) => setTypeId((e.target as HTMLInputElement).value)}
-              placeholder="Type ID"
-              className="search-input"
-            />
+            {/* Material Type Dropdown */}
+            <div className="relative">
+              <div
+                className="search-input cursor-pointer flex items-center justify-between"
+                onClick={() => !isLoadingTypes && setTypeFilterDropdownOpen(!typeFilterDropdownOpen)}
+              >
+                <span className={typeId ? 'text-gray-900' : 'text-gray-400'}>
+                  {typeId
+                    ? materialTypes.find((mt) => mt.id === typeId)?.name || typeId
+                    : 'All Types'}
+                </span>
+                {isLoadingTypes ? (
+                  <svg className="animate-spin h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                ) : (
+                  <svg
+                    className={`w-4 h-4 text-gray-500 transition-transform ${typeFilterDropdownOpen ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                )}
+              </div>
+
+              {/* Dropdown */}
+              {typeFilterDropdownOpen && (
+                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded shadow-lg max-h-60 overflow-auto">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTypeId('');
+                      setTypeFilterDropdownOpen(false);
+                    }}
+                    className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-100 ${!typeId ? 'bg-green-50 text-green-700' : ''}`}
+                  >
+                    All Types
+                  </button>
+                  {materialTypes.map((mt) => (
+                    <button
+                      key={mt.id}
+                      type="button"
+                      onClick={() => {
+                        setTypeId(mt.id);
+                        setTypeFilterDropdownOpen(false);
+                      }}
+                      className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-100 flex flex-col ${typeId === mt.id ? 'bg-green-50 text-green-700' : ''}`}
+                    >
+                      <span className="font-medium">{mt.name}</span>
+                      <span className="text-xs text-gray-500">ID: {mt.id}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Click outside to close */}
+              {typeFilterDropdownOpen && (
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setTypeFilterDropdownOpen(false)}
+                />
+              )}
+            </div>
+
             <select
               value={status}
               onChange={(e) => setStatus((e.target as HTMLSelectElement).value as MaterialStatus | '')}
@@ -300,7 +389,7 @@ export function InventoryPage() {
             <table className="data-table inventory-table">
               <thead>
                 <tr>
-                  <th>Item ID</th>
+                  <th className="col-id">ID</th>
                   <th>Type</th>
                   <th>Description</th>
                   <th>Location</th>
@@ -313,8 +402,17 @@ export function InventoryPage() {
               <tbody>
                 {filteredItems.map((item) => (
                   <tr key={item.id}>
-                    <td>
-                      <span className="font-mono font-medium">{item.id}</span>
+                    <td className="col-id">
+                      <button
+                        onClick={() => copyToClipboard(item.id)}
+                        className="copy-id-btn"
+                        title={`Copy ID: ${item.id}`}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                      </button>
                     </td>
                     <td>{item.typeId}</td>
                     <td>{item.description || '-'}</td>

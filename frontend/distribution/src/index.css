@@ -336,6 +336,7 @@ body {
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   overflow-y: auto;
+  overflow-x: hidden;
   height: 100%;
 }
 
@@ -358,6 +359,13 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+}
+
+/* Ensure inputs and selects in sidebar don't overflow */
+.sidebar .search-input,
+.sidebar .sort-select {
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .checkbox-label {
@@ -617,6 +625,38 @@ body {
 
 .data-table tbody tr.priority-low {
   border-left: 3px solid #a0aec0;
+}
+
+/* ID Column - narrow with copy button */
+.data-table .col-id {
+  width: 40px;
+  min-width: 40px;
+  max-width: 40px;
+  text-align: center;
+  padding: 0.5rem;
+}
+
+.copy-id-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  background-color: white;
+  color: #718096;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.copy-id-btn:hover {
+  background-color: #f7fafc;
+  border-color: #4299e1;
+  color: #4299e1;
+}
+
+.copy-id-btn:active {
+  transform: scale(0.95);
 }
 
 /* Request Info */

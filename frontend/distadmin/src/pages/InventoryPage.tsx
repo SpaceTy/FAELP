@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'preact/hooks';
 import { inventoryService } from '@/services/inventory';
-import type { MaterialInstance, MaterialStatus, InventorySummary } from '@/types/inventory';
+import { materialTypesService } from '@/services/materialTypes';
+import type { MaterialInstance, MaterialStatus, InventorySummary, MaterialType } from '@/types/inventory';
 import { InventoryFormModal } from '@/components/InventoryFormModal';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { Modal } from '@/components/Modal';
@@ -40,6 +41,7 @@ export function InventoryPage() {
   // State
   const [instances, setInstances] = useState<MaterialInstance[]>([]);
   const [summary, setSummary] = useState<InventorySummary[]>([]);
+  const [materialTypes, setMaterialTypes] = useState<MaterialType[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,6 +49,7 @@ export function InventoryPage() {
   const [statusFilter, setStatusFilter] = useState<MaterialStatus | ''>('');
   const [locationFilter, setLocationFilter] = useState('');
   const [typeIdFilter, setTypeIdFilter] = useState('');
+  const [typeFilterDropdownOpen, setTypeFilterDropdownOpen] = useState(false);
 
   // Modal state
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -81,9 +84,20 @@ export function InventoryPage() {
     }
   }, [statusFilter, locationFilter, typeIdFilter]);
 
+  // Load material types once on mount
+  const loadMaterialTypes = useCallback(async () => {
+    try {
+      const typesData = await materialTypesService.getMaterialTypes();
+      setMaterialTypes(typesData);
+    } catch (err) {
+      console.error('Failed to load material types:', err);
+    }
+  }, []);
+
   useEffect(() => {
     loadData();
-  }, [loadData]);
+    loadMaterialTypes();
+  }, [loadData, loadMaterialTypes]);
 
   // Summary calculations
   const summaryByStatus = useMemo(() => {
@@ -214,13 +228,64 @@ export function InventoryPage() {
         {/* Type Filter */}
         <div className="filter-section">
           <h3>Material-Typ</h3>
-          <input
-            type="text"
-            value={typeIdFilter}
-            onInput={(e) => setTypeIdFilter((e.target as HTMLInputElement).value)}
-            placeholder="Filter nach Typ-ID..."
-            className="logistics-input text-sm"
-          />
+          <div className="relative">
+            <div
+              className="logistics-input text-sm cursor-pointer flex items-center justify-between"
+              onClick={() => setTypeFilterDropdownOpen(!typeFilterDropdownOpen)}
+            >
+              <span className={typeIdFilter ? 'text-gray-900' : 'text-gray-400'}>
+                {typeIdFilter
+                  ? materialTypes.find((mt) => mt.id === typeIdFilter)?.name || typeIdFilter
+                  : 'Alle Typen'}
+              </span>
+              <svg
+                className={`w-4 h-4 text-gray-500 transition-transform ${typeFilterDropdownOpen ? 'rotate-180' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+
+            {/* Dropdown */}
+            {typeFilterDropdownOpen && (
+              <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded shadow-lg max-h-60 overflow-auto">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTypeIdFilter('');
+                    setTypeFilterDropdownOpen(false);
+                  }}
+                  className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-100 ${!typeIdFilter ? 'bg-blue-50 text-blue-700' : ''}`}
+                >
+                  Alle Typen
+                </button>
+                {materialTypes.map((mt) => (
+                  <button
+                    key={mt.id}
+                    type="button"
+                    onClick={() => {
+                      setTypeIdFilter(mt.id);
+                      setTypeFilterDropdownOpen(false);
+                    }}
+                    className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-100 flex flex-col ${typeIdFilter === mt.id ? 'bg-blue-50 text-blue-700' : ''}`}
+                  >
+                    <span className="font-medium">{mt.name}</span>
+                    <span className="text-xs text-gray-500">ID: {mt.id}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Click outside to close */}
+            {typeFilterDropdownOpen && (
+              <div
+                className="fixed inset-0 z-40"
+                onClick={() => setTypeFilterDropdownOpen(false)}
+              />
+            )}
+          </div>
         </div>
 
         {/* Stats */}
@@ -369,6 +434,7 @@ export function InventoryPage() {
         onClose={() => setIsFormModalOpen(false)}
         onSubmit={handleFormSubmit}
         instance={editingInstance}
+        materialTypes={materialTypes}
       />
 
       {/* Delete Confirmation */}

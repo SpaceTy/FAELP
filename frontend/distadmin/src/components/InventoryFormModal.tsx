@@ -1,12 +1,13 @@
-import { useState, useEffect } from 'preact/hooks';
+import { useState, useEffect, useMemo } from 'preact/hooks';
 import { Modal } from './Modal';
-import type { MaterialInstance, MaterialStatus } from '@/types/inventory';
+import type { MaterialInstance, MaterialStatus, MaterialType } from '@/types/inventory';
 
 interface InventoryFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: Record<string, string>) => Promise<void>;
   instance?: MaterialInstance | null;
+  materialTypes?: MaterialType[];
 }
 
 const STATUS_OPTIONS: { value: MaterialStatus; label: string; color: string }[] = [
@@ -15,29 +16,50 @@ const STATUS_OPTIONS: { value: MaterialStatus; label: string; color: string }[] 
   { value: 'returned', label: 'Zurückgegeben', color: 'text-gray-700' },
 ];
 
-export function InventoryFormModal({ isOpen, onClose, onSubmit, instance }: InventoryFormModalProps) {
+export function InventoryFormModal({ isOpen, onClose, onSubmit, instance, materialTypes = [] }: InventoryFormModalProps) {
   const isEditing = !!instance;
 
   const [typeId, setTypeId] = useState('');
+  const [customTypeId, setCustomTypeId] = useState('');
+  const [isCustomType, setIsCustomType] = useState(false);
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
   const [status, setStatus] = useState<MaterialStatus>('available');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  // Filter material types based on search query
+  const filteredMaterialTypes = useMemo(() => {
+    if (!searchQuery.trim()) return materialTypes;
+    const query = searchQuery.toLowerCase();
+    return materialTypes.filter(
+      (mt) =>
+        mt.name.toLowerCase().includes(query) ||
+        mt.id.toLowerCase().includes(query)
+    );
+  }, [materialTypes, searchQuery]);
 
   useEffect(() => {
     if (isOpen) {
       if (instance) {
         setTypeId(instance.typeId);
+        setCustomTypeId('');
+        setIsCustomType(false);
         setDescription(instance.description || '');
         setLocation(instance.location);
         setStatus(instance.status);
       } else {
         setTypeId('');
+        setCustomTypeId('');
+        setIsCustomType(false);
         setDescription('');
         setLocation('');
         setStatus('available');
       }
+      setSearchQuery('');
+      setIsDropdownOpen(false);
       setError(null);
     }
   }, [isOpen, instance]);
@@ -48,11 +70,13 @@ export function InventoryFormModal({ isOpen, onClose, onSubmit, instance }: Inve
     setIsLoading(true);
 
     try {
+      const finalTypeId = isCustomType ? customTypeId.trim() : typeId.trim();
+
       if (isEditing && instance) {
         await onSubmit({ status, location: location.trim() });
       } else {
         await onSubmit({
-          typeId: typeId.trim(),
+          typeId: finalTypeId,
           description: description.trim() || '',
           location: location.trim(),
         });
@@ -63,6 +87,24 @@ export function InventoryFormModal({ isOpen, onClose, onSubmit, instance }: Inve
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSelectMaterialType = (selectedTypeId: string) => {
+    setTypeId(selectedTypeId);
+    setIsCustomType(false);
+    setIsDropdownOpen(false);
+    setSearchQuery('');
+  };
+
+  const handleSelectCustomType = () => {
+    setIsCustomType(true);
+    setIsDropdownOpen(false);
+    setSearchQuery('');
+  };
+
+  const getSelectedMaterialTypeName = () => {
+    const mt = materialTypes.find((m) => m.id === typeId);
+    return mt ? `${mt.name} (${mt.id})` : typeId;
   };
 
   return (
@@ -84,7 +126,11 @@ export function InventoryFormModal({ isOpen, onClose, onSubmit, instance }: Inve
           <button
             type="submit"
             form="inventory-form"
-            disabled={isLoading || !location.trim() || (!isEditing && !typeId.trim())}
+            disabled={
+              isLoading ||
+              !location.trim() ||
+              (!isEditing && !(isCustomType ? customTypeId.trim() : typeId.trim()))
+            }
             className="btn-logistics btn-logistics-primary"
           >
             {isLoading ? (
@@ -116,25 +162,140 @@ export function InventoryFormModal({ isOpen, onClose, onSubmit, instance }: Inve
           </div>
         )}
 
-        {/* Type ID */}
-        <div>
-          <label className="logistics-label" htmlFor="typeId">
-            Material-Typ ID {isEditing && '(Nicht änderbar)'}
-          </label>
-          <input
-            type="text"
-            id="typeId"
-            value={typeId}
-            onInput={(e) => setTypeId((e.target as HTMLInputElement).value)}
-            disabled={isEditing}
-            className="logistics-input disabled:bg-gray-100 disabled:text-gray-500"
-            placeholder="z.B. material-type-uuid"
-            required={!isEditing}
-          />
-          <p className="mt-1 text-xs text-gray-500">
-            Die ID des Materialtyps aus dem Organisation-Backend
-          </p>
-        </div>
+        {/* Type ID Selection */}
+        {!isEditing && (
+          <div>
+            <label className="logistics-label" htmlFor="typeId">
+              Material-Typ *
+            </label>
+
+            {isCustomType ? (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    id="customTypeId"
+                    value={customTypeId}
+                    onInput={(e) => setCustomTypeId((e.target as HTMLInputElement).value)}
+                    className="logistics-input flex-1"
+                    placeholder="Neue Typ-ID eingeben..."
+                    required
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCustomType(false);
+                      setCustomTypeId('');
+                    }}
+                    className="px-3 py-2 text-sm text-gray-600 hover:text-gray-800 whitespace-nowrap"
+                  >
+                    Aus Liste wählen
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500">
+                  Geben Sie eine neue Typ-ID ein oder wählen Sie aus der Liste
+                </p>
+              </div>
+            ) : (
+              <div className="relative">
+                {/* Search/Select Input */}
+                <div
+                  className="logistics-input cursor-pointer flex items-center justify-between"
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                >
+                  <span className={typeId ? 'text-gray-900' : 'text-gray-400'}>
+                    {typeId ? getSelectedMaterialTypeName() : 'Material-Typ auswählen...'}
+                  </span>
+                  <svg
+                    className={`w-4 h-4 text-gray-500 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+
+                {/* Dropdown */}
+                {isDropdownOpen && (
+                  <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded shadow-lg max-h-80 overflow-auto">
+                    {/* Search in dropdown */}
+                    <div className="p-2 border-b border-gray-200 sticky top-0 bg-white">
+                      <input
+                        type="text"
+                        value={searchQuery}
+                        onInput={(e) => setSearchQuery((e.target as HTMLInputElement).value)}
+                        placeholder="Suchen..."
+                        className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-logistics-accent"
+                        autoFocus
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </div>
+
+                    {/* Add new option */}
+                    <button
+                      type="button"
+                      onClick={handleSelectCustomType}
+                      className="w-full px-4 py-2 text-left text-sm text-logistics-accent hover:bg-blue-50 flex items-center gap-2 border-b border-gray-100"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      Neuen Typ erstellen...
+                    </button>
+
+                    {/* Material type list */}
+                    {filteredMaterialTypes.length === 0 ? (
+                      <div className="px-4 py-3 text-sm text-gray-500">
+                        {searchQuery ? 'Keine Material-Typen gefunden' : 'Keine Material-Typen verfügbar'}
+                      </div>
+                    ) : (
+                      filteredMaterialTypes.map((mt) => (
+                        <button
+                          key={mt.id}
+                          type="button"
+                          onClick={() => handleSelectMaterialType(mt.id)}
+                          className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex flex-col gap-0.5 ${
+                            typeId === mt.id ? 'bg-blue-50 text-blue-700' : ''
+                          }`}
+                        >
+                          <span className="font-medium">{mt.name}</span>
+                          <span className="text-xs text-gray-500">ID: {mt.id}</span>
+                          {mt.description && (
+                            <span className="text-xs text-gray-400 truncate">{mt.description}</span>
+                          )}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+
+                {/* Click outside to close dropdown */}
+                {isDropdownOpen && (
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setIsDropdownOpen(false)}
+                  />
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Display selected type when editing */}
+        {isEditing && (
+          <div>
+            <label className="logistics-label">Material-Typ ID</label>
+            <input
+              type="text"
+              value={typeId}
+              disabled
+              className="logistics-input disabled:bg-gray-100 disabled:text-gray-500"
+            />
+            <p className="mt-1 text-xs text-gray-500">Der Material-Typ kann nicht geändert werden</p>
+          </div>
+        )}
 
         {/* Description */}
         <div>

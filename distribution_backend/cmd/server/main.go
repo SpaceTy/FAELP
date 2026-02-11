@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"distribution_backend/internal/auth"
+	"distribution_backend/internal/client"
 	"distribution_backend/internal/config"
 	"distribution_backend/internal/db"
 	"distribution_backend/internal/domain"
@@ -56,7 +57,10 @@ func main() {
 	jwtService := auth.NewJWTService(cfg.JWTSecret)
 	authMiddleware := auth.NewMiddleware(jwtService)
 	authHandler := handlers.NewAuthHandler(store, jwtService)
-	inventoryHandler := handlers.NewInventoryHandler(store)
+
+	// Initialize organization backend client
+	orgClient := client.NewOrgClient(cfg.OrganizationBackendURL, cfg.OrganizationBackendAPIKey)
+	inventoryHandler := handlers.NewInventoryHandler(store, orgClient)
 
 	mux := http.NewServeMux()
 
@@ -91,6 +95,9 @@ func main() {
 	mux.HandleFunc("POST /api/inventory/{id}/release", authMiddleware.RequireAuth(inventoryHandler.ReleaseFromRequest))
 	mux.HandleFunc("GET /api/inventory/summary", authMiddleware.RequireAuth(inventoryHandler.CountByTypeAndStatus))
 	mux.HandleFunc("GET /api/inventory/available", authMiddleware.RequireAuth(inventoryHandler.GetAvailableByType))
+
+	// Material types endpoint (fetches from organization backend)
+	mux.HandleFunc("GET /api/material-types", authMiddleware.RequireAuth(inventoryHandler.GetMaterialTypes))
 
 	server := &http.Server{
 		Addr:              ":8081",

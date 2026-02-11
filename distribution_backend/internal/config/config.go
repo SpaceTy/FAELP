@@ -19,9 +19,11 @@ type AdminConfig struct {
 }
 
 type Config struct {
-	DatabaseURL string      `yaml:"DATABASE_URL"`
-	JWTSecret   string      `yaml:"JWT_SECRET"`
-	Admin       AdminConfig `yaml:"admin"`
+	DatabaseURL               string      `yaml:"DATABASE_URL"`
+	JWTSecret                 string      `yaml:"JWT_SECRET"`
+	OrganizationBackendURL    string      `yaml:"ORGANIZATION_BACKEND_URL"`
+	OrganizationBackendAPIKey string      `yaml:"ORGANIZATION_BACKEND_API_KEY"`
+	Admin                     AdminConfig `yaml:"admin"`
 }
 
 func Load() (Config, error) {
@@ -46,6 +48,12 @@ func Load() (Config, error) {
 	}
 	if secret := os.Getenv("JWT_SECRET"); secret != "" {
 		cfg.JWTSecret = secret
+	}
+	if orgURL := os.Getenv("ORGANIZATION_BACKEND_URL"); orgURL != "" {
+		cfg.OrganizationBackendURL = orgURL
+	}
+	if orgAPIKey := os.Getenv("ORGANIZATION_BACKEND_API_KEY"); orgAPIKey != "" {
+		cfg.OrganizationBackendAPIKey = orgAPIKey
 	}
 	if adminUser := os.Getenv("ADMIN_USERNAME"); adminUser != "" {
 		cfg.Admin.Username = adminUser

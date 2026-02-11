@@ -3,6 +3,10 @@ DATABASE_URL: "postgresql://app_distributionbackend_dev:password@localhost:5432/
 # JWT secret for signing tokens - CHANGE THIS IN PRODUCTION
 JWT_SECRET: "your-secure-jwt-secret-change-in-production"
 
+# Organization backend configuration
+ORGANIZATION_BACKEND_URL: "http://localhost:8080"
+ORGANIZATION_BACKEND_API_KEY: "your-api-key-here"
+
 # Initial admin account - required for first setup
 admin:
   username: "admin"

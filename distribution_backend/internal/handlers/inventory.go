@@ -7,18 +7,37 @@ import (
 	"net/http"
 	"strconv"
 
+	"distribution_backend/internal/client"
 	"distribution_backend/internal/db"
 	"distribution_backend/internal/domain"
 )
 
 // InventoryHandler handles inventory endpoints.
 type InventoryHandler struct {
-	store *db.Store
+	store    *db.Store
+	orgClient *client.OrgClient
 }
 
 // NewInventoryHandler creates a new inventory handler.
-func NewInventoryHandler(store *db.Store) *InventoryHandler {
-	return &InventoryHandler{store: store}
+func NewInventoryHandler(store *db.Store, orgClient *client.OrgClient) *InventoryHandler {
+	return &InventoryHandler{store: store, orgClient: orgClient}
+}
+
+// GetMaterialTypes returns all material types from the organization backend.
+func (h *InventoryHandler) GetMaterialTypes(w http.ResponseWriter, r *http.Request) {
+	if h.orgClient == nil {
+		http.Error(w, `{"error":"organization backend client not configured"}`, http.StatusServiceUnavailable)
+		return
+	}
+
+	materialTypes, err := h.orgClient.GetMaterialTypes(r.Context())
+	if err != nil {
+		http.Error(w, `{"error":"failed to fetch material types from organization backend"}`, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(materialTypes)
 }
 
 type assignRequestBody struct {
