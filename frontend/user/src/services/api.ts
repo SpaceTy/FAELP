@@ -7,7 +7,9 @@ import type {
 import type { Material } from '@/types/material';
 import { authSignal } from '@/context/AuthContext';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+// Use relative URL to leverage Vite proxy in development, avoiding CORS issues
+// The Vite proxy forwards /api/* to the backend and rewrites to /*
+const API_BASE = '/api';
 
 class ApiError extends Error {
   constructor(

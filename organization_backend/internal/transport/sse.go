@@ -9,6 +9,8 @@ func Stream(w http.ResponseWriter, r *http.Request, events <-chan []byte) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 
 	flusher, ok := w.(http.Flusher)
 	if !ok {
@@ -16,7 +18,12 @@ func Stream(w http.ResponseWriter, r *http.Request, events <-chan []byte) {
 		return
 	}
 
+	// Send initial heartbeat to confirm connection is established.
+	// This ensures the client receives a response before any potential errors,
+	// preventing CORS errors with null status code.
+	fmt.Fprintf(w, ": connected\n\n")
 	flusher.Flush()
+
 	for {
 		select {
 		case <-r.Context().Done():

@@ -1,19 +1,20 @@
-import { useState } from 'preact/hooks';
+import { useState, useEffect } from 'preact/hooks';
 import { useCart } from '@/hooks/useCart';
 import { useMaterialTypes } from '@/context/MaterialTypesContext';
+import { useAuth } from '@/context/AuthContext';
 import { api } from '@/services/api';
 import type { CreateRequestPayload } from '@/types/request';
 
 export function CartPage() {
   const { items, itemCount, updateQuantity, removeItem, clearCart } = useCart();
   const { materialsById } = useMaterialTypes();
+  const { customer } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
   // Form state
-  const [customerEmail, setCustomerEmail] = useState('');
-  const [customerName, setCustomerName] = useState('');
+  const [customerEmail, setCustomerEmail] = useState(customer?.email || '');
   const [shippingCustomerName, setShippingCustomerName] = useState('');
   const [shippingAddress, setShippingAddress] = useState({
     line1: '',
@@ -23,6 +24,13 @@ export function CartPage() {
   });
   const [deliveryDate, setDeliveryDate] = useState('');
   const [notes, setNotes] = useState('');
+
+  // Update customer email when auth changes
+  useEffect(() => {
+    if (customer) {
+      setCustomerEmail(customer.email);
+    }
+  }, [customer]);
 
   const cartMaterials = Object.entries(items).map(([materialId, cartItem]) => {
     const material = materialsById.get(materialId);
@@ -39,8 +47,7 @@ export function CartPage() {
     try {
       const payload: CreateRequestPayload = {
         customerEmail,
-        customerName,
-        shippingCustomerName: shippingCustomerName || customerName,
+        shippingCustomerName: shippingCustomerName || customerEmail,
         shippingAddress,
         deliveryDate: new Date(deliveryDate).toISOString(),
         items: Object.fromEntries(
@@ -173,27 +180,13 @@ export function CartPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-text-primary mb-1">
-                E-Mail *
+                E-Mail
               </label>
               <input
                 type="email"
-                required
                 value={customerEmail}
-                onChange={(e) => setCustomerEmail((e.target as HTMLInputElement).value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
-                Name *
-              </label>
-              <input
-                type="text"
-                required
-                value={customerName}
-                onChange={(e) => setCustomerName((e.target as HTMLInputElement).value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary"
+                disabled
+                className="w-full px-3 py-2 border border-gray-300 rounded bg-gray-100 text-gray-600 cursor-not-allowed"
               />
             </div>
 

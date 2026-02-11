@@ -1,6 +1,8 @@
 import type { AuthSession, Customer } from '@/types/auth';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+// Use relative URL to leverage Vite proxy in development, avoiding CORS issues
+// The Vite proxy forwards /api/* to the backend and rewrites to /*
+const API_BASE = '/api';
 
 export class AuthError extends Error {
   constructor(public status: number, public code: string, message: string) {

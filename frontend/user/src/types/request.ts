@@ -30,7 +30,7 @@ export interface Request {
 
 export interface CreateRequestPayload {
   customerEmail: string;
-  customerName: string;
+  customerName?: string;
   deliveryDate: string;
   status?: string;
   shippingCustomerName: string;
