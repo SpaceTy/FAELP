@@ -32,13 +32,12 @@ flowchart TB
     subgraph FrontendLayer["Frontend Layer"]
         UserFrontend["User Frontend<br/>Preact + Vite - IMPLEMENTED"]
         OrgAdminFrontend["Org Admin Frontend<br/>Preact + Vite - IMPLEMENTED"]
-        LogisticsFrontend["Logistics Frontend<br/>Preact - Planned"]
-        DistAdminFrontend["Distribution Admin Frontend<br/>Preact - Planned"]
+        DistAdminFrontend["Distribution Admin Frontend<br/>Preact + Vite - IMPLEMENTED"]
     end
 
     subgraph BackendLayer["Backend Layer"]
         OrgBackend["Organization Backend<br/>Go + PostgreSQL + WorkOS<br/>IMPLEMENTED"]
-        LogBackend["Logistics Backend<br/>Planned"]
+        DistBackend["Distribution Backend<br/>Go + PostgreSQL + JWT<br/>IMPLEMENTED"]
     end
 
     subgraph DistributionBlock["Distribution Center Block"]
@@ -50,12 +49,11 @@ flowchart TB
     OrgAdmins --> OrgAdminFrontend
     UserFrontend --> OrgBackend
     OrgAdminFrontend --> OrgBackend
-    OrgBackend --> LogBackend
-    LogBackend --> DistCenter1
-    LogBackend --> DistCenterN
+    OrgBackend --> DistBackend
+    DistBackend --> DistCenter1
+    DistBackend --> DistCenterN
     
-    LogisticsFrontend --> LogBackend
-    DistAdminFrontend --> LogBackend
+    DistAdminFrontend --> DistBackend
 ```
 
 ### 2.2 Component Breakdown
@@ -63,11 +61,10 @@ flowchart TB
 | Component | Technology | Status | Purpose |
 |-----------|------------|--------|---------|
 | **Organization Backend** | Go + PostgreSQL + WorkOS | Implemented | Central coordination, request routing, customer management, authentication |
-| **Logistics Backend** | TBD | Planned | Distribution center operations, inventory, packaging, returns |
+| **Distribution Backend** | Go + PostgreSQL + JWT | Implemented | Distribution center inventory, material instances, returns |
 | **User Frontend** | Preact + Vite + TypeScript + Tailwind | Implemented | School/customer interface for requesting materials |
 | **Org Admin Frontend** | Preact + Vite + TypeScript + Tailwind | Implemented | Organization-wide administration, material type management |
-| **Logistics Frontend** | Preact | Planned | Distribution center staff interface |
-| **Distribution Admin Frontend** | Preact | Planned | Per-distribution-center administration |
+| **Distribution Admin Frontend** | Preact + Vite + TypeScript + Tailwind | Implemented | Per-distribution-center inventory and user management |
 
 ---
 
@@ -289,65 +286,160 @@ Material type images are uploaded via [`upload_handlers.go`](organization_backen
 
 ---
 
-## 4. Logistics Backend (logbackend)
+## 4. Distribution Backend (distribution_backend)
 
 ### 4.1 Overview
 
-The Logistics Backend handles **distribution center operations**. Each distribution center runs an instance of this backend to manage their local inventory and fulfill requests routed to them by the orgbackend.
+The Distribution Backend handles **distribution center operations**. Each distribution center runs an instance of this backend to manage their local inventory, track individual material instances, and fulfill requests routed to them by the orgbackend.
 
-**Status**: Planned (not yet implemented)  
-**Location**: [`distribution_backend/`](distribution_backend/) (currently empty)
+**Status**: Implemented  
+**Location**: [`distribution_backend/`](distribution_backend/)  
+**Database**: PostgreSQL  
+**Authentication**: JWT (username/password based)  
+**Port**: 8081
 
-### 4.2 Responsibilities
+### 4.2 Project Structure
+
+```
+distribution_backend/
+├── cmd/server/
+│   └── main.go                    # Application entry point
+├── internal/
+│   ├── api/
+│   │   └── routes.go              # Route definitions (in main.go)
+│   ├── auth/
+│   │   ├── auth.go                # Password hashing
+│   │   ├── jwt.go                 # JWT token generation/validation
+│   │   └── middleware.go          # Auth middleware
+│   ├── client/
+│   │   └── org_client.go          # Organization backend client
+│   ├── config/
+│   │   └── config.go              # Configuration management
+│   ├── db/
+│   │   ├── db.go                  # Database connection
+│   │   ├── migrate.go             # Migration runner
+│   │   ├── models.go              # Database models
+│   │   ├── queries.go             # SQL queries
+│   │   ├── user_queries.go        # User management queries
+│   │   └── migrations/
+│   │       ├── 001_init.sql       # Material instances table
+│   │       ├── 002_users.sql      # User management
+│   │       └── 003_material_instance_description.sql
+│   ├── domain/
+│   │   ├── material_instance.go   # Material instance domain model
+│   │   └── user.go                # User domain model
+│   └── handlers/
+│       ├── auth.go                # Authentication handlers
+│       └── inventory.go           # Inventory handlers
+├── scripts/
+│   └── setup_database.sh          # Database setup script
+├── config.yaml                    # Configuration file
+├── go.mod                         # Go module definition
+└── Makefile                       # Build automation
+```
+
+### 4.3 Responsibilities
 
 | Function | Description |
 |----------|-------------|
-| **Inventory Management** | Track physical items, their condition, location, and availability |
-| **Request Fulfillment** | Process incoming requests from orgbackend, reserve items |
-| **Packaging** | Manage the packaging process for outgoing shipments |
-| **Returns Processing** | Handle returned items, inspect condition, restock |
-| **Material Instances** | Track individual physical items (not just types) with serial numbers |
+| **Inventory Management** | Track physical items, their status, location, and availability |
+| **Material Instance Tracking** | Track individual physical items (not just types) with unique IDs |
+| **Request Assignment** | Assign available items to specific requests |
+| **Returns Processing** | Handle returned items and mark them available |
+| **User Management** | Admin and staff user accounts with role-based access |
+| **OrgBackend Integration** | Fetch material types from organization backend |
 
-### 4.3 Planned Data Models
+### 4.4 Data Models
 
-**Material Instance**:
-```
-{
-  id: string,              // Unique serial number
-  typeId: string,          // References MaterialType
-  status: "available" | "rented" | "returned" | "maintenance",
-  useCount: number,        // Track wear and tear
-  location: string,        // Current physical location
-  currentAssignment: {
-    requestId: string | null,
-    customerId: string | null,
-  },
-  condition: "excellent" | "good" | "fair" | "needs_repair",
+**MaterialInstance** ([`domain/material_instance.go`](distribution_backend/internal/domain/material_instance.go)):
+```go
+type MaterialInstance struct {
+    ID               string    `json:"id"`
+    TypeID           string    `json:"typeId"`
+    Description      string    `json:"description"`
+    Status           string    `json:"status"`        // available | rented | returned
+    UseCount         int       `json:"useCount"`
+    Location         string    `json:"location"`
+    CurrentRequestID *string   `json:"currentRequestId"`
+    CreatedAt        time.Time `json:"createdAt"`
+    UpdatedAt        time.Time `json:"updatedAt"`
 }
 ```
 
-**Material Available**:
-```
-{
-  materialTypeId: string,
-  amount: number,          // Count of available items
-  distributionCenterId: string,
+**User** ([`domain/user.go`](distribution_backend/internal/domain/user.go)):
+```go
+type User struct {
+    ID           string    `json:"id"`
+    Username     string    `json:"username"`
+    PasswordHash string    `json:"-"`
+    IsAdmin      bool      `json:"isAdmin"`
+    CreatedAt    time.Time `json:"createdAt"`
+    UpdatedAt    time.Time `json:"updatedAt"`
 }
 ```
 
-### 4.4 Communication with OrgBackend
+### 4.5 API Endpoints
+
+#### Authentication Endpoints
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| POST | `/api/auth/login` | Login with username/password | No |
+| GET | `/api/auth/me` | Get current authenticated user | Yes |
+| PUT | `/api/auth/password` | Update own password | Yes |
+
+#### User Management Endpoints (Admin Only)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/users` | List all users |
+| POST | `/api/users` | Create new user |
+| GET | `/api/users/{id}` | Get user by ID |
+| DELETE | `/api/users/{id}` | Delete user |
+| PUT | `/api/users/{id}/password` | Reset user password |
+| PUT | `/api/users/{id}/admin` | Set admin status |
+
+#### Inventory Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/inventory` | Create material instance |
+| GET | `/api/inventory` | List material instances (with filters) |
+| GET | `/api/inventory/{id}` | Get specific instance |
+| PUT | `/api/inventory/{id}` | Update instance status/location |
+| DELETE | `/api/inventory/{id}` | Delete instance |
+| POST | `/api/inventory/{id}/assign` | Assign to request |
+| POST | `/api/inventory/{id}/release` | Release from request |
+| GET | `/api/inventory/summary` | Count by type and status |
+| GET | `/api/inventory/available` | Get available by type |
+| GET | `/api/material-types` | Fetch types from org backend |
+
+### 4.6 Communication with OrgBackend
 
 - **Protocol**: HTTPS requests
-- **Authentication**: Custom auth system (details TBD)
+- **Client**: [`client/org_client.go`](distribution_backend/internal/client/org_client.go)
+- **Purpose**: Fetch material type catalog from organization backend
+- **Configuration**:
+  - `ORGANIZATION_BACKEND_URL` - URL of organization backend
+  - `ORGANIZATION_BACKEND_API_KEY` - API key for authentication (optional)
+
+### 4.7 Authentication Strategy
+
+**Distribution Center Users**:
+- **JWT-based Authentication**: Username and password login
+- **Admin Users**: Can create/manage other users
 - **Flow**:
-  1. Orgbackend receives request from school
-  2. Orgbackend determines optimal distribution center based on:
-     - Material availability
-     - Geographic proximity
-     - Current workload
-  3. Orgbackend forwards request to appropriate logbackend instance
-  4. Logbackend confirms fulfillment capability
-  5. Logbackend updates inventory and manages physical logistics
+  1. User logs in with username/password
+  2. Backend validates credentials against database
+  3. Backend issues JWT token for session management
+  4. Token contains user ID, username, and admin status
+- **Initial Admin**: Configured via `config.yaml` or environment variables
+
+**Configuration**:
+- `JWT_SECRET` - Secret for signing JWT tokens
+- `ADMIN_USERNAME` - Initial admin username
+- `ADMIN_PASSWORD` - Initial admin password
+- `DATABASE_URL` - PostgreSQL connection string
 
 ---
 
@@ -363,8 +455,8 @@ The frontend is split into **four distinct interfaces** targeting different user
 |----------|--------------|---------|--------|
 | **User Frontend** | Schools/Teachers | Browse materials, create requests, track orders | **IMPLEMENTED** (Preact + Vite) |
 | **Org Admin Frontend** | Organization Admins | Manage material types, oversee operations | **IMPLEMENTED** (Preact + Vite) |
-| **Logistics Frontend** | DC Staff/Volunteers | Process requests, manage packaging, handle returns | Demo (HTML) |
-| **Distribution Admin Frontend** | DC Admins | Manage single distribution center settings | Not started |
+| **Distribution Admin Frontend** | DC Admins/Staff | Manage inventory, users, and assignments | **IMPLEMENTED** (Preact + Vite) |
+| **Logistics Frontend** | DC Staff/Volunteers | Process requests, packaging, returns | Demo (HTML) |
 
 ### 5.3 User Frontend ([`frontend/user/`](frontend/user/))
 
@@ -484,7 +576,63 @@ frontend/orgadmin/
 - Real-time availability counts
 - Admin-only access protection
 
-### 5.5 Demo Frontend ([`frontend/demo/`](frontend/demo/))
+### 5.5 Distribution Admin Frontend ([`frontend/distadmin/`](frontend/distadmin/))
+
+**Technology Stack**:
+- Same as User Frontend: Preact + Vite + TypeScript + Tailwind + Signals
+
+**Project Structure**:
+```
+frontend/distadmin/
+├── index.html
+├── package.json
+├── vite.config.ts
+├── tailwind.config.js
+├── tsconfig.json
+├── src/
+│   ├── App.tsx
+│   ├── main.tsx
+│   ├── index.css
+│   ├── components/
+│   │   ├── Header.tsx
+│   │   ├── ProtectedRoute.tsx
+│   │   ├── Modal.tsx
+│   │   ├── ConfirmModal.tsx
+│   │   ├── InventoryFormModal.tsx
+│   │   └── UserFormModal.tsx
+│   ├── context/
+│   │   └── AuthContext.tsx
+│   ├── pages/
+│   │   ├── LoginPage.tsx
+│   │   ├── InventoryPage.tsx
+│   │   └── AccountsPage.tsx
+│   ├── services/
+│   │   ├── auth.ts
+│   │   ├── inventory.ts
+│   │   └── materialTypes.ts
+│   └── types/
+│       ├── auth.ts
+│       ├── account.ts
+│       └── inventory.ts
+```
+
+**Routes**:
+| Path | Page | Auth Required |
+|------|------|---------------|
+| `/` | Inventory Management | Yes |
+| `/inventory` | Inventory Management | Yes |
+| `/accounts` | User Accounts Management | Yes + Admin |
+| `/login` | Login | No |
+
+**Features**:
+- Inventory management with material instance CRUD
+- Assign/release items to/from requests
+- View inventory summaries by type and status
+- User account management (admin only)
+- Password management
+- Fetches material types from organization backend
+
+### 5.6 Demo Frontend ([`frontend/demo/`](frontend/demo/))
 
 The original HTML/CSS demo implementations are preserved in `frontend/demo/`:
 - `frontend/demo/user/` - Static HTML demo for user interface
@@ -551,9 +699,11 @@ The platform uses **PostgreSQL** as the primary database for both orgbackend and
 - Uses `pgcrypto` extension for UUID generation
 - Implements triggers for `updated_at` timestamps and change notifications
 
-**LogBackend Database** (planned):
-- Will store material instances, inventory counts, and fulfillment data
+**Distribution Backend Database**:
+- Stores material instances, user accounts, and inventory tracking
 - Each distribution center maintains its own database instance
+- Uses `pgcrypto` extension for UUID generation
+- Implements triggers for `updated_at` timestamps
 
 ### 7.2 Key Database Features
 
@@ -568,12 +718,22 @@ The platform uses **PostgreSQL** as the primary database for both orgbackend and
 
 ### 7.3 Migration History
 
+**Organization Backend** ([`organization_backend/internal/db/migrations/`](organization_backend/internal/db/migrations/)):
+
 | Migration | Description |
 |-----------|-------------|
 | `001_init.sql` | Initial schema: users, requests, request_items, distribution_centers, material_available |
 | `002_add_workos_auth.sql` | Add WorkOS user ID and email verification columns |
 | `003_add_material_types.sql` | Create material_types table with foreign key constraints |
 | `004_rename_customer_to_user.sql` | Rename customers table to users, add is_admin field |
+
+**Distribution Backend** ([`distribution_backend/internal/db/migrations/`](distribution_backend/internal/db/migrations/)):
+
+| Migration | Description |
+|-----------|-------------|
+| `001_init.sql` | Material instances table with status tracking |
+| `002_users.sql` | User accounts table for distribution center staff |
+| `003_material_instance_description.sql` | Add description field to material instances |
 
 ---
 
