@@ -24,3 +24,8 @@ Thumbs.db
 npm-debug.log*
 
 .env
+
+# Bin folders (build outputs)
+**/bin/
+bin/
+
