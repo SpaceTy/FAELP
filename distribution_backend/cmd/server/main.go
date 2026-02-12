@@ -17,6 +17,7 @@ import (
 	"distribution_backend/internal/db"
 	"distribution_backend/internal/domain"
 	"distribution_backend/internal/handlers"
+	"distribution_backend/internal/socket"
 )
 
 func main() {
@@ -99,18 +100,39 @@ func main() {
 	// Material types endpoint (fetches from organization backend)
 	mux.HandleFunc("GET /api/material-types", authMiddleware.RequireAuth(inventoryHandler.GetMaterialTypes))
 
+	// Internal endpoint for org backend to get available material counts (Unix socket only, no auth needed)
+	mux.HandleFunc("GET /internal/available-materials", inventoryHandler.GetAvailableMaterialCounts)
+
 	server := &http.Server{
 		Addr:              ":8081",
 		Handler:           mux,
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
+	// Start TCP listener (public)
 	go func() {
-		log.Printf("distribution backend listening on %s", server.Addr)
+		log.Printf("distribution backend listening on %s (TCP)", server.Addr)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("server error: %v", err)
 		}
 	}()
+
+	// Start Unix socket listener (internal) if enabled
+	if cfg.Internal.SocketEnabled && cfg.Internal.SocketPath != "" {
+		go func() {
+			listener, err := socket.Listen(cfg.Internal.SocketPath)
+			if err != nil {
+				log.Printf("Failed to create Unix socket: %v", err)
+				return
+			}
+			defer listener.Close()
+
+			log.Printf("internal communication on %s (Unix socket)", cfg.Internal.SocketPath)
+			if err := server.Serve(listener); err != nil && err != http.ErrServerClosed {
+				log.Printf("Unix socket server error: %v", err)
+			}
+		}()
+	}
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)

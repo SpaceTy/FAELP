@@ -14,7 +14,7 @@ import (
 
 // InventoryHandler handles inventory endpoints.
 type InventoryHandler struct {
-	store    *db.Store
+	store     *db.Store
 	orgClient *client.OrgClient
 }
 
@@ -291,6 +291,18 @@ func (h *InventoryHandler) GetAvailableByType(w http.ResponseWriter, r *http.Req
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(instances)
+}
+
+// GetAvailableMaterialCounts returns available material counts by type for org backend
+func (h *InventoryHandler) GetAvailableMaterialCounts(w http.ResponseWriter, r *http.Request) {
+	availabilities, err := h.store.GetAvailableCountsByType(r.Context())
+	if err != nil {
+		http.Error(w, `{"error":"failed to fetch available material counts"}`, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(availabilities)
 }
 
 func isValidMaterialStatus(status string) bool {

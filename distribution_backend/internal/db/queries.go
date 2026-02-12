@@ -210,6 +210,37 @@ func (s *Store) CountByTypeAndStatus(ctx context.Context) ([]InventorySummary, e
 	return result, rows.Err()
 }
 
+// MaterialAvailability represents the count of available instances for a material type
+type MaterialAvailability struct {
+	MaterialTypeID string `json:"material_type_id"`
+	Amount         int    `json:"amount"`
+}
+
+// GetAvailableCountsByType returns the count of available material instances grouped by type_id
+func (s *Store) GetAvailableCountsByType(ctx context.Context) ([]MaterialAvailability, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT type_id, COUNT(*) as amount
+		FROM material_instances
+		WHERE status = $1
+		GROUP BY type_id
+		ORDER BY type_id
+	`, domain.StatusAvailable)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var result []MaterialAvailability
+	for rows.Next() {
+		var avail MaterialAvailability
+		if err := rows.Scan(&avail.MaterialTypeID, &avail.Amount); err != nil {
+			return nil, err
+		}
+		result = append(result, avail)
+	}
+	return result, rows.Err()
+}
+
 // GetAvailableByType returns available instances for a given material type
 func (s *Store) GetAvailableByType(ctx context.Context, typeID string, limit int) ([]domain.MaterialInstance, error) {
 	if limit <= 0 || limit > 1000 {

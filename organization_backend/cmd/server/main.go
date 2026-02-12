@@ -11,6 +11,7 @@ import (
 
 	"organization_backend/internal/api"
 	"organization_backend/internal/auth"
+	"organization_backend/internal/client"
 	"organization_backend/internal/config"
 	"organization_backend/internal/db"
 	"organization_backend/internal/service"
@@ -63,9 +64,14 @@ func main() {
 		JWTSecret: cfg.JWTSecret,
 	}
 
+	// Initialize distribution backend client for fetching material availability
+	distClient := client.NewDistClient(cfg.DistBackend.SocketPath)
+
 	materialTypeHandler := &api.MaterialTypeHandler{
-		Store:      store,
-		UploadPath: "uploads",
+		Store:                store,
+		UploadPath:           "uploads",
+		DistClient:           distClient,
+		DistributionCenterID: cfg.DistBackend.DistributionCenterID,
 	}
 
 	uploadHandler := &api.UploadHandler{

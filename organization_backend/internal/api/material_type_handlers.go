@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 	"regexp"
 	"strings"
@@ -14,8 +15,10 @@ import (
 
 // MaterialTypeHandler handles material type related requests
 type MaterialTypeHandler struct {
-	Store      StoreInterface
-	UploadPath string
+	Store                StoreInterface
+	UploadPath           string
+	DistClient           DistClientInterface
+	DistributionCenterID string
 }
 
 // StoreInterface defines the methods needed from Store
@@ -27,15 +30,44 @@ type StoreInterface interface {
 	UpdateMaterialType(ctx context.Context, id, name, description string) (domain.MaterialType, error)
 	UpdateMaterialTypeImage(ctx context.Context, id, imageURL string) error
 	DeleteMaterialType(ctx context.Context, id string) error
+	UpdateMaterialAvailability(ctx context.Context, distributionCenterID string, availability map[string]int) error
 }
 
-// ListMaterialTypes returns all material types with availability counts (public)
+// DistClientInterface defines the methods needed from the distribution backend client
+type DistClientInterface interface {
+	GetAvailableMaterials(ctx context.Context) (map[string]int, error)
+}
+
+// ListMaterialTypes returns all material types with availability counts from dist backend (public)
 func (h *MaterialTypeHandler) ListMaterialTypes(w http.ResponseWriter, r *http.Request) {
-	materialTypes, err := h.Store.ListMaterialTypesWithAvailability(r.Context())
+	// Fetch material types from database
+	materialTypes, err := h.Store.ListMaterialTypes(r.Context())
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "list_failed", "Failed to fetch material types")
 		return
 	}
+
+	// Fetch availability from distribution backend if configured
+	if h.DistClient != nil && h.DistributionCenterID != "" {
+		availabilityMap, err := h.DistClient.GetAvailableMaterials(r.Context())
+		if err != nil {
+			// Log error but don't fail - return material types with zero availability
+			log.Printf("Warning: failed to fetch availability from dist backend: %v", err)
+		} else {
+			// Update availability counts
+			for i := range materialTypes {
+				if amount, ok := availabilityMap[materialTypes[i].ID]; ok {
+					materialTypes[i].AvailableCount = amount
+				}
+			}
+
+			// Store the availability in the database
+			if err := h.Store.UpdateMaterialAvailability(r.Context(), h.DistributionCenterID, availabilityMap); err != nil {
+				log.Printf("Warning: failed to store availability in database: %v", err)
+			}
+		}
+	}
+
 	writeJSON(w, http.StatusOK, materialTypes)
 }
 

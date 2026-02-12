@@ -15,6 +15,12 @@ type InternalConfig struct {
 	SocketEnabled bool   `yaml:"socket_enabled"`
 }
 
+// DistBackendConfig holds configuration for connecting to distribution backend
+type DistBackendConfig struct {
+	SocketPath           string `yaml:"socket_path"`
+	DistributionCenterID string `yaml:"distribution_center_id"`
+}
+
 type Config struct {
 	DatabaseURL    string `yaml:"DATABASE_URL"`
 	WorkOSAPIKey   string
@@ -23,6 +29,9 @@ type Config struct {
 
 	// Internal communication config
 	Internal InternalConfig `yaml:"internal"`
+
+	// Distribution backend connection
+	DistBackend DistBackendConfig `yaml:"distribution_backend"`
 }
 
 func Load() (Config, error) {
@@ -63,6 +72,14 @@ func Load() (Config, error) {
 		cfg.Internal.SocketEnabled = true
 	} else if socketEnabled == "false" {
 		cfg.Internal.SocketEnabled = false
+	}
+
+	// Override distribution backend config with environment variables
+	if distSocketPath := os.Getenv("DIST_BACKEND_SOCKET_PATH"); distSocketPath != "" {
+		cfg.DistBackend.SocketPath = distSocketPath
+	}
+	if distCenterID := os.Getenv("DIST_BACKEND_CENTER_ID"); distCenterID != "" {
+		cfg.DistBackend.DistributionCenterID = distCenterID
 	}
 
 	if cfg.DatabaseURL == "" {

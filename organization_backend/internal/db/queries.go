@@ -592,3 +592,35 @@ func (s *Store) DeleteMaterialType(ctx context.Context, id string) error {
 	`, id)
 	return err
 }
+
+// UpdateMaterialAvailability updates the availability for a distribution center
+// It deletes old records and inserts new ones
+func (s *Store) UpdateMaterialAvailability(ctx context.Context, distributionCenterID string, availability map[string]int) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Delete existing availability for this distribution center
+	_, err = tx.ExecContext(ctx, `
+		DELETE FROM material_available
+		WHERE distribution_center_id = $1
+	`, distributionCenterID)
+	if err != nil {
+		return err
+	}
+
+	// Insert new availability records
+	for materialTypeID, amount := range availability {
+		_, err = tx.ExecContext(ctx, `
+			INSERT INTO material_available (material_type_id, distribution_center_id, amount)
+			VALUES ($1, $2, $3)
+		`, materialTypeID, distributionCenterID, amount)
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
+}

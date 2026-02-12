@@ -6,3 +6,10 @@ internal:
   socket_path: "/tmp/org-backend.sock"
   # Enable/disable Unix socket listener
   socket_enabled: true
+
+# Distribution backend connection
+distribution_backend:
+  # Unix socket path to connect to dist backend
+  socket_path: "/tmp/dist-backend.sock"
+  # Distribution center ID that this dist backend represents
+  distribution_center_id: "00000000-0000-0000-0000-000000000001"
