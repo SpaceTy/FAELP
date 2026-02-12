@@ -10,11 +10,48 @@ import (
 
 type contextKey string
 
-const claimsContextKey contextKey = "authClaims"
+const (
+	claimsContextKey   contextKey = "authClaims"
+	internalContextKey contextKey = "internalRequest"
+)
+
+// isUnixSocketRequest checks if the request came via Unix socket
+func isUnixSocketRequest(r *http.Request) bool {
+	// Unix socket connections have special RemoteAddr formats:
+	// - Empty string
+	// - Starts with "@" (abstract socket on Linux)
+	// - Starts with "/" (filesystem socket path)
+	remoteAddr := r.RemoteAddr
+	return remoteAddr == "" ||
+		strings.HasPrefix(remoteAddr, "@") ||
+		strings.HasPrefix(remoteAddr, "/")
+}
+
+// InternalMiddleware marks requests from Unix sockets as internal
+func InternalMiddleware() func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if isUnixSocketRequest(r) {
+				// Mark as internal request - skip auth
+				ctx := context.WithValue(r.Context(), internalContextKey, true)
+				next.ServeHTTP(w, r.WithContext(ctx))
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
 
 func AuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Skip auth for internal Unix socket requests
+			if isUnixSocketRequest(r) {
+				ctx := context.WithValue(r.Context(), internalContextKey, true)
+				next.ServeHTTP(w, r.WithContext(ctx))
+				return
+			}
+
 			var token string
 
 			// First try to get token from Authorization header

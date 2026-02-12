@@ -18,12 +18,27 @@ type AdminConfig struct {
 	Password string `yaml:"password"`
 }
 
+// OrgBackendConfig holds configuration for connecting to organization backend
+type OrgBackendConfig struct {
+	URL        string `yaml:"url"`
+	SocketPath string `yaml:"socket_path"`
+	APIKey     string `yaml:"api_key"`
+}
+
+// InternalConfig holds Unix socket configuration for internal communication
+type InternalConfig struct {
+	SocketPath    string `yaml:"socket_path"`
+	SocketEnabled bool   `yaml:"socket_enabled"`
+}
+
 type Config struct {
-	DatabaseURL               string      `yaml:"DATABASE_URL"`
-	JWTSecret                 string      `yaml:"JWT_SECRET"`
-	OrganizationBackendURL    string      `yaml:"ORGANIZATION_BACKEND_URL"`
-	OrganizationBackendAPIKey string      `yaml:"ORGANIZATION_BACKEND_API_KEY"`
-	Admin                     AdminConfig `yaml:"admin"`
+	DatabaseURL               string           `yaml:"DATABASE_URL"`
+	JWTSecret                 string           `yaml:"JWT_SECRET"`
+	OrganizationBackendURL    string           `yaml:"ORGANIZATION_BACKEND_URL"`
+	OrganizationBackendAPIKey string           `yaml:"ORGANIZATION_BACKEND_API_KEY"`
+	Admin                     AdminConfig      `yaml:"admin"`
+	OrgBackend                OrgBackendConfig `yaml:"organization_backend"`
+	Internal                  InternalConfig   `yaml:"internal"`
 }
 
 func Load() (Config, error) {
@@ -62,9 +77,38 @@ func Load() (Config, error) {
 		cfg.Admin.Password = adminPass
 	}
 
+	// Override organization backend config with environment variables
+	if orgURL := os.Getenv("ORG_BACKEND_URL"); orgURL != "" {
+		cfg.OrgBackend.URL = orgURL
+	}
+	if socketPath := os.Getenv("ORG_BACKEND_SOCKET_PATH"); socketPath != "" {
+		cfg.OrgBackend.SocketPath = socketPath
+	}
+	if apiKey := os.Getenv("ORG_BACKEND_API_KEY"); apiKey != "" {
+		cfg.OrgBackend.APIKey = apiKey
+	}
+
+	// Override internal socket config with environment variables
+	if socketPath := os.Getenv("INTERNAL_SOCKET_PATH"); socketPath != "" {
+		cfg.Internal.SocketPath = socketPath
+	}
+	if socketEnabled := os.Getenv("INTERNAL_SOCKET_ENABLED"); socketEnabled == "true" {
+		cfg.Internal.SocketEnabled = true
+	} else if socketEnabled == "false" {
+		cfg.Internal.SocketEnabled = false
+	}
+
 	// Apply defaults
 	if cfg.DatabaseURL == "" {
 		cfg.DatabaseURL = defaultDatabaseURL
+	}
+
+	// Backwards compatibility: use old config if new org_backend not set
+	if cfg.OrgBackend.URL == "" && cfg.OrganizationBackendURL != "" {
+		cfg.OrgBackend.URL = cfg.OrganizationBackendURL
+	}
+	if cfg.OrgBackend.APIKey == "" && cfg.OrganizationBackendAPIKey != "" {
+		cfg.OrgBackend.APIKey = cfg.OrganizationBackendAPIKey
 	}
 
 	// Generate a random JWT secret if not configured (for development only)

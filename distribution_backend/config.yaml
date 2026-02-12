@@ -7,6 +7,20 @@ JWT_SECRET: "your-secure-jwt-secret-change-in-production"
 ORGANIZATION_BACKEND_URL: "http://localhost:8080"
 ORGANIZATION_BACKEND_API_KEY: "your-api-key-here"
 
+# Organization backend connection (preferred Unix socket)
+organization_backend:
+  # TCP URL (fallback for multi-server)
+  url: "http://localhost:8080"
+  # Unix socket path (preferred when on same server)
+  socket_path: "/tmp/org-backend.sock"
+  # API key (fallback for multi-server)
+  api_key: ""
+
+# Internal socket for receiving requests
+internal:
+  socket_path: "/tmp/dist-backend.sock"
+  socket_enabled: true
+
 # Initial admin account - required for first setup
 admin:
   username: "admin"

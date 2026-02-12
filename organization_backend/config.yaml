@@ -1,1 +1,8 @@
 DATABASE_URL: "postgresql://app_orgbackend_dev:password@localhost:5432/orgdb_dev?sslmode=disable"
+
+# Internal communication config
+internal:
+  # Unix socket path for inter-service communication
+  socket_path: "/tmp/org-backend.sock"
+  # Enable/disable Unix socket listener
+  socket_enabled: true

@@ -14,6 +14,7 @@ import (
 	"organization_backend/internal/config"
 	"organization_backend/internal/db"
 	"organization_backend/internal/service"
+	"organization_backend/internal/socket"
 )
 
 func main() {
@@ -80,12 +81,30 @@ func main() {
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
+	// Start TCP listener (public)
 	go func() {
-		log.Printf("org backend listening on %s", server.Addr)
+		log.Printf("org backend listening on %s (TCP)", server.Addr)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("server error: %v", err)
 		}
 	}()
+
+	// Start Unix socket listener (internal) if enabled
+	if cfg.Internal.SocketEnabled && cfg.Internal.SocketPath != "" {
+		go func() {
+			listener, err := socket.Listen(cfg.Internal.SocketPath)
+			if err != nil {
+				log.Printf("Failed to create Unix socket: %v", err)
+				return
+			}
+			defer listener.Close()
+
+			log.Printf("internal communication on %s (Unix socket)", cfg.Internal.SocketPath)
+			if err := server.Serve(listener); err != nil && err != http.ErrServerClosed {
+				log.Printf("Unix socket server error: %v", err)
+			}
+		}()
+	}
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)

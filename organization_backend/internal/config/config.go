@@ -9,11 +9,20 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// InternalConfig holds Unix socket configuration for inter-service communication
+type InternalConfig struct {
+	SocketPath    string `yaml:"socket_path"`
+	SocketEnabled bool   `yaml:"socket_enabled"`
+}
+
 type Config struct {
 	DatabaseURL    string `yaml:"DATABASE_URL"`
 	WorkOSAPIKey   string
 	WorkOSClientID string
 	JWTSecret      string
+
+	// Internal communication config
+	Internal InternalConfig `yaml:"internal"`
 }
 
 func Load() (Config, error) {
@@ -44,6 +53,16 @@ func Load() (Config, error) {
 		if err := yaml.Unmarshal(data, &cfg); err != nil {
 			return Config{}, err
 		}
+	}
+
+	// Override internal config with environment variables if set
+	if socketPath := os.Getenv("INTERNAL_SOCKET_PATH"); socketPath != "" {
+		cfg.Internal.SocketPath = socketPath
+	}
+	if socketEnabled := os.Getenv("INTERNAL_SOCKET_ENABLED"); socketEnabled == "true" {
+		cfg.Internal.SocketEnabled = true
+	} else if socketEnabled == "false" {
+		cfg.Internal.SocketEnabled = false
 	}
 
 	if cfg.DatabaseURL == "" {

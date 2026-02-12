@@ -12,6 +12,9 @@ func Routes(handler *Handler, authHandler *AuthHandler, materialTypeHandler *Mat
 
 	r.Use(CORS)
 
+	// Internal middleware to detect Unix socket requests
+	r.Use(InternalMiddleware())
+
 	// Public auth routes
 	r.Route("/auth", func(r chi.Router) {
 		r.Post("/magic-link", authHandler.RequestMagicLink)

@@ -138,6 +138,10 @@ test: test-org test-dist
 # Cleanup
 # =============================================================================
 
+clean-sockets:
+	@echo "Cleaning up Unix sockets..."
+	rm -f /tmp/org-backend.sock /tmp/dist-backend.sock
+
 clean-user:
 	rm -rf $(USER_FRONTEND_DIR)/dist $(USER_FRONTEND_DIR)/node_modules
 
@@ -162,7 +166,7 @@ clean-org: clean-org-backend clean-user clean-orgadmin
 
 clean-dist: clean-dist-backend clean-distadmin clean-distribution
 
-clean-all: clean-org clean-dist
+clean-all: clean-org clean-dist clean-sockets
 	@echo "All build artifacts cleaned!"
 
 clean: clean-all

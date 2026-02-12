@@ -58,8 +58,8 @@ func main() {
 	authMiddleware := auth.NewMiddleware(jwtService)
 	authHandler := handlers.NewAuthHandler(store, jwtService)
 
-	// Initialize organization backend client
-	orgClient := client.NewOrgClient(cfg.OrganizationBackendURL, cfg.OrganizationBackendAPIKey)
+	// Initialize organization backend client (prefer Unix socket if configured)
+	orgClient := client.NewOrgClient(cfg.OrgBackend.URL, cfg.OrgBackend.APIKey, cfg.OrgBackend.SocketPath)
 	inventoryHandler := handlers.NewInventoryHandler(store, orgClient)
 
 	mux := http.NewServeMux()
