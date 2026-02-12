@@ -7,7 +7,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func Routes(handler *Handler, authHandler *AuthHandler, materialTypeHandler *MaterialTypeHandler, uploadHandler *UploadHandler, jwtSecret string) chi.Router {
+func Routes(handler *Handler, authHandler *AuthHandler, materialTypeHandler *MaterialTypeHandler, uploadHandler *UploadHandler, dcHandler *DistributionCenterHandler, jwtSecret string) chi.Router {
 	r := chi.NewRouter()
 
 	r.Use(CORS)
@@ -51,6 +51,20 @@ func Routes(handler *Handler, authHandler *AuthHandler, materialTypeHandler *Mat
 			r.Post("/{id}/image", uploadHandler.UploadMaterialTypeImage)
 		})
 	})
+
+	// Distribution Centers routes (admin only)
+	r.Route("/distribution-centers", func(r chi.Router) {
+		r.Use(AuthMiddleware(jwtSecret))
+		r.Use(AdminMiddleware())
+		r.Get("/", dcHandler.ListDistributionCenters)
+		r.Post("/", dcHandler.CreateDistributionCenter)
+		r.Get("/{id}", dcHandler.GetDistributionCenter)
+		r.Put("/{id}", dcHandler.UpdateDistributionCenter)
+		r.Delete("/{id}", dcHandler.DeleteDistributionCenter)
+	})
+
+	// Internal endpoint for registering co-located dist backends (Unix socket only)
+	r.Post("/internal/register-dist-backend", dcHandler.RegisterDistBackend)
 
 	// Static file serving for uploads
 	uploadsDir := uploadHandler.UploadPath

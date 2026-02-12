@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -68,10 +69,10 @@ func main() {
 	distClient := client.NewDistClient(cfg.DistBackend.SocketPath)
 
 	materialTypeHandler := &api.MaterialTypeHandler{
-		Store:                store,
-		UploadPath:           "uploads",
-		DistClient:           distClient,
-		DistributionCenterID: cfg.DistBackend.DistributionCenterID,
+		Store:      store,
+		UploadPath: "uploads",
+		DistClient: distClient,
+		SocketPath: cfg.DistBackend.SocketPath,
 	}
 
 	uploadHandler := &api.UploadHandler{
@@ -79,7 +80,11 @@ func main() {
 		UploadPath: "uploads",
 	}
 
-	router := api.Routes(handler, authHandler, materialTypeHandler, uploadHandler, cfg.JWTSecret)
+	dcHandler := &api.DistributionCenterHandler{
+		Store: store,
+	}
+
+	router := api.Routes(handler, authHandler, materialTypeHandler, uploadHandler, dcHandler, cfg.JWTSecret)
 
 	server := &http.Server{
 		Addr:              ":8080",
@@ -112,6 +117,17 @@ func main() {
 		}()
 	}
 
+	// Auto-detect and register co-located distribution backends
+	if cfg.DistBackend.SocketPath != "" {
+		go func() {
+			// Wait a moment for the dist backend to start its socket
+			time.Sleep(2 * time.Second)
+			if err := autoRegisterDistBackend(context.Background(), store, cfg.DistBackend.SocketPath); err != nil {
+				log.Printf("Auto-registration of dist backend skipped: %v", err)
+			}
+		}()
+	}
+
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 	<-stop
@@ -122,4 +138,34 @@ func main() {
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		log.Printf("shutdown error: %v", err)
 	}
+}
+
+// autoRegisterDistBackend attempts to connect to a co-located dist backend and register it
+func autoRegisterDistBackend(ctx context.Context, store *db.Store, socketPath string) error {
+	// Check if already registered
+	_, err := store.GetDistributionCenterBySocketPath(ctx, socketPath)
+	if err == nil {
+		log.Printf("Distribution backend already registered for socket: %s", socketPath)
+		return nil
+	}
+
+	// Try to connect to the dist backend via Unix socket to verify it's there
+	distClient := client.NewDistClient(socketPath)
+	_, err = distClient.GetAvailableMaterials(ctx)
+	if err != nil {
+		return fmt.Errorf("dist backend not available at %s: %w", socketPath, err)
+	}
+
+	// Register the dist backend with a generated ID
+	center, err := store.CreateDistributionCenterWithSocket(ctx,
+		"Auto-registered Distribution Center",
+		"Co-located via Unix socket",
+		socketPath,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to register dist backend: %w", err)
+	}
+
+	log.Printf("Auto-registered distribution backend with ID: %s", center.ID)
+	return nil
 }

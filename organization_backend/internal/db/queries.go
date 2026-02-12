@@ -593,8 +593,8 @@ func (s *Store) DeleteMaterialType(ctx context.Context, id string) error {
 	return err
 }
 
-// UpdateMaterialAvailability updates the availability for a distribution center
-// It deletes old records and inserts new ones
+// UpdateMaterialAvailability updates the availability count for a distribution center
+// Only material types that exist in material_types table will be stored
 func (s *Store) UpdateMaterialAvailability(ctx context.Context, distributionCenterID string, availability map[string]int) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -611,8 +611,31 @@ func (s *Store) UpdateMaterialAvailability(ctx context.Context, distributionCent
 		return err
 	}
 
-	// Insert new availability records
+	// Get list of valid material type IDs from material_types table
+	rows, err := tx.QueryContext(ctx, `SELECT id FROM material_types`)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	validTypeIDs := make(map[string]bool)
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return err
+		}
+		validTypeIDs[id] = true
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
+	// Insert new availability records only for known material types
 	for materialTypeID, amount := range availability {
+		if !validTypeIDs[materialTypeID] {
+			// Skip unknown material types
+			continue
+		}
 		_, err = tx.ExecContext(ctx, `
 			INSERT INTO material_available (material_type_id, distribution_center_id, amount)
 			VALUES ($1, $2, $3)
@@ -623,4 +646,129 @@ func (s *Store) UpdateMaterialAvailability(ctx context.Context, distributionCent
 	}
 
 	return tx.Commit()
+}
+
+// Distribution Center CRUD operations
+
+// ListDistributionCenters returns all distribution centers
+func (s *Store) ListDistributionCenters(ctx context.Context) ([]domain.DistributionCenter, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT id, name, address, socket_path, created_at
+		FROM distribution_centers
+		ORDER BY name ASC
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var result []domain.DistributionCenter
+	for rows.Next() {
+		var dc domain.DistributionCenter
+		var socketPath sql.NullString
+		if err := rows.Scan(&dc.ID, &dc.Name, &dc.Address, &socketPath, &dc.CreatedAt); err != nil {
+			return nil, err
+		}
+		if socketPath.Valid {
+			dc.SocketPath = socketPath.String
+		}
+		result = append(result, dc)
+	}
+	return result, rows.Err()
+}
+
+// GetDistributionCenterByID returns a single distribution center by ID
+func (s *Store) GetDistributionCenterByID(ctx context.Context, id string) (domain.DistributionCenter, error) {
+	var dc domain.DistributionCenter
+	var socketPath sql.NullString
+	err := s.db.QueryRowContext(ctx, `
+		SELECT id, name, address, socket_path, created_at
+		FROM distribution_centers
+		WHERE id = $1
+	`, id).Scan(&dc.ID, &dc.Name, &dc.Address, &socketPath, &dc.CreatedAt)
+	if err != nil {
+		return domain.DistributionCenter{}, err
+	}
+	if socketPath.Valid {
+		dc.SocketPath = socketPath.String
+	}
+	return dc, nil
+}
+
+// GetDistributionCenterBySocketPath returns a distribution center by socket path
+func (s *Store) GetDistributionCenterBySocketPath(ctx context.Context, socketPath string) (domain.DistributionCenter, error) {
+	var dc domain.DistributionCenter
+	var socketPathNull sql.NullString
+	err := s.db.QueryRowContext(ctx, `
+		SELECT id, name, address, socket_path, created_at
+		FROM distribution_centers
+		WHERE socket_path = $1
+	`, socketPath).Scan(&dc.ID, &dc.Name, &dc.Address, &socketPathNull, &dc.CreatedAt)
+	if err != nil {
+		return domain.DistributionCenter{}, err
+	}
+	if socketPathNull.Valid {
+		dc.SocketPath = socketPathNull.String
+	}
+	return dc, nil
+}
+
+// CreateDistributionCenter creates a new distribution center
+func (s *Store) CreateDistributionCenter(ctx context.Context, input domain.CreateDistributionCenterInput) (domain.DistributionCenter, error) {
+	var dc domain.DistributionCenter
+	err := s.db.QueryRowContext(ctx, `
+		INSERT INTO distribution_centers (name, address)
+		VALUES ($1, $2)
+		RETURNING id, name, address, created_at
+	`, input.Name, input.Address).Scan(&dc.ID, &dc.Name, &dc.Address, &dc.CreatedAt)
+	if err != nil {
+		return domain.DistributionCenter{}, err
+	}
+	return dc, nil
+}
+
+// CreateDistributionCenterWithSocket creates a new distribution center with socket path (for auto-registration)
+func (s *Store) CreateDistributionCenterWithSocket(ctx context.Context, name, address, socketPath string) (domain.DistributionCenter, error) {
+	var dc domain.DistributionCenter
+	var socketPathNull sql.NullString
+	err := s.db.QueryRowContext(ctx, `
+		INSERT INTO distribution_centers (name, address, socket_path)
+		VALUES ($1, $2, $3)
+		RETURNING id, name, address, socket_path, created_at
+	`, name, address, socketPath).Scan(&dc.ID, &dc.Name, &dc.Address, &socketPathNull, &dc.CreatedAt)
+	if err != nil {
+		return domain.DistributionCenter{}, err
+	}
+	if socketPathNull.Valid {
+		dc.SocketPath = socketPathNull.String
+	}
+	return dc, nil
+}
+
+// UpdateDistributionCenter updates an existing distribution center
+func (s *Store) UpdateDistributionCenter(ctx context.Context, id string, input domain.UpdateDistributionCenterInput) (domain.DistributionCenter, error) {
+	var dc domain.DistributionCenter
+	var socketPath sql.NullString
+	err := s.db.QueryRowContext(ctx, `
+		UPDATE distribution_centers
+		SET name = $2, address = $3
+		WHERE id = $1
+		RETURNING id, name, address, socket_path, created_at
+	`, id, input.Name, input.Address).Scan(&dc.ID, &dc.Name, &dc.Address, &socketPath, &dc.CreatedAt)
+	if err != nil {
+		return domain.DistributionCenter{}, err
+	}
+	if socketPath.Valid {
+		dc.SocketPath = socketPath.String
+	}
+	return dc, nil
+}
+
+// DeleteDistributionCenter deletes a distribution center by ID
+func (s *Store) DeleteDistributionCenter(ctx context.Context, id string) error {
+	_, err := s.db.ExecContext(ctx, `
+		DELETE FROM distribution_centers
+		WHERE id = $1
+	`, id)
+	return err
 }

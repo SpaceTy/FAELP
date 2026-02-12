@@ -5,11 +5,18 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Header } from '@/components/Header';
 import { LoginPage } from '@/pages/LoginPage';
 import { MaterialTypesPage } from '@/pages/MaterialTypesPage';
+import { DistributionCentersPage } from '@/pages/DistributionCentersPage';
 
 // Wrapper component to handle RoutableProps
 const MaterialTypesPageWrapper = (_props: RoutableProps) => (
   <ProtectedRoute>
     <MaterialTypesPage />
+  </ProtectedRoute>
+);
+
+const DistributionCentersPageWrapper = (_props: RoutableProps) => (
+  <ProtectedRoute>
+    <DistributionCentersPage />
   </ProtectedRoute>
 );
 
@@ -37,6 +44,7 @@ function AppContent() {
           <LoginPageWrapper path="/login" />
           <MaterialTypesPageWrapper path="/" />
           <MaterialTypesPageWrapper path="/material-types" />
+          <DistributionCentersPageWrapper path="/distribution-centers" />
         </Router>
       </div>
     </div>

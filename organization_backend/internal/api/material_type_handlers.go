@@ -15,10 +15,10 @@ import (
 
 // MaterialTypeHandler handles material type related requests
 type MaterialTypeHandler struct {
-	Store                StoreInterface
-	UploadPath           string
-	DistClient           DistClientInterface
-	DistributionCenterID string
+	Store      StoreInterface
+	UploadPath string
+	DistClient DistClientInterface
+	SocketPath string
 }
 
 // StoreInterface defines the methods needed from Store
@@ -31,6 +31,13 @@ type StoreInterface interface {
 	UpdateMaterialTypeImage(ctx context.Context, id, imageURL string) error
 	DeleteMaterialType(ctx context.Context, id string) error
 	UpdateMaterialAvailability(ctx context.Context, distributionCenterID string, availability map[string]int) error
+	ListDistributionCenters(ctx context.Context) ([]domain.DistributionCenter, error)
+	GetDistributionCenterByID(ctx context.Context, id string) (domain.DistributionCenter, error)
+	GetDistributionCenterBySocketPath(ctx context.Context, socketPath string) (domain.DistributionCenter, error)
+	CreateDistributionCenter(ctx context.Context, input domain.CreateDistributionCenterInput) (domain.DistributionCenter, error)
+	CreateDistributionCenterWithSocket(ctx context.Context, name, address, socketPath string) (domain.DistributionCenter, error)
+	UpdateDistributionCenter(ctx context.Context, id string, input domain.UpdateDistributionCenterInput) (domain.DistributionCenter, error)
+	DeleteDistributionCenter(ctx context.Context, id string) error
 }
 
 // DistClientInterface defines the methods needed from the distribution backend client
@@ -48,7 +55,7 @@ func (h *MaterialTypeHandler) ListMaterialTypes(w http.ResponseWriter, r *http.R
 	}
 
 	// Fetch availability from distribution backend if configured
-	if h.DistClient != nil && h.DistributionCenterID != "" {
+	if h.DistClient != nil && h.SocketPath != "" {
 		availabilityMap, err := h.DistClient.GetAvailableMaterials(r.Context())
 		if err != nil {
 			// Log error but don't fail - return material types with zero availability
@@ -61,9 +68,15 @@ func (h *MaterialTypeHandler) ListMaterialTypes(w http.ResponseWriter, r *http.R
 				}
 			}
 
-			// Store the availability in the database
-			if err := h.Store.UpdateMaterialAvailability(r.Context(), h.DistributionCenterID, availabilityMap); err != nil {
-				log.Printf("Warning: failed to store availability in database: %v", err)
+			// Look up distribution center ID from database based on socket path
+			dc, err := h.Store.GetDistributionCenterBySocketPath(r.Context(), h.SocketPath)
+			if err != nil {
+				log.Printf("Warning: failed to find distribution center for socket %s: %v", h.SocketPath, err)
+			} else {
+				// Store the availability in the database
+				if err := h.Store.UpdateMaterialAvailability(r.Context(), dc.ID, availabilityMap); err != nil {
+					log.Printf("Warning: failed to store availability in database: %v", err)
+				}
 			}
 		}
 	}

@@ -20,6 +20,12 @@ export function Header() {
           >
             Materialtypen
           </a>
+          <a
+            href="/distribution-centers"
+            className="px-4 py-2 rounded transition-colors hover:bg-secondary-hover"
+          >
+            Vertriebszentren
+          </a>
         </nav>
 
         <div className="flex items-center gap-4">
