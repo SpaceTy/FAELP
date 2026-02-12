@@ -1,6 +1,7 @@
 import { createContext, ComponentChildren } from 'preact';
 import { useContext, useEffect, useState } from 'preact/hooks';
 import { api } from '@/services/api';
+import { materialSse } from '@/services/materialSse';
 import type { Material, MaterialCategory } from '@/types/material';
 
 interface MaterialTypesContextValue {
@@ -78,7 +79,59 @@ export function MaterialTypesProvider({ children }: { children: ComponentChildre
   };
 
   useEffect(() => {
+    console.log('Materials state changed:', materials.map(m => ({ id: m.id, count: m.availableCount })));
+  }, [materials]);
+
+  useEffect(() => {
     fetchMaterials();
+
+    // Subscribe to real-time material availability updates
+    const subscription = materialSse.subscribeToAvailability((event) => {
+      console.log('SSE Event received:', event);
+      if (event.type === 'snapshot' && event.materials) {
+        console.log('Processing snapshot:', event.materials.length, 'materials');
+        // Update all materials with the snapshot
+        const enrichedMaterials = event.materials.map(m => ({
+          ...m,
+          category: determineCategory(m),
+          imageUrl: ensureImageUrl(m)
+        }));
+        setMaterials(enrichedMaterials);
+      } else if (event.type === 'update' && event.material) {
+        console.log('Processing update for:', event.material.id, 'availableCount:', event.material.availableCount);
+        // Update single material (or add if not exists)
+        setMaterials(prev => {
+          const index = prev.findIndex(m => m.id === event.material!.id);
+          console.log('Found index:', index, 'current value:', prev[index]?.availableCount, 'prev length:', prev.length);
+          if (index >= 0) {
+            const updated = [...prev];
+            updated[index] = {
+              ...event.material!,
+              category: determineCategory(event.material!),
+              imageUrl: ensureImageUrl(event.material!)
+            };
+            console.log('Updated value:', updated[index].availableCount);
+            return updated;
+          } else {
+            // Material not found, add it
+            console.log('Material not found, adding new:', event.material!.id);
+            return [...prev, {
+              ...event.material!,
+              category: determineCategory(event.material!),
+              imageUrl: ensureImageUrl(event.material!)
+            }];
+          }
+        });
+      } else if (event.type === 'error') {
+        console.error('Material SSE error:', event.message);
+      }
+    }, (error) => {
+      console.error('Material SSE connection error:', error);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const materialsById = new Map(materials.map(m => [m.id, m]));

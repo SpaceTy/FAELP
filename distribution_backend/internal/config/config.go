@@ -39,6 +39,7 @@ type Config struct {
 	Admin                     AdminConfig      `yaml:"admin"`
 	OrgBackend                OrgBackendConfig `yaml:"organization_backend"`
 	Internal                  InternalConfig   `yaml:"internal"`
+	DistributionCenterID      string           `yaml:"distribution_center_id"`
 }
 
 func Load() (Config, error) {
@@ -96,6 +97,11 @@ func Load() (Config, error) {
 		cfg.Internal.SocketEnabled = true
 	} else if socketEnabled == "false" {
 		cfg.Internal.SocketEnabled = false
+	}
+
+	// Override distribution center ID with environment variable
+	if dcID := os.Getenv("DISTRIBUTION_CENTER_ID"); dcID != "" {
+		cfg.DistributionCenterID = dcID
 	}
 
 	// Apply defaults

@@ -40,6 +40,8 @@ func Routes(handler *Handler, authHandler *AuthHandler, materialTypeHandler *Mat
 		// Public routes
 		r.Get("/", materialTypeHandler.ListMaterialTypes)
 		r.Get("/{id}", materialTypeHandler.GetMaterialType)
+		// SSE endpoint for real-time material availability updates
+		r.Get("/subscribe", handler.SubscribeMaterialAvailability)
 
 		// Admin only routes
 		r.Group(func(r chi.Router) {
@@ -65,6 +67,9 @@ func Routes(handler *Handler, authHandler *AuthHandler, materialTypeHandler *Mat
 
 	// Internal endpoint for registering co-located dist backends (Unix socket only)
 	r.Post("/internal/register-dist-backend", dcHandler.RegisterDistBackend)
+
+	// Internal endpoint for receiving availability updates from dist backends (Unix socket only)
+	r.Post("/internal/availability", handler.UpdateAvailabilityFromDistBackend)
 
 	// Static file serving for uploads
 	uploadsDir := uploadHandler.UploadPath

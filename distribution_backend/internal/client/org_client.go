@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -99,4 +100,39 @@ func (c *OrgClient) GetMaterialTypes(ctx context.Context) ([]MaterialType, error
 	}
 
 	return materialTypes, nil
+}
+
+// UpdateAvailability sends current availability to organization backend
+func (c *OrgClient) UpdateAvailability(ctx context.Context, distributionCenterID string, availability map[string]int) error {
+	url := "http://unix/internal/availability"
+	if c.unixClient == nil {
+		url = fmt.Sprintf("%s/internal/availability", c.baseURL)
+	}
+
+	body := map[string]interface{}{
+		"distributionCenterId": distributionCenterID,
+		"availability":         availability,
+	}
+	bodyBytes, err := json.Marshal(body)
+	if err != nil {
+		return fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(bodyBytes))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.do(req)
+	if err != nil {
+		return fmt.Errorf("failed to update availability: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("organization backend returned status %d", resp.StatusCode)
+	}
+
+	return nil
 }

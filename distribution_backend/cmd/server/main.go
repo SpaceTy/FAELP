@@ -63,6 +63,23 @@ func main() {
 	orgClient := client.NewOrgClient(cfg.OrgBackend.URL, cfg.OrgBackend.APIKey, cfg.OrgBackend.SocketPath)
 	inventoryHandler := handlers.NewInventoryHandler(store, orgClient)
 
+	// Create cancellable context for background services
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Initialize and start availability notifier if distribution center ID is configured
+	var availabilityNotifier *db.AvailabilityNotifier
+	if cfg.DistributionCenterID != "" {
+		availabilityNotifier = db.NewAvailabilityNotifier(cfg.DatabaseURL, orgClient, store, cfg.DistributionCenterID)
+		if err := availabilityNotifier.Start(ctx); err != nil {
+			log.Printf("Failed to start availability notifier: %v", err)
+		} else {
+			log.Printf("Availability notifier started for distribution center: %s", cfg.DistributionCenterID)
+		}
+	} else {
+		log.Printf("Distribution center ID not configured, availability notifier disabled")
+	}
+
 	mux := http.NewServeMux()
 
 	// Health check endpoint (public)

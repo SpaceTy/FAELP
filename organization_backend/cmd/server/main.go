@@ -47,17 +47,22 @@ func main() {
 	store := db.NewStore(conn)
 	requestService := service.NewRequestService(store)
 	notifier := db.NewNotifier(cfg.DatabaseURL)
+	materialNotifier := db.NewMaterialNotifier(cfg.DatabaseURL)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	if err := notifier.Start(ctx); err != nil {
 		log.Fatalf("notifier start failed: %v", err)
 	}
+	if err := materialNotifier.Start(ctx); err != nil {
+		log.Fatalf("material notifier start failed: %v", err)
+	}
 
 	handler := &api.Handler{
-		Service:  requestService,
-		Store:    store,
-		Notifier: notifier,
+		Service:          requestService,
+		Store:            store,
+		Notifier:         notifier,
+		MaterialNotifier: materialNotifier,
 	}
 
 	authHandler := &api.AuthHandler{
