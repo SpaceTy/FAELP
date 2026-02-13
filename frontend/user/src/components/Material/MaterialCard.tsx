@@ -1,5 +1,5 @@
 import type { Material } from '@/types/material';
-import { useCart } from '@/hooks/useCart';
+import { addItem, getItem } from '@/hooks/useCart';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
@@ -14,7 +14,6 @@ function getFullImageUrl(imageUrl: string | undefined): string {
 }
 
 export function MaterialCard({ material }: MaterialCardProps) {
-  const { addItem, getItem } = useCart();
   const cartItem = getItem(material.id);
 
   const handleAddToCart = () => {

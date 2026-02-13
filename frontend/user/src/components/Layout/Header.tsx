@@ -1,9 +1,9 @@
-import { useCart } from '@/hooks/useCart';
+import { getItemCount } from '@/hooks/useCart';
 import { useAuth } from '@/context/AuthContext';
 import { UserMenu } from '@/components/Auth/UserMenu';
 
 export function Header() {
-  const { itemCount } = useCart();
+  const itemCount = getItemCount();
   const { isAuthenticated } = useAuth();
 
   return (

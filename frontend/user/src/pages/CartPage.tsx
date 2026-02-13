@@ -1,12 +1,13 @@
 import { useState } from 'preact/hooks';
-import { useCart } from '@/hooks/useCart';
+import { cartSignal, getItemCount, updateQuantity, removeItem, clearCart } from '@/hooks/useCart';
 import { useMaterialTypes } from '@/context/MaterialTypesContext';
 import { useAuth } from '@/context/AuthContext';
 import { RequestForm } from '@/components/Cart/RequestForm';
 import type { RequestItem } from '@/types/request';
 
 export function CartPage() {
-  const { items, itemCount, updateQuantity, removeItem, clearCart } = useCart();
+  const items = cartSignal.value.items;
+  const itemCount = getItemCount();
   const { materialsById } = useMaterialTypes();
   const { isAuthenticated } = useAuth();
   const [isSubmitted, setIsSubmitted] = useState(false);
