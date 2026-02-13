@@ -61,6 +61,7 @@ func Routes(handler *Handler, authHandler *AuthHandler, materialTypeHandler *Mat
 		r.Route("/requests", func(r chi.Router) {
 			r.Use(AuthMiddleware(jwtSecret))
 			r.Post("/", requestHandler.CreateRequest)
+			r.Get("/my", requestHandler.ListMyRequests)
 		})
 	})
 

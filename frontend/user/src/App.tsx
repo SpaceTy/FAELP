@@ -8,6 +8,7 @@ import { CallbackPage } from '@/components/Auth/CallbackPage';
 import { MaterialsPage } from '@/pages/MaterialsPage';
 import { CartPage } from '@/pages/CartPage';
 import { ProfilePage } from '@/pages/ProfilePage';
+import { MyRequestsPage } from '@/pages/MyRequestsPage';
 import { Header } from '@/components/Layout/Header';
 
 // Wrapper components to handle RoutableProps
@@ -22,6 +23,9 @@ const ProtectedCartWrapper = (_props: RoutableProps) => (
 const ProtectedProfileWrapper = (_props: RoutableProps) => (
   <ProtectedRoute><ProfilePage /></ProtectedRoute>
 );
+const ProtectedMyRequestsWrapper = (_props: RoutableProps) => (
+  <ProtectedRoute><MyRequestsPage /></ProtectedRoute>
+);
 
 function AppRoutes() {
   return (
@@ -35,6 +39,7 @@ function AppRoutes() {
           <CallbackPageWrapper path="/callback" />
           <ProtectedCartWrapper path="/cart" />
           <ProtectedProfileWrapper path="/profile" />
+          <ProtectedMyRequestsWrapper path="/my-requests" />
         </Router>
       </div>
     </div>

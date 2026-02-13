@@ -182,3 +182,38 @@ func (h *RequestHandler) CreateRequest(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, http.StatusCreated, created)
 }
+
+// ListMyRequests returns all requests for the currently authenticated customer
+func (h *RequestHandler) ListMyRequests(w http.ResponseWriter, r *http.Request) {
+	slog.Info("list_my_requests_handler_entered",
+		"method", r.Method,
+		"path", r.URL.Path,
+		"remote_addr", r.RemoteAddr,
+	)
+
+	claims := GetClaimsFromContext(r.Context())
+	if claims == nil {
+		slog.Info("list_my_requests_failed_no_claims")
+		writeError(w, http.StatusUnauthorized, "unauthorized", "Authentication required")
+		return
+	}
+
+	slog.Info("list_my_requests_claims_found",
+		"customer_id", claims.CustomerID,
+		"is_admin", claims.IsAdmin,
+	)
+
+	requests, err := h.Store.ListRequestsByCustomerID(r.Context(), claims.CustomerID)
+	if err != nil {
+		slog.Info("list_my_requests_store_failed", "error", err.Error())
+		writeError(w, http.StatusInternalServerError, "fetch_failed", "Failed to fetch requests")
+		return
+	}
+
+	slog.Info("list_my_requests_completed",
+		"customer_id", claims.CustomerID,
+		"count", len(requests),
+	)
+
+	writeJSON(w, http.StatusOK, requests)
+}

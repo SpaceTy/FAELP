@@ -559,3 +559,86 @@ func (s *Store) CreateRequest(ctx context.Context, input domain.CreateRequestInp
 
 	return req, nil
 }
+
+// ListRequestsByCustomerID returns all requests for a specific customer with their items
+func (s *Store) ListRequestsByCustomerID(ctx context.Context, customerID string) ([]domain.Request, error) {
+	slog.Info("store_list_requests_started", "customer_id", customerID)
+
+	// First, get all requests for the customer
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT id, customer_id, delivery_date, status, shipping_customer_name, 
+		       shipping_address_line1, shipping_address_line2, shipping_city, 
+		       shipping_zip_code, metadata, created_at, updated_at
+		FROM requests
+		WHERE customer_id = $1
+		ORDER BY created_at DESC
+	`, customerID)
+	if err != nil {
+		slog.Info("store_list_requests_query_failed", "customer_id", customerID, "error", err.Error())
+		return nil, err
+	}
+	defer rows.Close()
+
+	var requests []domain.Request
+	for rows.Next() {
+		var req domain.Request
+		var metadataBytes []byte
+		err := rows.Scan(
+			&req.ID, &req.CustomerID, &req.DeliveryDate, &req.Status, &req.ShippingCustomerName,
+			&req.ShippingAddressLine1, &req.ShippingAddressLine2, &req.ShippingCity, &req.ShippingZipCode,
+			&metadataBytes, &req.CreatedAt, &req.UpdatedAt,
+		)
+		if err != nil {
+			slog.Info("store_list_requests_scan_failed", "customer_id", customerID, "error", err.Error())
+			return nil, err
+		}
+
+		// Unmarshal metadata
+		if len(metadataBytes) > 0 {
+			req.Metadata = make(map[string]any)
+			if err := json.Unmarshal(metadataBytes, &req.Metadata); err != nil {
+				slog.Info("store_list_requests_metadata_unmarshal_failed", "request_id", req.ID, "error", err.Error())
+				req.Metadata = nil
+			}
+		}
+
+		requests = append(requests, req)
+	}
+
+	if err := rows.Err(); err != nil {
+		slog.Info("store_list_requests_rows_error", "customer_id", customerID, "error", err.Error())
+		return nil, err
+	}
+
+	// Now fetch items for each request
+	for i := range requests {
+		itemRows, err := s.db.QueryContext(ctx, `
+			SELECT material_type_id, quantity
+			FROM request_items
+			WHERE request_id = $1
+		`, requests[i].ID)
+		if err != nil {
+			slog.Info("store_list_requests_items_query_failed", "request_id", requests[i].ID, "error", err.Error())
+			return nil, err
+		}
+
+		for itemRows.Next() {
+			var item domain.RequestItem
+			if err := itemRows.Scan(&item.MaterialTypeID, &item.Quantity); err != nil {
+				itemRows.Close()
+				slog.Info("store_list_requests_item_scan_failed", "request_id", requests[i].ID, "error", err.Error())
+				return nil, err
+			}
+			requests[i].Items = append(requests[i].Items, item)
+		}
+		itemRows.Close()
+
+		if err := itemRows.Err(); err != nil {
+			slog.Info("store_list_requests_items_rows_error", "request_id", requests[i].ID, "error", err.Error())
+			return nil, err
+		}
+	}
+
+	slog.Info("store_list_requests_completed", "customer_id", customerID, "count", len(requests))
+	return requests, nil
+}

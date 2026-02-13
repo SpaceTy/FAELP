@@ -24,6 +24,12 @@ export function Header() {
             Materialien durchsuchen
           </a>
           <a
+            href="/my-requests"
+            className="px-4 py-2 rounded transition-colors hover:bg-secondary-hover"
+          >
+            Meine Anfragen
+          </a>
+          <a
             href="/profile"
             className="px-4 py-2 rounded transition-colors hover:bg-secondary-hover"
           >
