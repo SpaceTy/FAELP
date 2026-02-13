@@ -114,6 +114,13 @@ func main() {
 	if cfg.Frontend.Admin.Enabled && cfg.Frontend.Admin.Port != 0 && cfg.Frontend.Admin.Path != "" {
 		adminRouter := chi.NewRouter()
 		adminRouter.Use(api.CORS)
+		adminRouter.Handle("/api/*", router)
+		adminRouter.Handle("/internal/*", router)
+		adminRouter.Handle("/uploads/*", router)
+		adminRouter.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.Write([]byte(`{"status":"ok"}`))
+		})
 		spaHandler := api.NewSPAHandler(cfg.Frontend.Admin.Path)
 		adminRouter.Get("/*", spaHandler.ServeHTTP)
 
