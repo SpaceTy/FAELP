@@ -19,42 +19,37 @@ DISTRIBUTION_FRONTEND_DIR=frontend/distribution
 # Development - Run everything
 # =============================================================================
 
-# Run orgbackend with user and orgadmin frontends
+# Run orgbackend with user and orgadmin frontends (backend-served)
 dev-org:
-	@echo "Starting orgbackend with user and orgadmin frontends..."
-	@(trap 'kill 0' SIGINT; \
-		cd $(ORG_BACKEND_DIR) && go run ./cmd/server & \
-		cd $(USER_FRONTEND_DIR) && npm run dev & \
-		cd $(ORGADMIN_FRONTEND_DIR) && npm run dev & \
-		wait)
+	@echo "Building frontends..."
+	cd $(USER_FRONTEND_DIR) && npm run build
+	cd $(ORGADMIN_FRONTEND_DIR) && npm run build
+	@echo "Starting orgbackend with served frontends..."
+	cd $(ORG_BACKEND_DIR) && go run ./cmd/server
 
-# Run distbackend with distadmin and distribution frontends
+# Run distbackend with distadmin and distribution frontends (backend-served)
 dev-dist:
-	@echo "Starting distbackend with distadmin and distribution frontends..."
-	@(trap 'kill 0' SIGINT; \
-		cd $(DIST_BACKEND_DIR) && go run ./cmd/server & \
-		cd $(DISTADMIN_FRONTEND_DIR) && npm run dev & \
-		cd $(DISTRIBUTION_FRONTEND_DIR) && npm run dev & \
-		wait)
+	@echo "Building frontends..."
+	cd $(DISTRIBUTION_FRONTEND_DIR) && npm run build
+	cd $(DISTADMIN_FRONTEND_DIR) && npm run build
+	@echo "Starting distbackend with served frontends..."
+	cd $(DIST_BACKEND_DIR) && go run ./cmd/server
 
-# Run EVERYTHING - both backends and all frontends
+# Run EVERYTHING - both backends and all frontends (backend-served)
 dev-all:
-	@echo "Starting ALL backends and frontends..."
+	@echo "Building all frontends..."
+	cd $(USER_FRONTEND_DIR) && npm run build
+	cd $(ORGADMIN_FRONTEND_DIR) && npm run build
+	cd $(DISTRIBUTION_FRONTEND_DIR) && npm run build
+	cd $(DISTADMIN_FRONTEND_DIR) && npm run build
+	@echo "Starting ALL backends with served frontends..."
 	@echo "This will run:"
-	@echo "  - orgbackend (Go)"
-	@echo "  - distbackend (Go)"
-	@echo "  - user frontend (Vite)"
-	@echo "  - orgadmin frontend (Vite)"
-	@echo "  - distadmin frontend (Vite)"
-	@echo "  - distribution frontend (Vite)"
+	@echo "  - orgbackend (Go) on :8080/:8082"
+	@echo "  - distbackend (Go) on :8081/:8083"
 	@echo ""
 	@(trap 'kill 0' SIGINT; \
 		cd $(ORG_BACKEND_DIR) && go run ./cmd/server & \
 		cd $(DIST_BACKEND_DIR) && go run ./cmd/server & \
-		cd $(USER_FRONTEND_DIR) && npm run dev & \
-		cd $(ORGADMIN_FRONTEND_DIR) && npm run dev & \
-		cd $(DISTADMIN_FRONTEND_DIR) && npm run dev & \
-		cd $(DISTRIBUTION_FRONTEND_DIR) && npm run dev & \
 		wait)
 
 # Alias for dev-all
@@ -194,15 +189,15 @@ setup: install setup-db
 # Help
 # =============================================================================
 
-help:
+	help:
 	@echo "FAELP Global Makefile"
 	@echo "====================="
 	@echo ""
 	@echo "DEVELOPMENT (run with Ctrl+C to stop all):"
-	@echo "  make dev         - Run ALL backends and frontends"
+	@echo "  make dev         - Run ALL backends with served frontends"
 	@echo "  make dev-all     - Same as 'make dev'"
-	@echo "  make dev-org     - Run orgbackend + user + orgadmin frontends"
-	@echo "  make dev-dist    - Run distbackend + distadmin + distribution frontends"
+	@echo "  make dev-org     - Run orgbackend with user/orgadmin frontends on :8080/:8082"
+	@echo "  make dev-dist    - Run distbackend with distribution/distadmin frontends on :8081/:8083"
 	@echo ""
 	@echo "INSTALLATION:"
 	@echo "  make install         - Install all Go and npm dependencies"

@@ -21,6 +21,25 @@ type DistBackendConfig struct {
 	DistributionCenterID string `yaml:"distribution_center_id"`
 }
 
+// FrontendConfig for serving static frontend files
+type FrontendConfig struct {
+	Enabled bool   `yaml:"enabled"`
+	Path    string `yaml:"path"`
+}
+
+// AdminFrontendConfig includes port for admin frontends
+type AdminFrontendConfig struct {
+	Enabled bool   `yaml:"enabled"`
+	Port    int    `yaml:"port"`
+	Path    string `yaml:"path"`
+}
+
+// Frontend holds all frontend configurations
+type Frontend struct {
+	User  FrontendConfig      `yaml:"user"`
+	Admin AdminFrontendConfig `yaml:"admin"`
+}
+
 type Config struct {
 	DatabaseURL    string `yaml:"DATABASE_URL"`
 	WorkOSAPIKey   string
@@ -32,6 +51,9 @@ type Config struct {
 
 	// Distribution backend connection
 	DistBackend DistBackendConfig `yaml:"distribution_backend"`
+
+	// Frontend serving configuration
+	Frontend Frontend `yaml:"frontend"`
 }
 
 func Load() (Config, error) {

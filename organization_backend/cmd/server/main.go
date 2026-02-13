@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"organization_backend/internal/api"
 	"organization_backend/internal/auth"
 	"organization_backend/internal/client"
@@ -91,6 +92,13 @@ func main() {
 
 	router := api.Routes(handler, authHandler, materialTypeHandler, uploadHandler, dcHandler, cfg.JWTSecret)
 
+	// Mount user frontend at root if enabled (must be after API routes)
+	if cfg.Frontend.User.Enabled && cfg.Frontend.User.Path != "" {
+		spaHandler := api.NewSPAHandler(cfg.Frontend.User.Path)
+		router.Get("/*", spaHandler.ServeHTTP)
+		log.Printf("user frontend served from %s", cfg.Frontend.User.Path)
+	}
+
 	server := &http.Server{
 		Addr:              ":8080",
 		Handler:           router,
@@ -104,6 +112,28 @@ func main() {
 			log.Fatalf("server error: %v", err)
 		}
 	}()
+
+	// Start admin frontend server if enabled
+	var adminServer *http.Server
+	if cfg.Frontend.Admin.Enabled && cfg.Frontend.Admin.Port != 0 && cfg.Frontend.Admin.Path != "" {
+		adminRouter := chi.NewRouter()
+		adminRouter.Use(api.CORS)
+		spaHandler := api.NewSPAHandler(cfg.Frontend.Admin.Path)
+		adminRouter.Get("/*", spaHandler.ServeHTTP)
+
+		adminServer = &http.Server{
+			Addr:              fmt.Sprintf(":%d", cfg.Frontend.Admin.Port),
+			Handler:           adminRouter,
+			ReadHeaderTimeout: 5 * time.Second,
+		}
+
+		go func() {
+			log.Printf("orgadmin frontend listening on %s", adminServer.Addr)
+			if err := adminServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				log.Printf("admin server error: %v", err)
+			}
+		}()
+	}
 
 	// Start Unix socket listener (internal) if enabled
 	if cfg.Internal.SocketEnabled && cfg.Internal.SocketPath != "" {
@@ -142,6 +172,11 @@ func main() {
 	defer shutdownCancel()
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		log.Printf("shutdown error: %v", err)
+	}
+	if adminServer != nil {
+		if err := adminServer.Shutdown(shutdownCtx); err != nil {
+			log.Printf("admin server shutdown error: %v", err)
+		}
 	}
 }
 

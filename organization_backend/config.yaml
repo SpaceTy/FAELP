@@ -13,3 +13,13 @@ distribution_backend:
   socket_path: "/tmp/dist-backend.sock"
   # Distribution center ID that this dist backend represents
   distribution_center_id: "00000000-0000-0000-0000-000000000001"
+
+# Frontend serving configuration
+frontend:
+  user:
+    enabled: true
+    path: "../frontend/user/dist"  # Path to built user frontend
+  admin:
+    enabled: true
+    port: 8082
+    path: "../frontend/orgadmin/dist"  # Path to built orgadmin frontend

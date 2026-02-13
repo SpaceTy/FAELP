@@ -1,6 +1,7 @@
 import type { Customer, AuthSession, MagicLinkResponse, AuthCallbackResponse } from '@/types/auth';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+// Use relative URL since frontend is served by the backend
+const API_BASE = '/api';
 
 class AuthService {
   async requestMagicLink(email: string): Promise<MagicLinkResponse> {

@@ -31,6 +31,25 @@ type InternalConfig struct {
 	SocketEnabled bool   `yaml:"socket_enabled"`
 }
 
+// FrontendConfig for serving static frontend files
+type FrontendConfig struct {
+	Enabled bool   `yaml:"enabled"`
+	Path    string `yaml:"path"`
+}
+
+// AdminFrontendConfig includes port for admin frontends
+type AdminFrontendConfig struct {
+	Enabled bool   `yaml:"enabled"`
+	Port    int    `yaml:"port"`
+	Path    string `yaml:"path"`
+}
+
+// Frontend holds all frontend configurations
+type Frontend struct {
+	Distribution FrontendConfig      `yaml:"distribution"`
+	Admin        AdminFrontendConfig `yaml:"admin"`
+}
+
 type Config struct {
 	DatabaseURL               string           `yaml:"DATABASE_URL"`
 	JWTSecret                 string           `yaml:"JWT_SECRET"`
@@ -40,6 +59,9 @@ type Config struct {
 	OrgBackend                OrgBackendConfig `yaml:"organization_backend"`
 	Internal                  InternalConfig   `yaml:"internal"`
 	DistributionCenterID      string           `yaml:"distribution_center_id"`
+
+	// Frontend serving configuration
+	Frontend Frontend `yaml:"frontend"`
 }
 
 func Load() (Config, error) {

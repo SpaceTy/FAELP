@@ -25,3 +25,13 @@ internal:
 admin:
   username: "admin"
   password: "changeme123"
+
+# Frontend serving configuration
+frontend:
+  distribution:
+    enabled: true
+    path: "../frontend/distribution/dist"
+  admin:
+    enabled: true
+    port: 8083
+    path: "../frontend/distadmin/dist"

@@ -44,12 +44,13 @@ export function useRequests(params: ListRequestsParams): UseRequestsResult {
         });
       }
 
+      const requestList = result.requests ?? [];
       if (cursor) {
-        setRequests((prev: Request[]) => [...prev, ...result.requests]);
+        setRequests((prev: Request[]) => [...prev, ...requestList]);
       } else {
-        setRequests(result.requests);
+        setRequests(requestList);
       }
-      setHasMore(result.hasMore);
+      setHasMore(result.hasMore ?? false);
       setNextCursor(result.nextCursor);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load requests');

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -120,10 +121,47 @@ func main() {
 	// Internal endpoint for org backend to get available material counts (Unix socket only, no auth needed)
 	mux.HandleFunc("GET /internal/available-materials", inventoryHandler.GetAvailableMaterialCounts)
 
+	// Mount distribution frontend at root if enabled
+	if cfg.Frontend.Distribution.Enabled && cfg.Frontend.Distribution.Path != "" {
+		spaHandler := handlers.NewSPAHandler(cfg.Frontend.Distribution.Path)
+		// Use a catch-all handler for the frontend
+		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			// Don't interfere with API or internal routes
+			if r.URL.Path == "/" || (r.URL.Path != "/api" && len(r.URL.Path) < 5) ||
+				(r.URL.Path[:5] != "/api/" && r.URL.Path[:10] != "/internal/" && r.URL.Path[:8] != "/uploads/" && r.URL.Path[:8] != "/health") {
+				spaHandler.ServeHTTP(w, r)
+			} else {
+				http.NotFound(w, r)
+			}
+		})
+		log.Printf("distribution frontend served from %s", cfg.Frontend.Distribution.Path)
+	}
+
 	server := &http.Server{
 		Addr:              ":8081",
 		Handler:           mux,
 		ReadHeaderTimeout: 5 * time.Second,
+	}
+
+	// Start admin frontend server if enabled
+	var adminServer *http.Server
+	if cfg.Frontend.Admin.Enabled && cfg.Frontend.Admin.Port != 0 && cfg.Frontend.Admin.Path != "" {
+		adminMux := http.NewServeMux()
+		spaHandler := handlers.NewSPAHandler(cfg.Frontend.Admin.Path)
+		adminMux.Handle("/", spaHandler)
+
+		adminServer = &http.Server{
+			Addr:              fmt.Sprintf(":%d", cfg.Frontend.Admin.Port),
+			Handler:           adminMux,
+			ReadHeaderTimeout: 5 * time.Second,
+		}
+
+		go func() {
+			log.Printf("distadmin frontend listening on %s", adminServer.Addr)
+			if err := adminServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				log.Printf("admin server error: %v", err)
+			}
+		}()
 	}
 
 	// Start TCP listener (public)
@@ -159,6 +197,11 @@ func main() {
 	defer shutdownCancel()
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		log.Printf("shutdown error: %v", err)
+	}
+	if adminServer != nil {
+		if err := adminServer.Shutdown(shutdownCtx); err != nil {
+			log.Printf("admin server shutdown error: %v", err)
+		}
 	}
 }
 

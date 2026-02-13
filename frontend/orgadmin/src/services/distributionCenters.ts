@@ -1,7 +1,8 @@
 import type { DistributionCenter, CreateDistributionCenterInput, UpdateDistributionCenterInput } from '@/types/distributionCenter';
 import { authSignal } from '@/context/AuthContext';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+// Use relative URL since frontend is served by the backend
+const API_BASE = '/api';
 
 function getAuthHeaders(): Record<string, string> {
   const token = authSignal.value?.token;
