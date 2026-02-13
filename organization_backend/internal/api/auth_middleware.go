@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -45,8 +46,14 @@ func InternalMiddleware() func(http.Handler) http.Handler {
 func AuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			slog.Info("auth_middleware_entered",
+				"path", r.URL.Path,
+				"remote_addr", r.RemoteAddr,
+			)
+
 			// Skip auth for internal Unix socket requests
 			if isUnixSocketRequest(r) {
+				slog.Info("auth_skipped_unix_socket", "path", r.URL.Path)
 				ctx := context.WithValue(r.Context(), internalContextKey, true)
 				next.ServeHTTP(w, r.WithContext(ctx))
 				return
@@ -69,15 +76,26 @@ func AuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {
 			}
 
 			if token == "" {
+				slog.Info("auth_failed_no_token", "path", r.URL.Path)
 				writeError(w, http.StatusUnauthorized, "missing_auth", "Authorization header or token query parameter required")
 				return
 			}
 
 			claims, err := auth.ParseToken(token, jwtSecret)
 			if err != nil {
+				slog.Info("auth_failed_invalid_token",
+					"path", r.URL.Path,
+					"error", err.Error(),
+				)
 				writeError(w, http.StatusUnauthorized, "invalid_token", "Invalid or expired token")
 				return
 			}
+
+			slog.Info("auth_success",
+				"path", r.URL.Path,
+				"customer_id", claims.CustomerID,
+				"is_admin", claims.IsAdmin,
+			)
 
 			ctx := context.WithValue(r.Context(), claimsContextKey, claims)
 			next.ServeHTTP(w, r.WithContext(ctx))

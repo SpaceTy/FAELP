@@ -3,7 +3,9 @@ package db
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -451,45 +453,109 @@ type CreateRequestInput struct {
 }
 
 func (s *Store) CreateRequest(ctx context.Context, input domain.CreateRequestInput) (domain.Request, error) {
+	slog.Info("store_create_request_started",
+		"customer_id", input.CustomerID,
+		"delivery_date", input.DeliveryDate,
+		"item_count", len(input.Items),
+	)
+
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
+		slog.Info("store_create_request_transaction_failed", "error", err.Error())
 		return domain.Request{}, err
 	}
 	defer tx.Rollback()
+
+	slog.Info("store_create_request_transaction_begun")
 
 	metadata := make(map[string]any)
 	if input.Note != "" {
 		metadata["note"] = input.Note
 	}
 
+	// Convert metadata map to JSON bytes for PostgreSQL
+	metadataJSON, err := json.Marshal(metadata)
+	if err != nil {
+		slog.Info("store_create_request_metadata_marshal_failed", "error", err.Error())
+		return domain.Request{}, err
+	}
+
+	slog.Info("store_create_request_inserting_request",
+		"customer_id", input.CustomerID,
+		"delivery_date", input.DeliveryDate,
+	)
+
 	var req domain.Request
+	var metadataBytes []byte
 	err = tx.QueryRowContext(ctx, `
 		INSERT INTO requests (customer_id, delivery_date, status, shipping_customer_name, shipping_address_line1, shipping_address_line2, shipping_city, shipping_zip_code, metadata)
 		VALUES ($1, $2, 'pending', $3, $4, $5, $6, $7, $8)
 		RETURNING id, customer_id, delivery_date, status, shipping_customer_name, shipping_address_line1, shipping_address_line2, shipping_city, shipping_zip_code, metadata, created_at, updated_at
-	`, input.CustomerID, input.DeliveryDate, input.ShippingCustomerName, input.ShippingAddressLine1, input.ShippingAddressLine2, input.ShippingCity, input.ShippingZipCode, metadata).Scan(
+	`, input.CustomerID, input.DeliveryDate, input.ShippingCustomerName, input.ShippingAddressLine1, input.ShippingAddressLine2, input.ShippingCity, input.ShippingZipCode, metadataJSON).Scan(
 		&req.ID, &req.CustomerID, &req.DeliveryDate, &req.Status, &req.ShippingCustomerName,
 		&req.ShippingAddressLine1, &req.ShippingAddressLine2, &req.ShippingCity, &req.ShippingZipCode,
-		&req.Metadata, &req.CreatedAt, &req.UpdatedAt,
+		&metadataBytes, &req.CreatedAt, &req.UpdatedAt,
 	)
 	if err != nil {
+		slog.Info("store_create_request_insert_failed", "error", err.Error())
 		return domain.Request{}, err
 	}
 
-	for _, item := range input.Items {
+	// Unmarshal metadata JSON bytes to map
+	if len(metadataBytes) > 0 {
+		req.Metadata = make(map[string]any)
+		if err := json.Unmarshal(metadataBytes, &req.Metadata); err != nil {
+			slog.Info("store_create_request_metadata_unmarshal_failed", "error", err.Error())
+			// Don't fail the request if metadata unmarshal fails
+			req.Metadata = nil
+		}
+	}
+
+	slog.Info("store_create_request_inserted",
+		"request_id", req.ID,
+		"customer_id", req.CustomerID,
+	)
+
+	slog.Info("store_create_request_inserting_items",
+		"request_id", req.ID,
+		"item_count", len(input.Items),
+	)
+
+	for i, item := range input.Items {
 		_, err = tx.ExecContext(ctx, `
 			INSERT INTO request_items (request_id, material_type_id, quantity)
 			VALUES ($1, $2, $3)
 		`, req.ID, item.MaterialTypeID, item.Quantity)
 		if err != nil {
+			slog.Info("store_create_request_item_insert_failed",
+				"request_id", req.ID,
+				"index", i,
+				"material_type_id", item.MaterialTypeID,
+				"error", err.Error(),
+			)
 			return domain.Request{}, err
 		}
 		req.Items = append(req.Items, item)
 	}
 
+	slog.Info("store_create_request_items_inserted",
+		"request_id", req.ID,
+		"items_inserted", len(req.Items),
+	)
+
 	if err = tx.Commit(); err != nil {
+		slog.Info("store_create_request_commit_failed",
+			"request_id", req.ID,
+			"error", err.Error(),
+		)
 		return domain.Request{}, err
 	}
+
+	slog.Info("store_create_request_completed",
+		"request_id", req.ID,
+		"customer_id", req.CustomerID,
+		"item_count", len(req.Items),
+	)
 
 	return req, nil
 }

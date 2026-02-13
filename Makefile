@@ -8,7 +8,7 @@ ORGADMIN_FRONTEND_DIR=frontend/orgadmin
 DISTADMIN_FRONTEND_DIR=frontend/distadmin
 DISTRIBUTION_FRONTEND_DIR=frontend/distribution
 
-.PHONY: dev dev-org dev-dist dev-all \
+.PHONY: dev dev-org dev-dist dev-all dev-backends \
 	install install-org install-dist \
 	build build-org build-dist build-all \
 	clean clean-org clean-dist clean-all \
@@ -54,6 +54,17 @@ dev-all:
 
 # Alias for dev-all
 dev: dev-all
+
+# Run both backends without building frontends (for development with dev servers)
+dev-backends:
+	@echo "Starting both backends (no frontend builds)..."
+	@echo "  - orgbackend (Go) on :8080/:8082"
+	@echo "  - distbackend (Go) on :8081/:8083"
+	@echo ""
+	@(trap 'kill 0' SIGINT; \
+		cd $(ORG_BACKEND_DIR) && go run ./cmd/server & \
+		cd $(DIST_BACKEND_DIR) && go run ./cmd/server & \
+		wait)
 
 # =============================================================================
 # Installation - Install dependencies
@@ -194,10 +205,11 @@ setup: install setup-db
 	@echo "====================="
 	@echo ""
 	@echo "DEVELOPMENT (run with Ctrl+C to stop all):"
-	@echo "  make dev         - Run ALL backends with served frontends"
-	@echo "  make dev-all     - Same as 'make dev'"
-	@echo "  make dev-org     - Run orgbackend with user/orgadmin frontends on :8080/:8082"
-	@echo "  make dev-dist    - Run distbackend with distribution/distadmin frontends on :8081/:8083"
+	@echo "  make dev           - Run ALL backends with served frontends"
+	@echo "  make dev-all       - Same as 'make dev'"
+	@echo "  make dev-backends  - Run both backends without building frontends"
+	@echo "  make dev-org       - Run orgbackend with user/orgadmin frontends on :8080/:8082"
+	@echo "  make dev-dist      - Run distbackend with distribution/distadmin frontends on :8081/:8083"
 	@echo ""
 	@echo "INSTALLATION:"
 	@echo "  make install         - Install all Go and npm dependencies"

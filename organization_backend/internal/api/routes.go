@@ -10,7 +10,10 @@ import (
 func Routes(handler *Handler, authHandler *AuthHandler, materialTypeHandler *MaterialTypeHandler, uploadHandler *UploadHandler, dcHandler *DistributionCenterHandler, requestHandler *RequestHandler, jwtSecret string) chi.Router {
 	r := chi.NewRouter()
 
+	// Recovery must be first to catch all panics
+	r.Use(RecoveryMiddleware)
 	r.Use(CORS)
+	r.Use(DebugMiddleware)
 
 	// Internal middleware to detect Unix socket requests
 	r.Use(InternalMiddleware())
