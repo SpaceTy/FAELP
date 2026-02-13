@@ -1,12 +1,123 @@
 import { useState, useEffect } from 'preact/hooks';
 import { api } from '@/services/api';
 import { authSignal } from '@/context/AuthContext';
-import type { Request } from '@/types/request';
+import { useMaterialTypes } from '@/context/MaterialTypesContext';
+import type { Request, RequestItem } from '@/types/request';
+import type { Material } from '@/types/material';
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+
+function getFullImageUrl(imageUrl: string | undefined): string {
+  if (!imageUrl) return '';
+  if (imageUrl.startsWith('http')) return imageUrl;
+  return `${API_BASE}${imageUrl}`;
+}
+
+interface MaterialCarouselProps {
+  items: RequestItem[];
+  materialsById: Map<string, Material>;
+}
+
+function MaterialCarousel({ items, materialsById }: MaterialCarouselProps) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  
+  const materialsWithImages = items
+    .map(item => ({
+      ...item,
+      material: materialsById.get(item.materialTypeId)
+    }))
+    .filter(item => item.material);
+
+  if (materialsWithImages.length === 0) {
+    return (
+      <div className="h-32 bg-slate-100 rounded-md flex items-center justify-center">
+        <span className="text-sm text-slate-400">Keine Bilder verfügbar</span>
+      </div>
+    );
+  }
+
+  const current = materialsWithImages[currentIndex];
+  const canGoPrev = materialsWithImages.length > 1;
+  const canGoNext = materialsWithImages.length > 1;
+
+  const handlePrev = (e: Event) => {
+    e.stopPropagation();
+    setCurrentIndex(prev => 
+      prev === 0 ? materialsWithImages.length - 1 : prev - 1
+    );
+  };
+
+  const handleNext = (e: Event) => {
+    e.stopPropagation();
+    setCurrentIndex(prev => 
+      prev === materialsWithImages.length - 1 ? 0 : prev + 1
+    );
+  };
+
+  return (
+    <div className="relative">
+      <div className="h-32 bg-slate-50 rounded-md overflow-hidden relative">
+        {current.material && (
+          <img
+            src={getFullImageUrl(current.material.imageUrl)}
+            alt={current.material.name}
+            className="w-full h-full object-cover"
+          />
+        )}
+        {canGoPrev && (
+          <button
+            onClick={handlePrev}
+            className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/80 hover:bg-white rounded-full flex items-center justify-center shadow-sm transition-colors"
+          >
+            <svg className="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+        )}
+        {canGoNext && (
+          <button
+            onClick={handleNext}
+            className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/80 hover:bg-white rounded-full flex items-center justify-center shadow-sm transition-colors"
+          >
+            <svg className="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        )}
+      </div>
+      <div className="mt-2 flex items-center justify-between">
+        <span className="text-sm text-slate-700 truncate pr-2">
+          {current.material?.name}
+        </span>
+        <span className="text-sm font-medium text-slate-900 tabular-nums flex-shrink-0">
+          {current.quantity}×
+        </span>
+      </div>
+      {materialsWithImages.length > 1 && (
+        <div className="flex justify-center gap-1.5 mt-2">
+          {materialsWithImages.map((_, idx) => (
+            <button
+              key={idx}
+              onClick={(e) => {
+                e.stopPropagation();
+                setCurrentIndex(idx);
+              }}
+              className={`w-2 h-2 rounded-full transition-colors ${
+                idx === currentIndex ? 'bg-slate-600' : 'bg-slate-300'
+              }`}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function MyRequestsPage() {
   const [requests, setRequests] = useState<Request[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { materialsById } = useMaterialTypes();
 
   useEffect(() => {
     const token = authSignal.value?.token;
@@ -169,7 +280,7 @@ export function MyRequestsPage() {
                         </div>
                       </div>
 
-                      {/* Materials */}
+                      {/* Materials Carousel */}
                       <div>
                         <div className="flex items-center justify-between mb-3">
                           <h4 className="text-xs font-semibold text-slate-900 uppercase tracking-wider">
@@ -179,19 +290,7 @@ export function MyRequestsPage() {
                             {totalItems} {totalItems === 1 ? 'Artikel' : 'Artikel'}
                           </span>
                         </div>
-                        <div className="space-y-2">
-                          {request.items.map((item, idx) => (
-                            <div
-                              key={idx}
-                              className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-md"
-                            >
-                              <span className="text-sm text-slate-700">{item.materialTypeId}</span>
-                              <span className="text-sm font-medium text-slate-900 tabular-nums">
-                                {item.quantity}×
-                              </span>
-                            </div>
-                          ))}
-                        </div>
+                        <MaterialCarousel items={request.items} materialsById={materialsById} />
                       </div>
                     </div>
                   </div>
