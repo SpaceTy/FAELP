@@ -24,19 +24,6 @@ func Routes(handler *Handler, authHandler *AuthHandler, materialTypeHandler *Mat
 			r.With(AuthMiddleware(jwtSecret)).Get("/me", authHandler.GetCurrentUser)
 		})
 
-		// Protected routes
-		r.Route("/requests", func(r chi.Router) {
-			r.Use(AuthMiddleware(jwtSecret))
-			r.Post("/", handler.CreateRequest)
-			r.Get("/", handler.ListRequests)
-			r.Get("/subscribe", handler.SubscribeRequests)
-			r.Get("/{id}", handler.GetRequest)
-			r.Get("/{id}/subscribe", handler.SubscribeRequest)
-		})
-
-		// My Requests - protected
-		r.With(AuthMiddleware(jwtSecret)).Get("/my-requests", handler.GetMyRequests)
-
 		// Material Types routes
 		r.Route("/material-types", func(r chi.Router) {
 			// Public routes

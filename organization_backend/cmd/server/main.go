@@ -16,7 +16,6 @@ import (
 	"organization_backend/internal/client"
 	"organization_backend/internal/config"
 	"organization_backend/internal/db"
-	"organization_backend/internal/service"
 	"organization_backend/internal/socket"
 )
 
@@ -46,23 +45,16 @@ func main() {
 	defer conn.Close()
 
 	store := db.NewStore(conn)
-	requestService := service.NewRequestService(store)
-	notifier := db.NewNotifier(cfg.DatabaseURL)
 	materialNotifier := db.NewMaterialNotifier(cfg.DatabaseURL)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	if err := notifier.Start(ctx); err != nil {
-		log.Fatalf("notifier start failed: %v", err)
-	}
 	if err := materialNotifier.Start(ctx); err != nil {
 		log.Fatalf("material notifier start failed: %v", err)
 	}
 
 	handler := &api.Handler{
-		Service:          requestService,
 		Store:            store,
-		Notifier:         notifier,
 		MaterialNotifier: materialNotifier,
 	}
 

@@ -1,7 +1,6 @@
 package db
 
 import (
-	"encoding/json"
 	"time"
 )
 
@@ -14,38 +13,4 @@ type userRow struct {
 	EmailVerified bool
 	IsAdmin       bool
 	CreatedAt     time.Time
-}
-
-type requestRow struct {
-	ID                     string
-	CustomerID             string
-	DeliveryDate           time.Time
-	Status                 string
-	ShippingCustomerName   string
-	ShippingAddressLine1   string
-	ShippingAddressLine2   *string
-	ShippingCity           string
-	ShippingZipCode        string
-	Metadata               json.RawMessage
-	CreatedAt              time.Time
-	UpdatedAt              time.Time
-	CustomerEmail          string
-	CustomerName           string
-	CustomerToken          string
-	CustomerWorkOSUserID   string
-	CustomerEmailVerified  bool
-	CustomerCreatedAt      time.Time
-}
-
-type requestItemRow struct {
-	RequestID      string
-	MaterialTypeID string
-	Quantity       int
-}
-
-type materialTypeRow struct {
-	ID          string
-	Name        string
-	Description string
-	ImageURL    string
 }

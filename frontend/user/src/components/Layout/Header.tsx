@@ -24,12 +24,6 @@ export function Header() {
             Materialien durchsuchen
           </a>
           <a
-            href="/requests"
-            className="px-4 py-2 rounded transition-colors hover:bg-secondary-hover"
-          >
-            Meine Anfragen
-          </a>
-          <a
             href="/profile"
             className="px-4 py-2 rounded transition-colors hover:bg-secondary-hover"
           >
@@ -45,7 +39,7 @@ export function Header() {
             href="/cart"
             className="px-4 py-2 bg-primary text-secondary font-medium rounded hover:bg-primary-hover transition-colors"
           >
-            Anfrage-Warenkorb ({itemCount})
+            Warenkorb ({itemCount})
           </a>
           {isAuthenticated && <UserMenu />}
         </div>

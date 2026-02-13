@@ -1,36 +1,9 @@
-import { useState, useEffect } from 'preact/hooks';
 import { useCart } from '@/hooks/useCart';
 import { useMaterialTypes } from '@/context/MaterialTypesContext';
-import { useAuth } from '@/context/AuthContext';
-import { api } from '@/services/api';
-import type { CreateRequestPayload } from '@/types/request';
 
 export function CartPage() {
   const { items, itemCount, updateQuantity, removeItem, clearCart } = useCart();
   const { materialsById } = useMaterialTypes();
-  const { customer } = useAuth();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [submitSuccess, setSubmitSuccess] = useState(false);
-
-  // Form state
-  const [customerEmail, setCustomerEmail] = useState(customer?.email || '');
-  const [shippingCustomerName, setShippingCustomerName] = useState('');
-  const [shippingAddress, setShippingAddress] = useState({
-    line1: '',
-    line2: '',
-    city: '',
-    zipCode: ''
-  });
-  const [deliveryDate, setDeliveryDate] = useState('');
-  const [notes, setNotes] = useState('');
-
-  // Update customer email when auth changes
-  useEffect(() => {
-    if (customer) {
-      setCustomerEmail(customer.email);
-    }
-  }, [customer]);
 
   const cartMaterials = Object.entries(items).map(([materialId, cartItem]) => {
     const material = materialsById.get(materialId);
@@ -38,55 +11,6 @@ export function CartPage() {
   }).filter(({ material }) => material !== undefined);
 
   const totalUnits = Object.values(items).reduce((sum, item) => sum + item.quantity, 0);
-
-  const handleSubmit = async (e: Event) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setSubmitError(null);
-
-    try {
-      const payload: CreateRequestPayload = {
-        customerEmail,
-        shippingCustomerName: shippingCustomerName || customerEmail,
-        shippingAddress,
-        deliveryDate: new Date(deliveryDate).toISOString(),
-        items: Object.fromEntries(
-          Object.entries(items).map(([id, item]) => [id, item.quantity])
-        ),
-        metadata: notes ? { note: notes } : undefined
-      };
-
-      await api.createRequest(payload);
-      setSubmitSuccess(true);
-      clearCart();
-    } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : 'Anfrage konnte nicht erstellt werden');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  if (submitSuccess) {
-    return (
-      <main className="flex-1 flex items-center justify-center p-6">
-          <div className="bg-white p-8 rounded-lg shadow-sm text-center max-w-md">
-            <div className="text-green-500 text-5xl mb-4">✓</div>
-            <h2 className="text-2xl font-semibold text-secondary mb-2">
-              Anfrage erfolgreich!
-            </h2>
-            <p className="text-text-secondary mb-6">
-              Ihre Materialanfrage wurde erfolgreich übermittelt. Sie erhalten eine Bestätigung per E-Mail.
-            </p>
-            <a
-              href="/materials"
-              className="inline-block px-6 py-2 bg-primary text-secondary font-medium rounded hover:bg-primary-hover transition-colors"
-            >
-              Weitere Materialien anfragen
-            </a>
-          </div>
-        </main>
-    );
-  }
 
   if (itemCount === 0) {
     return (
@@ -97,7 +21,7 @@ export function CartPage() {
               Ihr Warenkorb ist leer
             </h2>
             <p className="text-text-secondary mb-6">
-              Durchsuchen Sie unsere Materialien und fügen Sie Artikel zu Ihrem Anfrage-Warenkorb hinzu.
+              Durchsuchen Sie unsere Materialien und fügen Sie Artikel zu Ihrem Warenkorb hinzu.
             </p>
             <a
               href="/materials"
@@ -114,20 +38,22 @@ export function CartPage() {
     <main className="flex-1 flex overflow-hidden">
         {/* Cart Items */}
         <section className="flex-1 p-6 overflow-y-auto">
-          <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
-            <h2 className="text-2xl font-semibold text-secondary">
-              Anfrage-Warenkorb
-            </h2>
-            <p className="text-text-secondary">
-              {itemCount} Artikel im Warenkorb
-            </p>
-          </div>
-
-          {submitError && (
-            <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg mb-6">
-              <p>Fehler: {submitError}</p>
+          <div className="bg-white p-6 rounded-lg shadow-sm mb-6 flex justify-between items-center">
+            <div>
+              <h2 className="text-2xl font-semibold text-secondary">
+                Warenkorb
+              </h2>
+              <p className="text-text-secondary">
+                {itemCount} Artikel im Warenkorb
+              </p>
             </div>
-          )}
+            <button
+              onClick={clearCart}
+              className="px-4 py-2 text-red-600 border border-red-600 rounded hover:bg-red-50 transition-colors"
+            >
+              Warenkorb leeren
+            </button>
+          </div>
 
           <div className="space-y-4">
             {cartMaterials.map(({ material, cartItem }) => material && (
@@ -171,134 +97,34 @@ export function CartPage() {
           </div>
         </section>
 
-        {/* Checkout Form */}
+        {/* Cart Summary */}
         <aside className="w-96 bg-white p-6 overflow-y-auto shadow-sm">
           <h3 className="text-lg font-semibold text-secondary mb-4">
-            Anfrage-Details
+            Zusammenfassung
           </h3>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
-                E-Mail
-              </label>
-              <input
-                type="email"
-                value={customerEmail}
-                disabled
-                className="w-full px-3 py-2 border border-gray-300 rounded bg-gray-100 text-gray-600 cursor-not-allowed"
-              />
+          <div className="space-y-3 mb-6">
+            <div className="flex justify-between">
+              <span className="text-text-secondary">Artikel:</span>
+              <span className="font-medium">{cartMaterials.length}</span>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
-                Lieferdatum *
-              </label>
-              <input
-                type="date"
-                required
-                value={deliveryDate}
-                min={new Date().toISOString().split('T')[0]}
-                onChange={(e) => setDeliveryDate((e.target as HTMLInputElement).value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary"
-              />
+            <div className="flex justify-between">
+              <span className="text-text-secondary">Einheiten:</span>
+              <span className="font-medium">{totalUnits}</span>
             </div>
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
-                Empfängername (falls abweichend)
-              </label>
-              <input
-                type="text"
-                value={shippingCustomerName}
-                onChange={(e) => setShippingCustomerName((e.target as HTMLInputElement).value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
-                Straße und Hausnummer *
-              </label>
-              <input
-                type="text"
-                required
-                value={shippingAddress.line1}
-                onChange={(e) => setShippingAddress(prev => ({ ...prev, line1: (e.target as HTMLInputElement).value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
-                Adresszusatz
-              </label>
-              <input
-                type="text"
-                value={shippingAddress.line2}
-                onChange={(e) => setShippingAddress(prev => ({ ...prev, line2: (e.target as HTMLInputElement).value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-text-primary mb-1">
-                  PLZ *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={shippingAddress.zipCode}
-                  onChange={(e) => setShippingAddress(prev => ({ ...prev, zipCode: (e.target as HTMLInputElement).value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-text-primary mb-1">
-                  Ort *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={shippingAddress.city}
-                  onChange={(e) => setShippingAddress(prev => ({ ...prev, city: (e.target as HTMLInputElement).value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
-                Notizen
-              </label>
-              <textarea
-                rows={3}
-                value={notes}
-                onChange={(e) => setNotes((e.target as HTMLTextAreaElement).value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-
-            <div className="pt-4 border-t">
-              <div className="flex justify-between mb-2">
-                <span>Gesamt Artikel:</span>
-                <span>{cartMaterials.length}</span>
-              </div>
-              <div className="flex justify-between mb-4">
-                <span>Gesamt Einheiten:</span>
-                <span>{totalUnits}</span>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full py-3 bg-primary text-secondary font-semibold rounded hover:bg-primary-hover transition-colors disabled:opacity-50"
-              >
-                {isSubmitting ? 'Wird gesendet...' : 'Anfrage einreichen'}
-              </button>
-            </div>
-          </form>
+          <div className="pt-4 border-t">
+            <p className="text-sm text-text-secondary mb-4">
+              Die Bestellfunktion ist derzeit nicht verfügbar.
+            </p>
+            <a
+              href="/materials"
+              className="block w-full py-3 bg-primary text-secondary font-semibold rounded hover:bg-primary-hover transition-colors text-center"
+            >
+              Weiter einkaufen
+            </a>
+          </div>
         </aside>
       </main>
   );

@@ -2,351 +2,15 @@ package api
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
-	"strconv"
-	"strings"
-	"time"
 
 	"organization_backend/internal/db"
-	"organization_backend/internal/domain"
-	"organization_backend/internal/service"
 	"organization_backend/internal/transport"
-	"organization_backend/pkg/pagination"
-
-	"github.com/go-chi/chi/v5"
 )
 
 type Handler struct {
-	Service          *service.RequestService
 	Store            *db.Store
-	Notifier         *db.Notifier
 	MaterialNotifier *db.MaterialNotifier
-}
-
-func (h *Handler) CreateRequest(w http.ResponseWriter, r *http.Request) {
-	claims := GetClaimsFromContext(r.Context())
-	if claims == nil {
-		writeError(w, http.StatusUnauthorized, "unauthorized", "Authentication required")
-		return
-	}
-
-	var payload service.CreateRequestPayload
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid_json", "Invalid JSON body")
-		return
-	}
-
-	// Non-admin users can only create requests for themselves.
-	if !claims.IsAdmin {
-		payload.CustomerID = claims.CustomerID
-		payload.CustomerEmail = ""
-		payload.CustomerName = ""
-		payload.CustomerToken = ""
-		payload.Status = ""
-	}
-
-	// Admin callers default to their own account when no customer is provided.
-	if claims.IsAdmin && payload.CustomerID == "" && payload.CustomerEmail == "" {
-		payload.CustomerID = claims.CustomerID
-	}
-
-	req, err := h.Service.CreateRequest(r.Context(), payload)
-	if err != nil {
-		var validation service.ValidationErrors
-		if errors.As(err, &validation) {
-			writeJSON(w, http.StatusBadRequest, validation)
-			return
-		}
-		writeError(w, http.StatusInternalServerError, "create_failed", err.Error())
-		return
-	}
-
-	writeJSON(w, http.StatusCreated, req)
-}
-
-func (h *Handler) GetRequest(w http.ResponseWriter, r *http.Request) {
-	claims := GetClaimsFromContext(r.Context())
-	if claims == nil {
-		writeError(w, http.StatusUnauthorized, "unauthorized", "Authentication required")
-		return
-	}
-
-	id := chi.URLParam(r, "id")
-	req, err := h.Service.GetRequestByID(r.Context(), id)
-	if err != nil {
-		writeError(w, http.StatusNotFound, "not_found", "Request not found")
-		return
-	}
-	if !claims.IsAdmin && req.Customer.ID != claims.CustomerID {
-		writeError(w, http.StatusNotFound, "not_found", "Request not found")
-		return
-	}
-	writeJSON(w, http.StatusOK, req)
-}
-
-func (h *Handler) ListRequests(w http.ResponseWriter, r *http.Request) {
-	claims := GetClaimsFromContext(r.Context())
-	if claims == nil {
-		writeError(w, http.StatusUnauthorized, "unauthorized", "Authentication required")
-		return
-	}
-
-	params, err := parseListParams(r)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid_params", err.Error())
-		return
-	}
-	if !claims.IsAdmin {
-		params.CustomerID = claims.CustomerID
-	}
-	result, err := h.Service.ListRequests(r.Context(), params)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "list_failed", err.Error())
-		return
-	}
-	writeJSON(w, http.StatusOK, result)
-}
-
-// GetMyRequests returns requests for the authenticated customer
-func (h *Handler) GetMyRequests(w http.ResponseWriter, r *http.Request) {
-	claims := GetClaimsFromContext(r.Context())
-	if claims == nil {
-		writeError(w, http.StatusUnauthorized, "unauthorized", "Authentication required")
-		return
-	}
-
-	params, err := parseListParams(r)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid_params", err.Error())
-		return
-	}
-
-	// Force customer ID filter to the authenticated customer
-	params.CustomerID = claims.CustomerID
-
-	result, err := h.Service.ListRequests(r.Context(), params)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "list_failed", err.Error())
-		return
-	}
-	writeJSON(w, http.StatusOK, result)
-}
-
-func (h *Handler) SubscribeRequest(w http.ResponseWriter, r *http.Request) {
-	claims := GetClaimsFromContext(r.Context())
-	if claims == nil {
-		writeError(w, http.StatusUnauthorized, "unauthorized", "Authentication required")
-		return
-	}
-
-	requestID := chi.URLParam(r, "id")
-	if strings.TrimSpace(requestID) == "" {
-		writeError(w, http.StatusBadRequest, "invalid_request", "id required")
-		return
-	}
-
-	initial, err := h.Service.GetRequestByID(r.Context(), requestID)
-	if err != nil {
-		writeError(w, http.StatusNotFound, "not_found", "Request not found")
-		return
-	}
-	if !claims.IsAdmin && initial.Customer.ID != claims.CustomerID {
-		writeError(w, http.StatusNotFound, "not_found", "Request not found")
-		return
-	}
-
-	events := make(chan []byte, 10)
-	subID, updates := h.Notifier.Subscribe()
-	defer h.Notifier.Unsubscribe(subID)
-
-	go func() {
-		defer close(events)
-		ctx := r.Context()
-		sendEvent(events, "snapshot", "SNAPSHOT", &initial, requestID, time.Now())
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case update, ok := <-updates:
-				if !ok {
-					return
-				}
-				if update.RequestID != requestID {
-					continue
-				}
-				switch update.Action {
-				case "DELETE":
-					sendEvent(events, "deleted", update.Action, nil, update.RequestID, update.UpdatedAt)
-				default:
-					req, err := h.Service.GetRequestByID(ctx, requestID)
-					if err != nil {
-						sendEvent(events, "deleted", update.Action, nil, update.RequestID, update.UpdatedAt)
-						continue
-					}
-					if !claims.IsAdmin && req.Customer.ID != claims.CustomerID {
-						continue
-					}
-					sendEvent(events, "update", update.Action, &req, update.RequestID, update.UpdatedAt)
-				}
-			}
-		}
-	}()
-
-	transport.Stream(w, r, events)
-}
-
-func (h *Handler) SubscribeRequests(w http.ResponseWriter, r *http.Request) {
-	claims := GetClaimsFromContext(r.Context())
-	if claims == nil {
-		writeError(w, http.StatusUnauthorized, "unauthorized", "Authentication required")
-		return
-	}
-
-	params, err := parseListParams(r)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid_params", err.Error())
-		return
-	}
-	if !claims.IsAdmin {
-		params.CustomerID = claims.CustomerID
-	}
-
-	events := make(chan []byte, 10)
-	subID, updates := h.Notifier.Subscribe()
-	defer h.Notifier.Unsubscribe(subID)
-
-	go func() {
-		defer close(events)
-		ctx := r.Context()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case update, ok := <-updates:
-				if !ok {
-					return
-				}
-				if update.Action == "DELETE" {
-					if !claims.IsAdmin {
-						continue
-					}
-					sendEvent(events, "deleted", update.Action, nil, update.RequestID, update.UpdatedAt)
-					continue
-				}
-				req, err := h.Service.GetRequestByID(ctx, update.RequestID)
-				if err != nil {
-					continue
-				}
-				if !claims.IsAdmin && req.Customer.ID != claims.CustomerID {
-					continue
-				}
-				if matchesListQuery(req, params) {
-					sendEvent(events, "update", update.Action, &req, update.RequestID, update.UpdatedAt)
-				}
-			}
-		}
-	}()
-
-	transport.Stream(w, r, events)
-}
-
-func parseListParams(r *http.Request) (db.ListRequestsParams, error) {
-	q := r.URL.Query()
-
-	limit := 20
-	if q.Get("limit") != "" {
-		parsed, err := strconv.Atoi(q.Get("limit"))
-		if err != nil {
-			return db.ListRequestsParams{}, errors.New("limit must be number")
-		}
-		limit = parsed
-	}
-
-	var cursor *pagination.Cursor
-	if q.Get("cursor") != "" {
-		parsed, err := pagination.Decode(q.Get("cursor"))
-		if err != nil {
-			return db.ListRequestsParams{}, errors.New("invalid cursor")
-		}
-		cursor = &parsed
-	}
-
-	var from *time.Time
-	if q.Get("from") != "" {
-		ts, err := time.Parse(time.RFC3339, q.Get("from"))
-		if err != nil {
-			return db.ListRequestsParams{}, errors.New("invalid from")
-		}
-		from = &ts
-	}
-	var to *time.Time
-	if q.Get("to") != "" {
-		ts, err := time.Parse(time.RFC3339, q.Get("to"))
-		if err != nil {
-			return db.ListRequestsParams{}, errors.New("invalid to")
-		}
-		to = &ts
-	}
-
-	return db.ListRequestsParams{
-		Limit:      limit,
-		Cursor:     cursor,
-		Query:      strings.TrimSpace(q.Get("q")),
-		Status:     strings.TrimSpace(q.Get("status")),
-		CustomerID: strings.TrimSpace(q.Get("customerId")),
-		From:       from,
-		To:         to,
-	}, nil
-}
-
-func matchesListQuery(req domain.Request, params db.ListRequestsParams) bool {
-	if params.Status != "" && req.Status != params.Status {
-		return false
-	}
-	if params.CustomerID != "" && req.Customer.ID != params.CustomerID {
-		return false
-	}
-	if params.From != nil && req.DeliveryDate.Before(*params.From) {
-		return false
-	}
-	if params.To != nil && req.DeliveryDate.After(*params.To) {
-		return false
-	}
-	if params.Query != "" {
-		q := strings.ToLower(params.Query)
-		if !strings.Contains(strings.ToLower(req.Customer.Name), q) &&
-			!strings.Contains(strings.ToLower(req.Customer.Email), q) &&
-			!strings.Contains(strings.ToLower(req.ID), q) {
-			return false
-		}
-	}
-	return true
-}
-
-type requestEvent struct {
-	Type      string          `json:"type"`
-	Action    string          `json:"action"`
-	Request   *domain.Request `json:"request,omitempty"`
-	RequestID string          `json:"requestId"`
-	UpdatedAt time.Time       `json:"updatedAt"`
-}
-
-func sendEvent(events chan<- []byte, eventType, action string, request *domain.Request, requestID string, updatedAt time.Time) {
-	payload, err := json.Marshal(requestEvent{
-		Type:      eventType,
-		Action:    action,
-		Request:   request,
-		RequestID: requestID,
-		UpdatedAt: updatedAt,
-	})
-	if err != nil {
-		return
-	}
-	select {
-	case events <- payload:
-	default:
-	}
 }
 
 func writeJSON(w http.ResponseWriter, status int, payload any) {
@@ -360,6 +24,35 @@ func writeError(w http.ResponseWriter, status int, code, message string) {
 		"error":   code,
 		"message": message,
 	})
+}
+
+// UpdateAvailabilityFromDistBackend receives availability updates from distribution backends
+// This endpoint is called via Unix socket or internal API
+func (h *Handler) UpdateAvailabilityFromDistBackend(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		DistributionCenterID string         `json:"distributionCenterId"`
+		Availability         map[string]int `json:"availability"` // material_type_id -> count
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_json", "Invalid JSON body")
+		return
+	}
+
+	if req.DistributionCenterID == "" {
+		writeError(w, http.StatusBadRequest, "missing_field", "distributionCenterId is required")
+		return
+	}
+
+	// Update material_available table
+	// This will trigger the pg_notify automatically via the database trigger
+	err := h.Store.UpdateMaterialAvailability(r.Context(), req.DistributionCenterID, req.Availability)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "update_failed", err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 // SubscribeMaterialAvailability handles SSE subscriptions for material availability updates
@@ -430,33 +123,4 @@ func (h *Handler) SubscribeMaterialAvailability(w http.ResponseWriter, r *http.R
 	}()
 
 	transport.Stream(w, r, events)
-}
-
-// UpdateAvailabilityFromDistBackend receives availability updates from distribution backends
-// This endpoint is called via Unix socket or internal API
-func (h *Handler) UpdateAvailabilityFromDistBackend(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		DistributionCenterID string         `json:"distributionCenterId"`
-		Availability         map[string]int `json:"availability"` // material_type_id -> count
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid_json", "Invalid JSON body")
-		return
-	}
-
-	if req.DistributionCenterID == "" {
-		writeError(w, http.StatusBadRequest, "missing_field", "distributionCenterId is required")
-		return
-	}
-
-	// Update material_available table
-	// This will trigger the pg_notify automatically via the database trigger
-	err := h.Store.UpdateMaterialAvailability(r.Context(), req.DistributionCenterID, req.Availability)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "update_failed", err.Error())
-		return
-	}
-
-	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
