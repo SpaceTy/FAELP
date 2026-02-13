@@ -1,7 +1,6 @@
 import type { Material } from '@/types/material';
+import type { CreateRequestInput, Request } from '@/types/request';
 
-// Use relative URL to leverage Vite proxy in development, avoiding CORS issues
-// The Vite proxy forwards /api/* to the backend and rewrites to /*
 const API_BASE = '/api';
 
 class ApiError extends Error {
@@ -31,7 +30,6 @@ async function handleResponse<T>(response: Response): Promise<T> {
 }
 
 class ApiService {
-  // Material Types API (public)
   async listMaterialTypes(): Promise<Material[]> {
     const response = await fetch(`${API_BASE}/material-types`);
     return handleResponse<Material[]>(response);
@@ -40,6 +38,18 @@ class ApiService {
   async getMaterialType(id: string): Promise<Material> {
     const response = await fetch(`${API_BASE}/material-types/${id}`);
     return handleResponse<Material>(response);
+  }
+
+  async createRequest(input: CreateRequestInput, token: string): Promise<Request> {
+    const response = await fetch(`${API_BASE}/requests`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(input),
+    });
+    return handleResponse<Request>(response);
   }
 }
 

@@ -1,9 +1,15 @@
+import { useState } from 'preact/hooks';
 import { useCart } from '@/hooks/useCart';
 import { useMaterialTypes } from '@/context/MaterialTypesContext';
+import { useAuth } from '@/context/AuthContext';
+import { RequestForm } from '@/components/Cart/RequestForm';
+import type { RequestItem } from '@/types/request';
 
 export function CartPage() {
   const { items, itemCount, updateQuantity, removeItem, clearCart } = useCart();
   const { materialsById } = useMaterialTypes();
+  const { isAuthenticated } = useAuth();
+  const [isSubmitted, setIsSubmitted] = useState(false);
 
   const cartMaterials = Object.entries(items).map(([materialId, cartItem]) => {
     const material = materialsById.get(materialId);
@@ -11,6 +17,38 @@ export function CartPage() {
   }).filter(({ material }) => material !== undefined);
 
   const totalUnits = Object.values(items).reduce((sum, item) => sum + item.quantity, 0);
+
+  const requestItems: RequestItem[] = Object.entries(items).map(([materialId, cartItem]) => ({
+    materialTypeId: materialId,
+    quantity: cartItem.quantity,
+  }));
+
+  const handleSubmitSuccess = () => {
+    clearCart();
+    setIsSubmitted(true);
+  };
+
+  if (isSubmitted) {
+    return (
+      <main className="flex-1 flex items-center justify-center p-6">
+        <div className="bg-white p-8 rounded-lg shadow-sm text-center max-w-md">
+          <div className="text-6xl mb-4">✓</div>
+          <h2 className="text-2xl font-semibold text-secondary mb-2">
+            Anfrage erfolgreich gesendet
+          </h2>
+          <p className="text-text-secondary mb-6">
+            Ihre Anfrage wurde erfolgreich übermittelt. Sie erhalten eine Bestätigung per E-Mail.
+          </p>
+          <a
+            href="/materials"
+            className="inline-block px-6 py-2 bg-primary text-white font-medium rounded hover:bg-primary-hover transition-colors"
+          >
+            Weiter stöbern
+          </a>
+        </div>
+      </main>
+    );
+  }
 
   if (itemCount === 0) {
     return (
@@ -36,7 +74,6 @@ export function CartPage() {
 
   return (
     <main className="flex-1 flex overflow-hidden">
-        {/* Cart Items */}
         <section className="flex-1 p-6 overflow-y-auto">
           <div className="bg-white p-6 rounded-lg shadow-sm mb-6 flex justify-between items-center">
             <div>
@@ -97,7 +134,6 @@ export function CartPage() {
           </div>
         </section>
 
-        {/* Cart Summary */}
         <aside className="w-96 bg-white p-6 overflow-y-auto shadow-sm">
           <h3 className="text-lg font-semibold text-secondary mb-4">
             Zusammenfassung
@@ -115,15 +151,21 @@ export function CartPage() {
           </div>
 
           <div className="pt-4 border-t">
-            <p className="text-sm text-text-secondary mb-4">
-              Die Bestellfunktion ist derzeit nicht verfügbar.
-            </p>
-            <a
-              href="/materials"
-              className="block w-full py-3 bg-primary text-secondary font-semibold rounded hover:bg-primary-hover transition-colors text-center"
-            >
-              Weiter einkaufen
-            </a>
+            {isAuthenticated ? (
+              <RequestForm items={requestItems} onSuccess={handleSubmitSuccess} />
+            ) : (
+              <div className="text-center">
+                <p className="text-sm text-text-secondary mb-4">
+                  Bitte melden Sie sich an, um eine Anfrage zu senden.
+                </p>
+                <a
+                  href="/login"
+                  className="block w-full py-3 bg-primary text-white font-semibold rounded hover:bg-primary-hover transition-colors text-center"
+                >
+                  Anmelden
+                </a>
+              </div>
+            )}
           </div>
         </aside>
       </main>

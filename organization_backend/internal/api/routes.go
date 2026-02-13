@@ -7,7 +7,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func Routes(handler *Handler, authHandler *AuthHandler, materialTypeHandler *MaterialTypeHandler, uploadHandler *UploadHandler, dcHandler *DistributionCenterHandler, jwtSecret string) chi.Router {
+func Routes(handler *Handler, authHandler *AuthHandler, materialTypeHandler *MaterialTypeHandler, uploadHandler *UploadHandler, dcHandler *DistributionCenterHandler, requestHandler *RequestHandler, jwtSecret string) chi.Router {
 	r := chi.NewRouter()
 
 	r.Use(CORS)
@@ -52,6 +52,12 @@ func Routes(handler *Handler, authHandler *AuthHandler, materialTypeHandler *Mat
 			r.Get("/{id}", dcHandler.GetDistributionCenter)
 			r.Put("/{id}", dcHandler.UpdateDistributionCenter)
 			r.Delete("/{id}", dcHandler.DeleteDistributionCenter)
+		})
+
+		// Requests routes (authenticated users)
+		r.Route("/requests", func(r chi.Router) {
+			r.Use(AuthMiddleware(jwtSecret))
+			r.Post("/", requestHandler.CreateRequest)
 		})
 	})
 

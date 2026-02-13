@@ -449,3 +449,47 @@ type CreateRequestInput struct {
 	Items                map[string]int
 	Metadata             map[string]any
 }
+
+func (s *Store) CreateRequest(ctx context.Context, input domain.CreateRequestInput) (domain.Request, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return domain.Request{}, err
+	}
+	defer tx.Rollback()
+
+	metadata := make(map[string]any)
+	if input.Note != "" {
+		metadata["note"] = input.Note
+	}
+
+	var req domain.Request
+	err = tx.QueryRowContext(ctx, `
+		INSERT INTO requests (customer_id, delivery_date, status, shipping_customer_name, shipping_address_line1, shipping_address_line2, shipping_city, shipping_zip_code, metadata)
+		VALUES ($1, $2, 'pending', $3, $4, $5, $6, $7, $8)
+		RETURNING id, customer_id, delivery_date, status, shipping_customer_name, shipping_address_line1, shipping_address_line2, shipping_city, shipping_zip_code, metadata, created_at, updated_at
+	`, input.CustomerID, input.DeliveryDate, input.ShippingCustomerName, input.ShippingAddressLine1, input.ShippingAddressLine2, input.ShippingCity, input.ShippingZipCode, metadata).Scan(
+		&req.ID, &req.CustomerID, &req.DeliveryDate, &req.Status, &req.ShippingCustomerName,
+		&req.ShippingAddressLine1, &req.ShippingAddressLine2, &req.ShippingCity, &req.ShippingZipCode,
+		&req.Metadata, &req.CreatedAt, &req.UpdatedAt,
+	)
+	if err != nil {
+		return domain.Request{}, err
+	}
+
+	for _, item := range input.Items {
+		_, err = tx.ExecContext(ctx, `
+			INSERT INTO request_items (request_id, material_type_id, quantity)
+			VALUES ($1, $2, $3)
+		`, req.ID, item.MaterialTypeID, item.Quantity)
+		if err != nil {
+			return domain.Request{}, err
+		}
+		req.Items = append(req.Items, item)
+	}
+
+	if err = tx.Commit(); err != nil {
+		return domain.Request{}, err
+	}
+
+	return req, nil
+}
