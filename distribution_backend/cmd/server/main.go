@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -124,11 +125,12 @@ func main() {
 	// Mount distribution frontend at root if enabled
 	if cfg.Frontend.Distribution.Enabled && cfg.Frontend.Distribution.Path != "" {
 		spaHandler := handlers.NewSPAHandler(cfg.Frontend.Distribution.Path)
-		// Use a catch-all handler for the frontend
 		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			// Don't interfere with API or internal routes
-			if r.URL.Path == "/" || (r.URL.Path != "/api" && len(r.URL.Path) < 5) ||
-				(r.URL.Path[:5] != "/api/" && r.URL.Path[:10] != "/internal/" && r.URL.Path[:8] != "/uploads/" && r.URL.Path[:8] != "/health") {
+			if r.URL.Path == "/" ||
+				!strings.HasPrefix(r.URL.Path, "/api/") &&
+					!strings.HasPrefix(r.URL.Path, "/internal/") &&
+					!strings.HasPrefix(r.URL.Path, "/uploads/") &&
+					r.URL.Path != "/health" {
 				spaHandler.ServeHTTP(w, r)
 			} else {
 				http.NotFound(w, r)
@@ -148,6 +150,8 @@ func main() {
 	if cfg.Frontend.Admin.Enabled && cfg.Frontend.Admin.Port != 0 && cfg.Frontend.Admin.Path != "" {
 		adminMux := http.NewServeMux()
 		spaHandler := handlers.NewSPAHandler(cfg.Frontend.Admin.Path)
+		adminMux.Handle("/api/", mux)
+		adminMux.Handle("/health", mux)
 		adminMux.Handle("/", spaHandler)
 
 		adminServer = &http.Server{
