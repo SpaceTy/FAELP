@@ -62,6 +62,14 @@ export function InventoryPage() {
   const [assigningInstance, setAssigningInstance] = useState<MaterialInstance | null>(null);
   const [assignRequestId, setAssignRequestId] = useState('');
 
+  const materialTypeByID = useMemo(() => {
+    const map = new Map<string, MaterialType>();
+    for (const mt of materialTypes) {
+      map.set(mt.id, mt);
+    }
+    return map;
+  }, [materialTypes]);
+
   // Load data
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -234,9 +242,18 @@ export function InventoryPage() {
               onClick={() => setTypeFilterDropdownOpen(!typeFilterDropdownOpen)}
             >
               <span className={typeIdFilter ? 'text-gray-900' : 'text-gray-400'}>
-                {typeIdFilter
-                  ? materialTypes.find((mt) => mt.id === typeIdFilter)?.name || typeIdFilter
-                  : 'Alle Typen'}
+                {typeIdFilter ? (
+                  <span className="material-inline">
+                    {materialTypeByID.get(typeIdFilter)?.imageUrl ? (
+                      <img className="material-thumb" src={materialTypeByID.get(typeIdFilter)?.imageUrl} alt={materialTypeByID.get(typeIdFilter)?.name || typeIdFilter} />
+                    ) : (
+                      <span className="material-thumb-placeholder">?</span>
+                    )}
+                    {materialTypeByID.get(typeIdFilter)?.name || typeIdFilter}
+                  </span>
+                ) : (
+                  'Alle Typen'
+                )}
               </span>
               <svg
                 className={`w-4 h-4 text-gray-500 transition-transform ${typeFilterDropdownOpen ? 'rotate-180' : ''}`}
@@ -269,9 +286,16 @@ export function InventoryPage() {
                       setTypeIdFilter(mt.id);
                       setTypeFilterDropdownOpen(false);
                     }}
-                    className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-100 flex flex-col ${typeIdFilter === mt.id ? 'bg-blue-50 text-blue-700' : ''}`}
+                    className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-100 flex flex-col gap-1 ${typeIdFilter === mt.id ? 'bg-blue-50 text-blue-700' : ''}`}
                   >
-                    <span className="font-medium">{mt.name}</span>
+                    <span className="font-medium material-inline">
+                      {mt.imageUrl ? (
+                        <img className="material-thumb" src={mt.imageUrl} alt={mt.name} />
+                      ) : (
+                        <span className="material-thumb-placeholder">?</span>
+                      )}
+                      {mt.name}
+                    </span>
                     <span className="text-xs text-gray-500">ID: {mt.id}</span>
                   </button>
                 ))}
@@ -366,7 +390,14 @@ export function InventoryPage() {
                         <span className="text-sm text-gray-500 font-mono">{instance.id.slice(0, 8)}...</span>
                       </div>
                       <h3 className="font-medium text-gray-800 mb-1">
-                        Material-Typ: <span className="font-mono text-sm">{instance.typeId.slice(0, 16)}...</span>
+                        <span className="material-inline">
+                          {materialTypeByID.get(instance.typeId)?.imageUrl ? (
+                            <img className="material-thumb" src={materialTypeByID.get(instance.typeId)?.imageUrl} alt={materialTypeByID.get(instance.typeId)?.name || instance.typeId} />
+                          ) : (
+                            <span className="material-thumb-placeholder">?</span>
+                          )}
+                          Material-Typ: <span className="font-mono text-sm">{materialTypeByID.get(instance.typeId)?.name || instance.typeId.slice(0, 16)}...</span>
+                        </span>
                       </h3>
                       <p className="text-sm text-gray-600 mb-2">
                         Standort: <span className="font-medium">{instance.location}</span>
@@ -468,7 +499,14 @@ export function InventoryPage() {
               </div>
               <div>
                 <label className="text-xs text-gray-500 uppercase">Material-Typ ID</label>
-                <p className="font-mono text-sm">{detailInstance.typeId}</p>
+                <p className="font-mono text-sm material-inline">
+                  {materialTypeByID.get(detailInstance.typeId)?.imageUrl ? (
+                    <img className="material-thumb" src={materialTypeByID.get(detailInstance.typeId)?.imageUrl} alt={materialTypeByID.get(detailInstance.typeId)?.name || detailInstance.typeId} />
+                  ) : (
+                    <span className="material-thumb-placeholder">?</span>
+                  )}
+                  {materialTypeByID.get(detailInstance.typeId)?.name || detailInstance.typeId}
+                </p>
               </div>
               <div>
                 <label className="text-xs text-gray-500 uppercase">Standort</label>

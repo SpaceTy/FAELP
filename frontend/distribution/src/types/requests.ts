@@ -4,6 +4,7 @@ export type RequestPriority = 'high' | 'normal' | 'low';
 export interface RequestItem {
   materialTypeId: string;
   materialName: string;
+  materialImageUrl?: string;
   quantity: number;
   availableQuantity?: number;
   shortageQuantity?: number;

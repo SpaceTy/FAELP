@@ -69,6 +69,7 @@ function mapIncomingRequest(input: IncomingRequest): BorrowRequest {
     items: input.items.map((item) => ({
       materialTypeId: item.materialTypeId,
       materialName: item.materialName,
+      materialImageUrl: item.materialImageUrl,
       quantity: item.quantity,
       availableQuantity: item.availableQuantity,
       shortageQuantity: item.shortageQuantity,
@@ -247,6 +248,11 @@ export function RequestsPage() {
                     <td>
                       <div className="items-summary">
                         <span className="item-count">
+                          {request.items[0]?.materialImageUrl ? (
+                            <img className="material-thumb" src={request.items[0].materialImageUrl} alt={request.items[0].materialName} />
+                          ) : (
+                            <span className="material-thumb-placeholder">?</span>
+                          )}
                           {request.items[0]?.quantity}x {request.items[0]?.materialName}
                         </span>
                         <span className={request.isFulfillable ? 'stock-check stock-check-ok' : 'stock-check stock-check-missing'}>
@@ -322,7 +328,14 @@ export function RequestsPage() {
                 <ul className="space-y-1">
                   {selectedRequest.items.map((item, idx) => (
                     <li key={idx} className="flex justify-between">
-                      <span>{item.materialName}</span>
+                      <span className="material-inline">
+                        {item.materialImageUrl ? (
+                          <img className="material-thumb" src={item.materialImageUrl} alt={item.materialName} />
+                        ) : (
+                          <span className="material-thumb-placeholder">?</span>
+                        )}
+                        {item.materialName}
+                      </span>
                       <span className={item.isFulfillable ? 'stock-check stock-check-ok' : 'stock-check stock-check-missing'}>
                         {item.isFulfillable ? '✓' : '✗'} Req {item.quantity} / Avail {item.availableQuantity ?? 0}
                         {!item.isFulfillable && item.shortageQuantity ? ` (Short ${item.shortageQuantity})` : ''}

@@ -205,7 +205,22 @@ export function InventoryFormModal({ isOpen, onClose, onSubmit, instance, materi
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                 >
                   <span className={typeId ? 'text-gray-900' : 'text-gray-400'}>
-                    {typeId ? getSelectedMaterialTypeName() : 'Material-Typ auswählen...'}
+                    {typeId ? (
+                      <span className="material-inline">
+                        {materialTypes.find((m) => m.id === typeId)?.imageUrl ? (
+                          <img
+                            className="material-thumb"
+                            src={materialTypes.find((m) => m.id === typeId)?.imageUrl}
+                            alt={materialTypes.find((m) => m.id === typeId)?.name || typeId}
+                          />
+                        ) : (
+                          <span className="material-thumb-placeholder">?</span>
+                        )}
+                        {getSelectedMaterialTypeName()}
+                      </span>
+                    ) : (
+                      'Material-Typ auswählen...'
+                    )}
                   </span>
                   <svg
                     className={`w-4 h-4 text-gray-500 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}
@@ -260,7 +275,14 @@ export function InventoryFormModal({ isOpen, onClose, onSubmit, instance, materi
                             typeId === mt.id ? 'bg-blue-50 text-blue-700' : ''
                           }`}
                         >
-                          <span className="font-medium">{mt.name}</span>
+                          <span className="font-medium material-inline">
+                            {mt.imageUrl ? (
+                              <img className="material-thumb" src={mt.imageUrl} alt={mt.name} />
+                            ) : (
+                              <span className="material-thumb-placeholder">?</span>
+                            )}
+                            {mt.name}
+                          </span>
                           <span className="text-xs text-gray-500">ID: {mt.id}</span>
                           {mt.description && (
                             <span className="text-xs text-gray-400 truncate">{mt.description}</span>

@@ -107,6 +107,14 @@ export function InventoryPage() {
     );
   }, [items, searchQuery]);
 
+  const materialTypeByID = useMemo(() => {
+    const map = new Map<string, MaterialType>();
+    for (const mt of materialTypes) {
+      map.set(mt.id, mt);
+    }
+    return map;
+  }, [materialTypes]);
+
   const handleSubmitFilter = async (e: Event) => {
     e.preventDefault();
     await loadData();
@@ -134,9 +142,18 @@ export function InventoryPage() {
                 onClick={() => !isLoadingTypes && setTypeFilterDropdownOpen(!typeFilterDropdownOpen)}
               >
                 <span className={typeId ? 'text-gray-900' : 'text-gray-400'}>
-                  {typeId
-                    ? materialTypes.find((mt) => mt.id === typeId)?.name || typeId
-                    : 'All Types'}
+                  {typeId ? (
+                    <span className="material-inline">
+                      {materialTypeByID.get(typeId)?.imageUrl ? (
+                        <img className="material-thumb" src={materialTypeByID.get(typeId)?.imageUrl} alt={materialTypeByID.get(typeId)?.name || typeId} />
+                      ) : (
+                        <span className="material-thumb-placeholder">?</span>
+                      )}
+                      {materialTypeByID.get(typeId)?.name || typeId}
+                    </span>
+                  ) : (
+                    'All Types'
+                  )}
                 </span>
                 {isLoadingTypes ? (
                   <svg className="animate-spin h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24">
@@ -176,9 +193,16 @@ export function InventoryPage() {
                         setTypeId(mt.id);
                         setTypeFilterDropdownOpen(false);
                       }}
-                      className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-100 flex flex-col ${typeId === mt.id ? 'bg-green-50 text-green-700' : ''}`}
+                      className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-100 flex flex-col gap-1 ${typeId === mt.id ? 'bg-green-50 text-green-700' : ''}`}
                     >
-                      <span className="font-medium">{mt.name}</span>
+                      <span className="font-medium material-inline">
+                        {mt.imageUrl ? (
+                          <img className="material-thumb" src={mt.imageUrl} alt={mt.name} />
+                        ) : (
+                          <span className="material-thumb-placeholder">?</span>
+                        )}
+                        {mt.name}
+                      </span>
                       <span className="text-xs text-gray-500">ID: {mt.id}</span>
                     </button>
                   ))}
@@ -298,7 +322,16 @@ export function InventoryPage() {
                         </svg>
                       </button>
                     </td>
-                    <td>{item.typeId}</td>
+                    <td>
+                      <span className="material-inline">
+                        {materialTypeByID.get(item.typeId)?.imageUrl ? (
+                          <img className="material-thumb" src={materialTypeByID.get(item.typeId)?.imageUrl} alt={materialTypeByID.get(item.typeId)?.name || item.typeId} />
+                        ) : (
+                          <span className="material-thumb-placeholder">?</span>
+                        )}
+                        {materialTypeByID.get(item.typeId)?.name || item.typeId}
+                      </span>
+                    </td>
                     <td>{item.description || '-'}</td>
                     <td>{item.location}</td>
                     <td>

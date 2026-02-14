@@ -169,7 +169,22 @@ export function EnterInventoryPage() {
                   onClick={() => !isLoadingTypes && setIsDropdownOpen(!isDropdownOpen)}
                 >
                   <span className={typeId ? 'text-gray-900' : 'text-gray-400'}>
-                    {typeId ? getSelectedMaterialTypeName() : 'Material-Typ auswählen...'}
+                    {typeId ? (
+                      <span className="material-inline">
+                        {materialTypes.find((m) => m.id === typeId)?.imageUrl ? (
+                          <img
+                            className="material-thumb"
+                            src={materialTypes.find((m) => m.id === typeId)?.imageUrl}
+                            alt={materialTypes.find((m) => m.id === typeId)?.name || typeId}
+                          />
+                        ) : (
+                          <span className="material-thumb-placeholder">?</span>
+                        )}
+                        {getSelectedMaterialTypeName()}
+                      </span>
+                    ) : (
+                      'Material-Typ auswählen...'
+                    )}
                   </span>
                   {isLoadingTypes ? (
                     <svg className="animate-spin h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24">
@@ -231,7 +246,14 @@ export function EnterInventoryPage() {
                             typeId === mt.id ? 'bg-green-50 text-green-700' : ''
                           }`}
                         >
-                          <span className="font-medium">{mt.name}</span>
+                          <span className="font-medium material-inline">
+                            {mt.imageUrl ? (
+                              <img className="material-thumb" src={mt.imageUrl} alt={mt.name} />
+                            ) : (
+                              <span className="material-thumb-placeholder">?</span>
+                            )}
+                            {mt.name}
+                          </span>
                           <span className="text-xs text-gray-500">ID: {mt.id}</span>
                           {mt.description && (
                             <span className="text-xs text-gray-400 truncate">{mt.description}</span>

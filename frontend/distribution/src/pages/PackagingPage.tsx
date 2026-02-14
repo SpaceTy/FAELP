@@ -135,7 +135,14 @@ export function PackagingPage() {
                       </td>
                       <td>
                         <div className="items-summary">
-                          <span className="item-count">{order.items.length} item types</span>
+                          <span className="item-count material-inline">
+                            {order.items[0]?.materialImageUrl ? (
+                              <img className="material-thumb" src={order.items[0].materialImageUrl} alt={order.items[0].materialName} />
+                            ) : (
+                              <span className="material-thumb-placeholder">?</span>
+                            )}
+                            {order.items.length} item types
+                          </span>
                           <span className="requester-org">Total qty: {totalQuantity(order)}</span>
                         </div>
                       </td>
@@ -203,7 +210,14 @@ export function PackagingPage() {
                 <ul className="space-y-1">
                   {selectedOrder.items.map((item, idx) => (
                     <li key={idx} className="flex justify-between">
-                      <span>{item.materialName}</span>
+                      <span className="material-inline">
+                        {item.materialImageUrl ? (
+                          <img className="material-thumb" src={item.materialImageUrl} alt={item.materialName} />
+                        ) : (
+                          <span className="material-thumb-placeholder">?</span>
+                        )}
+                        {item.materialName}
+                      </span>
                       <span className={item.isFulfillable ? 'stock-check stock-check-ok' : 'stock-check stock-check-missing'}>
                         {item.isFulfillable ? '✓' : '✗'} Req {item.quantity} / Avail {item.availableQuantity}
                         {!item.isFulfillable && item.shortageQuantity > 0 ? ` (Short ${item.shortageQuantity})` : ''}
