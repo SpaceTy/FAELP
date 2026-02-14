@@ -1,6 +1,7 @@
 import { createContext, ComponentChildren } from 'preact';
 import { useContext, useEffect, useState } from 'preact/hooks';
 import { api } from '@/services/api';
+import { API_REFRESH_INTERVAL_MS } from '@/constants/polling';
 import type { Material, MaterialCategory } from '@/types/material';
 
 interface MaterialTypesContextValue {
@@ -58,8 +59,10 @@ export function MaterialTypesProvider({ children }: { children: ComponentChildre
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchMaterials = async () => {
-    setIsLoading(true);
+  const fetchMaterials = async (backgroundRefresh = false) => {
+    if (!backgroundRefresh) {
+      setIsLoading(true);
+    }
     setError(null);
     try {
       const data = await api.listMaterialTypes();
@@ -79,6 +82,12 @@ export function MaterialTypesProvider({ children }: { children: ComponentChildre
 
   useEffect(() => {
     fetchMaterials();
+
+    const intervalId = window.setInterval(() => {
+      fetchMaterials(true);
+    }, API_REFRESH_INTERVAL_MS);
+
+    return () => window.clearInterval(intervalId);
   }, []);
 
   const materialsById = new Map(materials.map(m => [m.id, m]));

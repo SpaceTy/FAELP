@@ -2,6 +2,7 @@ import { useState, useEffect } from 'preact/hooks';
 import { api } from '@/services/api';
 import { authSignal } from '@/context/AuthContext';
 import { useMaterialTypes } from '@/context/MaterialTypesContext';
+import { API_REFRESH_INTERVAL_MS } from '@/constants/polling';
 import type { Request, RequestItem } from '@/types/request';
 import type { Material } from '@/types/material';
 
@@ -126,10 +127,31 @@ export function MyRequestsPage() {
       return;
     }
 
-    api.getMyRequests(token)
-      .then(setRequests)
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
+    const fetchRequests = async (backgroundRefresh = false) => {
+      if (!backgroundRefresh) {
+        setLoading(true);
+      }
+
+      try {
+        const data = await api.getMyRequests(token);
+        setRequests(data);
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load requests');
+      } finally {
+        if (!backgroundRefresh) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchRequests();
+
+    const intervalId = window.setInterval(() => {
+      fetchRequests(true);
+    }, API_REFRESH_INTERVAL_MS);
+
+    return () => window.clearInterval(intervalId);
   }, []);
 
   const getStatusConfig = (status: Request['status']) => {
