@@ -1,8 +1,13 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -15,20 +20,26 @@ type RequestsHandler struct {
 	orgClient            *client.OrgClient
 	store                *db.Store
 	distributionCenterID string
+	uploadPath           string
 }
 
 // NewRequestsHandler creates a new requests handler.
-func NewRequestsHandler(store *db.Store, orgClient *client.OrgClient, distributionCenterID string) *RequestsHandler {
+func NewRequestsHandler(store *db.Store, orgClient *client.OrgClient, distributionCenterID, uploadPath string) *RequestsHandler {
+	if strings.TrimSpace(uploadPath) == "" {
+		uploadPath = "uploads"
+	}
 	return &RequestsHandler{
 		orgClient:            orgClient,
 		store:                store,
 		distributionCenterID: distributionCenterID,
+		uploadPath:           uploadPath,
 	}
 }
 
 type incomingRequestItem struct {
 	MaterialTypeID    string `json:"materialTypeId"`
 	MaterialName      string `json:"materialName"`
+	MaterialImageURL  string `json:"materialImageUrl"`
 	Quantity          int    `json:"quantity"`
 	AvailableQuantity int    `json:"availableQuantity"`
 	ShortageQuantity  int    `json:"shortageQuantity"`
@@ -90,7 +101,9 @@ func (h *RequestsHandler) ListIncomingRequests(w http.ResponseWriter, r *http.Re
 	}
 
 	typeNameByID := map[string]string{}
+	typeImageURLByID := map[string]string{}
 	if materialTypes, err := h.orgClient.GetMaterialTypes(r.Context()); err == nil {
+		typeImageURLByID = h.syncMaterialTypeImages(r.Context(), materialTypes)
 		for _, mt := range materialTypes {
 			typeNameByID[mt.ID] = mt.Name
 		}
@@ -118,6 +131,7 @@ func (h *RequestsHandler) ListIncomingRequests(w http.ResponseWriter, r *http.Re
 			items[i] = incomingRequestItem{
 				MaterialTypeID:    item.MaterialTypeID,
 				MaterialName:      materialName,
+				MaterialImageURL:  typeImageURLByID[item.MaterialTypeID],
 				Quantity:          item.Quantity,
 				AvailableQuantity: availableQuantity,
 				ShortageQuantity:  shortageQuantity,
@@ -186,4 +200,87 @@ func (h *RequestsHandler) ApproveIncomingRequest(w http.ResponseWriter, r *http.
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(approved)
+}
+
+var materialTypeIDSanitizer = regexp.MustCompile(`[^a-zA-Z0-9_-]+`)
+
+func sanitizeMaterialTypeID(input string) string {
+	s := materialTypeIDSanitizer.ReplaceAllString(strings.TrimSpace(input), "_")
+	if s == "" {
+		return "unknown"
+	}
+	return s
+}
+
+func imageExtensionFromURL(raw string) string {
+	base := raw
+	if idx := strings.Index(base, "?"); idx >= 0 {
+		base = base[:idx]
+	}
+	ext := strings.ToLower(filepath.Ext(base))
+	switch ext {
+	case ".jpg", ".jpeg", ".png", ".webp", ".gif":
+		return ext
+	default:
+		return ".webp"
+	}
+}
+
+func (h *RequestsHandler) syncMaterialTypeImages(ctx context.Context, materialTypes []client.MaterialType) map[string]string {
+	result := map[string]string{}
+
+	baseDir := filepath.Join(h.uploadPath, "material-types")
+	_ = os.MkdirAll(baseDir, 0755)
+
+	for _, mt := range materialTypes {
+		if strings.TrimSpace(mt.ImageURL) == "" {
+			continue
+		}
+
+		localName := sanitizeMaterialTypeID(mt.ID) + imageExtensionFromURL(mt.ImageURL)
+		localPath := filepath.Join(baseDir, localName)
+		sourcePath := localPath + ".source"
+		localURL := fmt.Sprintf("/uploads/material-types/%s", localName)
+
+		sourceURLBytes, readErr := os.ReadFile(sourcePath)
+		sourceURL := strings.TrimSpace(string(sourceURLBytes))
+		localExists := fileExists(localPath)
+
+		if localExists && readErr == nil && sourceURL == mt.ImageURL {
+			result[mt.ID] = localURL
+			continue
+		}
+
+		imageData, err := h.orgClient.GetAsset(ctx, mt.ImageURL)
+		if err != nil {
+			if localExists {
+				result[mt.ID] = localURL
+			} else {
+				result[mt.ID] = mt.ImageURL
+			}
+			continue
+		}
+
+		if err := os.WriteFile(localPath, imageData, 0644); err != nil {
+			if localExists {
+				result[mt.ID] = localURL
+			} else {
+				result[mt.ID] = mt.ImageURL
+			}
+			continue
+		}
+
+		_ = os.WriteFile(sourcePath, []byte(mt.ImageURL), 0644)
+		result[mt.ID] = localURL
+	}
+
+	return result
+}
+
+func fileExists(path string) bool {
+	info, err := os.Stat(path)
+	if err != nil {
+		return false
+	}
+	return !info.IsDir()
 }

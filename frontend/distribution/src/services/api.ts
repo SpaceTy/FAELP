@@ -179,6 +179,7 @@ export const api = new ApiService();
 export interface IncomingRequestItem {
   materialTypeId: string;
   materialName: string;
+  materialImageUrl: string;
   quantity: number;
   availableQuantity: number;
   shortageQuantity: number;

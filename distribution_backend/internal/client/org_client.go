@@ -5,9 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -288,4 +290,41 @@ func (c *OrgClient) RegisterDistBackend(ctx context.Context, name, address, sock
 	}
 
 	return center, nil
+}
+
+// GetAsset downloads a static asset from organization backend.
+// assetPath can be an absolute URL or a path like /uploads/material-types/foo.webp.
+func (c *OrgClient) GetAsset(ctx context.Context, assetPath string) ([]byte, error) {
+	endpoint := assetPath
+	if !strings.HasPrefix(endpoint, "http://") && !strings.HasPrefix(endpoint, "https://") {
+		if strings.TrimSpace(endpoint) == "" || !strings.HasPrefix(endpoint, "/") {
+			return nil, fmt.Errorf("invalid asset path")
+		}
+		if c.unixClient != nil {
+			endpoint = "http://unix" + endpoint
+		} else {
+			endpoint = fmt.Sprintf("%s%s", c.baseURL, endpoint)
+		}
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	resp, err := c.do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch asset: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("organization backend returned status %d", resp.StatusCode)
+	}
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read asset body: %w", err)
+	}
+	return data, nil
 }

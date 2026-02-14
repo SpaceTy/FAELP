@@ -69,8 +69,9 @@ func main() {
 		log.Printf("Failed to resolve distribution center ID: %v", err)
 	}
 
+	uploadsPath := "uploads"
 	inventoryHandler := handlers.NewInventoryHandler(store, orgClient)
-	requestsHandler := handlers.NewRequestsHandler(store, orgClient, distributionCenterID)
+	requestsHandler := handlers.NewRequestsHandler(store, orgClient, distributionCenterID, uploadsPath)
 
 	// Create cancellable context for background services
 	ctx, cancel := context.WithCancel(context.Background())
@@ -130,6 +131,11 @@ func main() {
 
 	// Internal endpoint for org backend to get available material counts (Unix socket only, no auth needed)
 	mux.HandleFunc("GET /internal/available-materials", inventoryHandler.GetAvailableMaterialCounts)
+
+	// Static file serving for locally synced uploads
+	_ = os.MkdirAll(uploadsPath, 0755)
+	uploadsFS := http.FileServer(http.Dir(uploadsPath))
+	mux.Handle("/uploads/", http.StripPrefix("/uploads/", uploadsFS))
 
 	// Mount distribution frontend at root if enabled
 	if cfg.Frontend.Distribution.Enabled && cfg.Frontend.Distribution.Path != "" {
