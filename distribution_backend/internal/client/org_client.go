@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"time"
 )
 
@@ -17,6 +18,29 @@ type MaterialType struct {
 	Description    string `json:"description"`
 	ImageURL       string `json:"imageUrl"`
 	AvailableCount int    `json:"availableCount"`
+}
+
+// RequestItem represents a requested material item in organization backend.
+type RequestItem struct {
+	MaterialTypeID string `json:"materialTypeId"`
+	Quantity       int    `json:"quantity"`
+}
+
+// Request represents a borrow request from organization backend.
+type Request struct {
+	ID                   string                 `json:"id"`
+	CustomerID           string                 `json:"customerId"`
+	DeliveryDate         time.Time              `json:"deliveryDate"`
+	Status               string                 `json:"status"`
+	ShippingCustomerName string                 `json:"shippingName"`
+	ShippingAddressLine1 string                 `json:"addressLine1"`
+	ShippingAddressLine2 string                 `json:"addressLine2"`
+	ShippingCity         string                 `json:"city"`
+	ShippingZipCode      string                 `json:"zipCode"`
+	Metadata             map[string]interface{} `json:"metadata"`
+	CreatedAt            time.Time              `json:"createdAt"`
+	UpdatedAt            time.Time              `json:"updatedAt"`
+	Items                []RequestItem          `json:"items"`
 }
 
 // OrgClient is a client for communicating with the organization backend
@@ -135,4 +159,37 @@ func (c *OrgClient) UpdateAvailability(ctx context.Context, distributionCenterID
 	}
 
 	return nil
+}
+
+// GetRequests fetches requests from organization backend, optionally filtered by status.
+func (c *OrgClient) GetRequests(ctx context.Context, status string) ([]Request, error) {
+	endpoint := "http://unix/internal/requests"
+	if c.unixClient == nil {
+		endpoint = fmt.Sprintf("%s/internal/requests", c.baseURL)
+	}
+	if status != "" {
+		endpoint = fmt.Sprintf("%s?status=%s", endpoint, url.QueryEscape(status))
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	resp, err := c.do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch requests: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("organization backend returned status %d", resp.StatusCode)
+	}
+
+	var requests []Request
+	if err := json.NewDecoder(resp.Body).Decode(&requests); err != nil {
+		return nil, fmt.Errorf("failed to decode requests: %w", err)
+	}
+
+	return requests, nil
 }

@@ -217,3 +217,30 @@ func (h *RequestHandler) ListMyRequests(w http.ResponseWriter, r *http.Request) 
 
 	writeJSON(w, http.StatusOK, requests)
 }
+
+// ListRequestsForDistribution returns requests for distribution backend usage.
+// Supports optional status query filtering and is intended for internal/service calls.
+func (h *RequestHandler) ListRequestsForDistribution(w http.ResponseWriter, r *http.Request) {
+	status := strings.TrimSpace(r.URL.Query().Get("status"))
+	if status != "" && !isValidRequestStatus(status) {
+		writeError(w, http.StatusBadRequest, "invalid_status", "Status must be one of: pending, inAction, returned")
+		return
+	}
+
+	requests, err := h.Store.ListRequests(r.Context(), status)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "fetch_failed", "Failed to fetch requests")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, requests)
+}
+
+func isValidRequestStatus(status string) bool {
+	switch status {
+	case "pending", "inAction", "returned":
+		return true
+	default:
+		return false
+	}
+}

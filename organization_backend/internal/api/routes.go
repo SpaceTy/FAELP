@@ -72,6 +72,9 @@ func Routes(handler *Handler, authHandler *AuthHandler, materialTypeHandler *Mat
 	// Internal endpoint for receiving availability updates from dist backends (Unix socket only)
 	r.Post("/internal/availability", handler.UpdateAvailabilityFromDistBackend)
 
+	// Internal endpoint for listing requests (Unix socket preferred; HTTP requires API key)
+	r.With(APIKeyMiddleware()).Get("/internal/requests", requestHandler.ListRequestsForDistribution)
+
 	// Static file serving for uploads
 	uploadsDir := uploadHandler.UploadPath
 	if uploadsDir == "" {

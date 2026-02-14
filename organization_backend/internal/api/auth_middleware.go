@@ -108,6 +108,25 @@ func GetClaimsFromContext(ctx context.Context) *auth.Claims {
 	return claims
 }
 
+func IsInternalRequest(ctx context.Context) bool {
+	internal, _ := ctx.Value(internalContextKey).(bool)
+	return internal
+}
+
+// APIKeyMiddleware currently rejects all non-internal HTTP requests.
+// Unix socket requests are allowed and used for current inter-service communication.
+func APIKeyMiddleware() func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if IsInternalRequest(r.Context()) || isUnixSocketRequest(r) {
+				next.ServeHTTP(w, r)
+				return
+			}
+			writeError(w, http.StatusUnauthorized, "api_key_not_implemented", "API key authentication is not implemented yet")
+		})
+	}
+}
+
 // AdminMiddleware checks if the authenticated user is an admin
 func AdminMiddleware() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
