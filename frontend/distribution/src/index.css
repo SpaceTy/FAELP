@@ -235,6 +235,16 @@ body {
   background-color: rgba(255, 255, 255, 0.1);
 }
 
+.btn-secondary-light {
+  background-color: #ffffff;
+  color: #4a5568;
+  border-color: #cbd5e0;
+}
+
+.btn-secondary-light:hover {
+  background-color: #f7fafc;
+}
+
 .btn-approve {
   background-color: #48bb78;
   color: white;

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { api } from '@/services/api';
 import { materialTypesService } from '@/services/materialTypes';
-import type { InventorySummaryItem, MaterialInstance, MaterialStatus, MaterialType } from '@/types/inventory';
+import type { MaterialInstance, MaterialStatus, MaterialType } from '@/types/inventory';
 
 const STATUS_OPTIONS: Array<MaterialStatus | ''> = ['', 'available', 'rented', 'returned'];
 const STATUS_LABELS: Record<string, string> = {
@@ -42,7 +42,6 @@ async function copyToClipboard(text: string): Promise<void> {
 
 export function InventoryPage() {
   const [items, setItems] = useState<MaterialInstance[]>([]);
-  const [summary, setSummary] = useState<InventorySummaryItem[]>([]);
   const [materialTypes, setMaterialTypes] = useState<MaterialType[]>([]);
   const [typeId, setTypeId] = useState('');
   const [status, setStatus] = useState<MaterialStatus | ''>('');
@@ -53,30 +52,22 @@ export function InventoryPage() {
   const [error, setError] = useState<string | null>(null);
   const [typeFilterDropdownOpen, setTypeFilterDropdownOpen] = useState(false);
 
-  // Filter states for sidebar
-  const [statusFilters, setStatusFilters] = useState({
-    inStock: true,
-    lowStock: true,
-    outOfStock: true,
-    onLoan: true,
-  });
+  const loadData = async (filters?: { typeId: string; status: MaterialStatus | ''; location: string }) => {
+    const nextTypeId = filters?.typeId ?? typeId;
+    const nextStatus = filters?.status ?? status;
+    const nextLocation = filters?.location ?? location;
 
-  const loadData = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const [listData, summaryData] = await Promise.all([
-        api.listMaterialInstances({
-          typeId: typeId.trim() || undefined,
-          status: status || undefined,
-          location: location.trim() || undefined,
-          limit: 200,
-          offset: 0,
-        }),
-        api.getInventorySummary(),
-      ]);
+      const listData = await api.listMaterialInstances({
+        typeId: nextTypeId.trim() || undefined,
+        status: nextStatus || undefined,
+        location: nextLocation.trim() || undefined,
+        limit: 200,
+        offset: 0,
+      });
       setItems(listData || []);
-      setSummary(summaryData || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Inventory could not be loaded.');
     } finally {
@@ -104,28 +95,6 @@ export function InventoryPage() {
     loadData();
   }, []);
 
-  const summaryTotals = useMemo(() => {
-    let available = 0;
-    let rented = 0;
-    let returned = 0;
-
-    for (const row of summary) {
-      if (row.status === 'available') available += row.count;
-      if (row.status === 'rented') rented += row.count;
-      if (row.status === 'returned') returned += row.count;
-    }
-
-    return {
-      available,
-      rented,
-      returned,
-      total: available + rented + returned,
-    };
-  }, [summary]);
-
-  // Check if any items have low stock (arbitrary threshold for demo)
-  const lowStockCount = 5; // Mock value for demo
-
   const filteredItems = useMemo(() => {
     const safeItems = items || [];
     if (!searchQuery) return safeItems;
@@ -148,61 +117,13 @@ export function InventoryPage() {
     setStatus('');
     setLocation('');
     setSearchQuery('');
-    setTimeout(() => {
-      loadData();
-    }, 0);
+    await loadData({ typeId: '', status: '', location: '' });
   };
 
   return (
     <main className="main-content">
       {/* Sidebar Filters */}
       <aside className="sidebar">
-        <div className="filter-section">
-          <h3>Stock Status</h3>
-          <div className="filter-group">
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={statusFilters.inStock}
-                onChange={(e) =>
-                  setStatusFilters({ ...statusFilters, inStock: (e.target as HTMLInputElement).checked })
-                }
-              />
-              <span>In Stock</span>
-            </label>
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={statusFilters.lowStock}
-                onChange={(e) =>
-                  setStatusFilters({ ...statusFilters, lowStock: (e.target as HTMLInputElement).checked })
-                }
-              />
-              <span>Low Stock</span>
-            </label>
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={statusFilters.outOfStock}
-                onChange={(e) =>
-                  setStatusFilters({ ...statusFilters, outOfStock: (e.target as HTMLInputElement).checked })
-                }
-              />
-              <span>Out of Stock</span>
-            </label>
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={statusFilters.onLoan}
-                onChange={(e) =>
-                  setStatusFilters({ ...statusFilters, onLoan: (e.target as HTMLInputElement).checked })
-                }
-              />
-              <span>On Loan</span>
-            </label>
-          </div>
-        </div>
-
         <div className="filter-section">
           <h3>Quick Filter</h3>
           <div className="filter-group">
@@ -299,34 +220,10 @@ export function InventoryPage() {
               >
                 Apply
               </button>
-              <button type="button" onClick={handleResetFilter} className="btn-secondary flex-1">
+              <button type="button" onClick={handleResetFilter} className="btn-secondary btn-secondary-light flex-1">
                 Reset
               </button>
             </div>
-          </div>
-        </div>
-
-        <div className="stats-card">
-          <h3>Inventory Summary</h3>
-          <div className="stat-row">
-            <span>Total Items:</span>
-            <span className="stat-value">{summaryTotals.total}</span>
-          </div>
-          <div className="stat-row">
-            <span>Available:</span>
-            <span className="stat-value approved">{summaryTotals.available}</span>
-          </div>
-          <div className="stat-row">
-            <span>On Loan:</span>
-            <span className="stat-value in-progress">{summaryTotals.rented}</span>
-          </div>
-          <div className="stat-row">
-            <span>Low Stock:</span>
-            <span className="stat-value pending">{lowStockCount}</span>
-          </div>
-          <div className="stat-row">
-            <span>In Repair:</span>
-            <span className="stat-value rejected">3</span>
           </div>
         </div>
 
@@ -359,19 +256,6 @@ export function InventoryPage() {
             </select>
           </div>
         </div>
-
-        {/* Inventory Alerts */}
-        {lowStockCount > 0 && (
-          <div className="alerts-section">
-            <div className="alert alert-warning">
-              <span className="alert-icon">!</span>
-              <span className="alert-text">
-                <strong>Low Stock Alert:</strong> {lowStockCount} items are running low and may need reordering.
-              </span>
-              <button className="alert-action">View Items</button>
-            </div>
-          </div>
-        )}
 
         {error && (
           <div className="mt-4 p-3 rounded border border-red-300 bg-red-50 text-red-700 text-sm">{error}</div>
