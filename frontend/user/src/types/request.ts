@@ -7,7 +7,8 @@ export interface Request {
   id: string;
   customerId: string;
   deliveryDate: string;
-  status: 'pending' | 'inAction' | 'returned';
+  status: 'pending' | 'approved' | 'inAction' | 'returned';
+  outgoingTrackingCode?: string;
   shippingName: string;
   addressLine1: string;
   addressLine2: string;

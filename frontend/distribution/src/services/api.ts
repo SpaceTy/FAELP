@@ -44,6 +44,35 @@ class ApiService {
     return response.json();
   }
 
+  async markIncomingRequestInAction(requestID: string, outgoingTrackingCode: string): Promise<IncomingRequest> {
+    const response = await fetch(`${API_BASE}/api/requests/${encodeURIComponent(requestID)}/in-action`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ outgoingTrackingCode }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(error.error || 'Failed to mark request inAction');
+    }
+
+    return response.json();
+  }
+
+  async cancelIncomingRequest(requestID: string): Promise<IncomingRequest> {
+    const response = await fetch(`${API_BASE}/api/requests/${encodeURIComponent(requestID)}/cancel`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(error.error || 'Failed to cancel request');
+    }
+
+    return response.json();
+  }
+
   async login(credentials: LoginRequest): Promise<LoginResponse> {
     const response = await fetch(`${API_BASE}/api/auth/login`, {
       method: 'POST',
@@ -191,6 +220,7 @@ export interface IncomingRequest {
   customerId: string;
   deliveryDate: string;
   status: RequestStatus;
+  outgoingTrackingCode?: string;
   shippingName: string;
   addressLine1: string;
   addressLine2: string;

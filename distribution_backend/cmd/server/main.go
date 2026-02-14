@@ -128,6 +128,8 @@ func main() {
 	mux.HandleFunc("GET /api/material-types", authMiddleware.RequireAuth(inventoryHandler.GetMaterialTypes))
 	mux.HandleFunc("GET /api/requests/incoming", authMiddleware.RequireAuth(requestsHandler.ListIncomingRequests))
 	mux.HandleFunc("POST /api/requests/{id}/approve", authMiddleware.RequireAuth(requestsHandler.ApproveIncomingRequest))
+	mux.HandleFunc("POST /api/requests/{id}/in-action", authMiddleware.RequireAuth(requestsHandler.MarkIncomingRequestInAction))
+	mux.HandleFunc("POST /api/requests/{id}/cancel", authMiddleware.RequireAuth(requestsHandler.CancelAssignedIncomingRequest))
 
 	// Internal endpoint for org backend to get available material counts (Unix socket only, no auth needed)
 	mux.HandleFunc("GET /internal/available-materials", inventoryHandler.GetAvailableMaterialCounts)

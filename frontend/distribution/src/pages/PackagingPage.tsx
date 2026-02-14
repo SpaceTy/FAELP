@@ -29,6 +29,8 @@ export function PackagingPage() {
   const [selectedOrder, setSelectedOrder] = useState<IncomingRequest | null>(null);
   const [packagingOrder, setPackagingOrder] = useState<IncomingRequest | null>(null);
   const [packChecks, setPackChecks] = useState<Record<string, boolean>>({});
+  const [outgoingTrackingCode, setOutgoingTrackingCode] = useState('');
+  const [isSubmittingPack, setIsSubmittingPack] = useState(false);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -56,6 +58,7 @@ export function PackagingPage() {
       initialChecks[item.materialTypeId] = false;
     }
     setPackChecks(initialChecks);
+    setOutgoingTrackingCode('');
     setPackagingOrder(order);
   };
 
@@ -63,6 +66,26 @@ export function PackagingPage() {
     ? packagingOrder.items.filter((item) => !!packChecks[item.materialTypeId]).length
     : 0;
   const allPacked = packagingOrder ? packedCount === packagingOrder.items.length : false;
+  const canMarkPacked = allPacked && outgoingTrackingCode.trim().length > 0 && !isSubmittingPack;
+
+  const handleMarkPacked = async () => {
+    if (!packagingOrder || !canMarkPacked) {
+      return;
+    }
+
+    setIsSubmittingPack(true);
+    setError(null);
+    try {
+      await api.markIncomingRequestInAction(packagingOrder.id, outgoingTrackingCode.trim());
+      setPackagingOrder(null);
+      setOutgoingTrackingCode('');
+      await loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to complete packaging');
+    } finally {
+      setIsSubmittingPack(false);
+    }
+  };
 
   return (
     <main className="main-content">
@@ -280,11 +303,28 @@ export function PackagingPage() {
                   </label>
                 ))}
               </div>
+              <div className="mt-4">
+                <label className="block text-sm font-semibold mb-2" htmlFor="outgoing-tracking-code">
+                  DHL Tracking Code
+                </label>
+                <input
+                  id="outgoing-tracking-code"
+                  type="text"
+                  value={outgoingTrackingCode}
+                  onInput={(e) => setOutgoingTrackingCode((e.target as HTMLInputElement).value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-md"
+                  placeholder="Enter DHL tracking code"
+                />
+                <p className="text-text-secondary mt-1 text-sm">Required to finish packaging and mark request inAction.</p>
+              </div>
               <div className="card-actions mt-4">
-                <button className="btn-primary" disabled={!allPacked}>
-                  Mark Packed
+                <button className="btn-primary" disabled={!canMarkPacked} onClick={handleMarkPacked}>
+                  {isSubmittingPack ? 'Saving...' : 'Mark Packed'}
                 </button>
                 {!allPacked && <span className="text-text-secondary">Check all material types to continue.</span>}
+                {allPacked && outgoingTrackingCode.trim().length === 0 && (
+                  <span className="text-text-secondary">Enter DHL tracking code to continue.</span>
+                )}
               </div>
             </div>
           </div>

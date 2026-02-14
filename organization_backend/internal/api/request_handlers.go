@@ -243,6 +243,15 @@ type approveRequestBody struct {
 	DistributionCenterID string `json:"distributionCenterId"`
 }
 
+type markRequestInActionBody struct {
+	DistributionCenterID string `json:"distributionCenterId"`
+	OutgoingTrackingCode string `json:"outgoingTrackingCode"`
+}
+
+type cancelAssignedRequestBody struct {
+	DistributionCenterID string `json:"distributionCenterId"`
+}
+
 // ApproveRequestForDistribution sets request status to approved and binds it to a distribution center.
 func (h *RequestHandler) ApproveRequestForDistribution(w http.ResponseWriter, r *http.Request) {
 	requestID := strings.TrimSpace(chi.URLParam(r, "id"))
@@ -278,6 +287,85 @@ func (h *RequestHandler) ApproveRequestForDistribution(w http.ResponseWriter, r 
 	}
 
 	writeJSON(w, http.StatusOK, approved)
+}
+
+// MarkRequestInActionForDistribution sets an approved request to inAction and stores outgoing tracking code.
+func (h *RequestHandler) MarkRequestInActionForDistribution(w http.ResponseWriter, r *http.Request) {
+	requestID := strings.TrimSpace(chi.URLParam(r, "id"))
+	if requestID == "" {
+		writeError(w, http.StatusBadRequest, "validation_error", "Request ID is required")
+		return
+	}
+
+	var req markRequestInActionBody
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_json", "Invalid JSON body")
+		return
+	}
+	req.DistributionCenterID = strings.TrimSpace(req.DistributionCenterID)
+	req.OutgoingTrackingCode = strings.TrimSpace(req.OutgoingTrackingCode)
+	if req.DistributionCenterID == "" {
+		writeError(w, http.StatusBadRequest, "validation_error", "distributionCenterId is required")
+		return
+	}
+	if req.OutgoingTrackingCode == "" {
+		writeError(w, http.StatusBadRequest, "validation_error", "outgoingTrackingCode is required")
+		return
+	}
+
+	updated, err := h.Store.MarkRequestInAction(r.Context(), requestID, req.DistributionCenterID, req.OutgoingTrackingCode)
+	if err != nil {
+		switch {
+		case errors.Is(err, db.ErrRequestNotFound):
+			writeError(w, http.StatusNotFound, "not_found", "Request not found")
+		case errors.Is(err, db.ErrRequestAlreadyApproved):
+			writeError(w, http.StatusConflict, "already_approved", "Request belongs to another distribution center")
+		case errors.Is(err, db.ErrInvalidRequestStatus):
+			writeError(w, http.StatusConflict, "invalid_status", "Request must be approved before marking inAction")
+		default:
+			writeError(w, http.StatusInternalServerError, "update_failed", "Failed to update request")
+		}
+		return
+	}
+
+	writeJSON(w, http.StatusOK, updated)
+}
+
+// CancelAssignedRequestForDistribution reverts approved/inAction request to pending and clears assignment/tracking.
+func (h *RequestHandler) CancelAssignedRequestForDistribution(w http.ResponseWriter, r *http.Request) {
+	requestID := strings.TrimSpace(chi.URLParam(r, "id"))
+	if requestID == "" {
+		writeError(w, http.StatusBadRequest, "validation_error", "Request ID is required")
+		return
+	}
+
+	var req cancelAssignedRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_json", "Invalid JSON body")
+		return
+	}
+	req.DistributionCenterID = strings.TrimSpace(req.DistributionCenterID)
+	if req.DistributionCenterID == "" {
+		writeError(w, http.StatusBadRequest, "validation_error", "distributionCenterId is required")
+		return
+	}
+
+	updated, err := h.Store.CancelAssignedRequest(r.Context(), requestID, req.DistributionCenterID)
+	if err != nil {
+		switch {
+		case errors.Is(err, db.ErrRequestNotFound):
+			writeError(w, http.StatusNotFound, "not_found", "Request not found")
+		case errors.Is(err, db.ErrRequestAlreadyApproved):
+			writeError(w, http.StatusConflict, "already_approved", "Request belongs to another distribution center")
+		case errors.Is(err, db.ErrInvalidRequestStatus):
+			writeError(w, http.StatusConflict, "invalid_status", "Request must be approved or inAction to cancel")
+		default:
+			writeError(w, http.StatusInternalServerError, "update_failed", "Failed to cancel request")
+		}
+		return
+	}
+
+	writeJSON(w, http.StatusOK, updated)
 }
 
 func isValidRequestStatus(status string) bool {

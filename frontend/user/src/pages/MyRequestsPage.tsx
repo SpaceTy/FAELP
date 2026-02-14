@@ -168,6 +168,12 @@ export function MyRequestsPage() {
           className: 'bg-blue-50 text-blue-700 border-blue-200',
           dotClassName: 'bg-blue-500'
         };
+      case 'approved':
+        return {
+          label: 'Freigegeben',
+          className: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+          dotClassName: 'bg-emerald-500'
+        };
       case 'returned':
         return {
           label: 'Abgeschlossen',
@@ -299,6 +305,17 @@ export function MyRequestsPage() {
                               <p className="text-sm text-slate-600">{request.zipCode} {request.city}</p>
                             </div>
                           </div>
+                          {request.outgoingTrackingCode && (
+                            <div className="flex items-start gap-2">
+                              <svg className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5h6m-7 4h8m-9 4h10m-9 4h8" />
+                              </svg>
+                              <div>
+                                <p className="text-xs text-slate-500">DHL Tracking</p>
+                                <p className="text-sm text-slate-900 font-mono">{request.outgoingTrackingCode}</p>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
 

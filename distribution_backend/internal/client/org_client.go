@@ -35,6 +35,7 @@ type Request struct {
 	DeliveryDate                 time.Time              `json:"deliveryDate"`
 	Status                       string                 `json:"status"`
 	ApprovedDistributionCenterID *string                `json:"approvedDistributionCenterId,omitempty"`
+	OutgoingTrackingCode         *string                `json:"outgoingTrackingCode,omitempty"`
 	ShippingCustomerName         string                 `json:"shippingName"`
 	ShippingAddressLine1         string                 `json:"addressLine1"`
 	ShippingAddressLine2         string                 `json:"addressLine2"`
@@ -246,6 +247,85 @@ func (c *OrgClient) ApproveRequest(ctx context.Context, requestID, distributionC
 	var request Request
 	if err := json.NewDecoder(resp.Body).Decode(&request); err != nil {
 		return Request{}, fmt.Errorf("failed to decode approved request: %w", err)
+	}
+
+	return request, nil
+}
+
+// MarkRequestInAction marks an approved request as inAction and stores outgoing tracking code.
+func (c *OrgClient) MarkRequestInAction(ctx context.Context, requestID, distributionCenterID, outgoingTrackingCode string) (Request, error) {
+	endpoint := fmt.Sprintf("http://unix/internal/requests/%s/in-action", url.PathEscape(requestID))
+	if c.unixClient == nil {
+		endpoint = fmt.Sprintf("%s/internal/requests/%s/in-action", c.baseURL, url.PathEscape(requestID))
+	}
+
+	body := map[string]string{
+		"distributionCenterId": distributionCenterID,
+		"outgoingTrackingCode": outgoingTrackingCode,
+	}
+	bodyBytes, err := json.Marshal(body)
+	if err != nil {
+		return Request{}, fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(bodyBytes))
+	if err != nil {
+		return Request{}, fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.do(req)
+	if err != nil {
+		return Request{}, fmt.Errorf("failed to mark request inAction: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return Request{}, fmt.Errorf("organization backend returned status %d", resp.StatusCode)
+	}
+
+	var request Request
+	if err := json.NewDecoder(resp.Body).Decode(&request); err != nil {
+		return Request{}, fmt.Errorf("failed to decode updated request: %w", err)
+	}
+
+	return request, nil
+}
+
+// CancelAssignedRequest reverts approved/inAction request back to pending and clears assignment/tracking.
+func (c *OrgClient) CancelAssignedRequest(ctx context.Context, requestID, distributionCenterID string) (Request, error) {
+	endpoint := fmt.Sprintf("http://unix/internal/requests/%s/cancel", url.PathEscape(requestID))
+	if c.unixClient == nil {
+		endpoint = fmt.Sprintf("%s/internal/requests/%s/cancel", c.baseURL, url.PathEscape(requestID))
+	}
+
+	body := map[string]string{
+		"distributionCenterId": distributionCenterID,
+	}
+	bodyBytes, err := json.Marshal(body)
+	if err != nil {
+		return Request{}, fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(bodyBytes))
+	if err != nil {
+		return Request{}, fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.do(req)
+	if err != nil {
+		return Request{}, fmt.Errorf("failed to cancel assigned request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return Request{}, fmt.Errorf("organization backend returned status %d", resp.StatusCode)
+	}
+
+	var request Request
+	if err := json.NewDecoder(resp.Body).Decode(&request); err != nil {
+		return Request{}, fmt.Errorf("failed to decode updated request: %w", err)
 	}
 
 	return request, nil

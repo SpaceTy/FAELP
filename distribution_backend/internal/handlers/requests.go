@@ -51,6 +51,7 @@ type incomingRequest struct {
 	CustomerID           string                `json:"customerId"`
 	DeliveryDate         string                `json:"deliveryDate"`
 	Status               string                `json:"status"`
+	OutgoingTrackingCode string                `json:"outgoingTrackingCode,omitempty"`
 	ShippingCustomerName string                `json:"shippingName"`
 	ShippingAddressLine1 string                `json:"addressLine1"`
 	ShippingAddressLine2 string                `json:"addressLine2"`
@@ -149,6 +150,7 @@ func (h *RequestsHandler) ListIncomingRequests(w http.ResponseWriter, r *http.Re
 			CustomerID:           req.CustomerID,
 			DeliveryDate:         req.DeliveryDate.Format("2006-01-02"),
 			Status:               req.Status,
+			OutgoingTrackingCode: derefString(req.OutgoingTrackingCode),
 			ShippingCustomerName: req.ShippingCustomerName,
 			ShippingAddressLine1: req.ShippingAddressLine1,
 			ShippingAddressLine2: req.ShippingAddressLine2,
@@ -202,6 +204,76 @@ func (h *RequestsHandler) ApproveIncomingRequest(w http.ResponseWriter, r *http.
 	_ = json.NewEncoder(w).Encode(approved)
 }
 
+type markInActionBody struct {
+	OutgoingTrackingCode string `json:"outgoingTrackingCode"`
+}
+
+// MarkIncomingRequestInAction marks an approved request as inAction with outgoing tracking code.
+func (h *RequestsHandler) MarkIncomingRequestInAction(w http.ResponseWriter, r *http.Request) {
+	if h.orgClient == nil {
+		http.Error(w, `{"error":"organization backend client not configured"}`, http.StatusServiceUnavailable)
+		return
+	}
+	if strings.TrimSpace(h.distributionCenterID) == "" {
+		http.Error(w, `{"error":"distribution center id not configured"}`, http.StatusServiceUnavailable)
+		return
+	}
+
+	requestID := strings.TrimSpace(r.PathValue("id"))
+	if requestID == "" {
+		http.Error(w, `{"error":"request id is required"}`, http.StatusBadRequest)
+		return
+	}
+
+	var body markInActionBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, `{"error":"invalid json body"}`, http.StatusBadRequest)
+		return
+	}
+
+	body.OutgoingTrackingCode = strings.TrimSpace(body.OutgoingTrackingCode)
+	if body.OutgoingTrackingCode == "" {
+		http.Error(w, `{"error":"outgoingTrackingCode is required"}`, http.StatusBadRequest)
+		return
+	}
+
+	updated, err := h.orgClient.MarkRequestInAction(r.Context(), requestID, h.distributionCenterID, body.OutgoingTrackingCode)
+	if err != nil {
+		http.Error(w, `{"error":"failed to mark request inAction"}`, http.StatusBadGateway)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(updated)
+}
+
+// CancelAssignedIncomingRequest reverts approved/inAction request back to pending and clears assignment/tracking.
+func (h *RequestsHandler) CancelAssignedIncomingRequest(w http.ResponseWriter, r *http.Request) {
+	if h.orgClient == nil {
+		http.Error(w, `{"error":"organization backend client not configured"}`, http.StatusServiceUnavailable)
+		return
+	}
+	if strings.TrimSpace(h.distributionCenterID) == "" {
+		http.Error(w, `{"error":"distribution center id not configured"}`, http.StatusServiceUnavailable)
+		return
+	}
+
+	requestID := strings.TrimSpace(r.PathValue("id"))
+	if requestID == "" {
+		http.Error(w, `{"error":"request id is required"}`, http.StatusBadRequest)
+		return
+	}
+
+	updated, err := h.orgClient.CancelAssignedRequest(r.Context(), requestID, h.distributionCenterID)
+	if err != nil {
+		http.Error(w, `{"error":"failed to cancel request"}`, http.StatusBadGateway)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(updated)
+}
+
 var materialTypeIDSanitizer = regexp.MustCompile(`[^a-zA-Z0-9_-]+`)
 
 func sanitizeMaterialTypeID(input string) string {
@@ -224,6 +296,13 @@ func imageExtensionFromURL(raw string) string {
 	default:
 		return ".webp"
 	}
+}
+
+func derefString(input *string) string {
+	if input == nil {
+		return ""
+	}
+	return *input
 }
 
 func (h *RequestsHandler) syncMaterialTypeImages(ctx context.Context, materialTypes []client.MaterialType) map[string]string {

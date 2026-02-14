@@ -187,7 +187,8 @@ class MockRequestsService {
     
     return {
       pending: mockRequests.filter((r) => r.status === 'pending').length,
-      approved: mockRequests.filter((r) => r.status === 'inAction' || r.status === 'approved').length,
+      approved: mockRequests.filter((r) => r.status === 'approved').length,
+      inAction: mockRequests.filter((r) => r.status === 'inAction').length,
       returned: mockRequests.filter((r) => r.status === 'returned').length,
       total: mockRequests.length,
     };

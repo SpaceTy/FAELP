@@ -6,12 +6,14 @@ import type {
   RequestStatus,
 } from '@/types/requests';
 
-const STATUS_OPTIONS: Array<RequestStatus | ''> = ['', 'pending', 'approved', 'returned'];
+const STATUS_OPTIONS: Array<RequestStatus | ''> = ['', 'pending', 'approved', 'inAction', 'returned'];
 
 function statusClass(status: RequestStatus): string {
   switch (status) {
     case 'approved':
       return 'status-badge status-approved';
+    case 'inAction':
+      return 'status-badge status-in-progress';
     case 'returned':
       return 'status-badge status-returned';
     case 'pending':
@@ -25,6 +27,8 @@ function statusLabel(status: RequestStatus): string {
   switch (status) {
     case 'approved':
       return 'Approved';
+    case 'inAction':
+      return 'In Action';
     case 'returned':
       return 'Returned';
     case 'pending':
@@ -87,11 +91,12 @@ function mapIncomingRequest(input: IncomingRequest): BorrowRequest {
 
 export function RequestsPage() {
   const [requests, setRequests] = useState<BorrowRequest[]>([]);
-  const [stats, setStats] = useState<RequestStats>({ pending: 0, approved: 0, returned: 0, total: 0 });
+  const [stats, setStats] = useState<RequestStats>({ pending: 0, approved: 0, inAction: 0, returned: 0, total: 0 });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedRequest, setSelectedRequest] = useState<BorrowRequest | null>(null);
   const [approvingRequestID, setApprovingRequestID] = useState<string | null>(null);
+  const [cancellingRequestID, setCancellingRequestID] = useState<string | null>(null);
 
   const [statusFilter, setStatusFilter] = useState<RequestStatus | ''>('pending');
 
@@ -99,20 +104,23 @@ export function RequestsPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const [pendingRaw, approvedRaw, returnedRaw] = await Promise.all([
+      const [pendingRaw, approvedRaw, inActionRaw, returnedRaw] = await Promise.all([
         api.listIncomingRequests('pending'),
         api.listIncomingRequests('approved'),
+        api.listIncomingRequests('inAction'),
         api.listIncomingRequests('returned'),
       ]);
 
       const pending = pendingRaw.map(mapIncomingRequest);
       const approved = approvedRaw.map(mapIncomingRequest);
+      const inAction = inActionRaw.map(mapIncomingRequest);
       const returned = returnedRaw.map(mapIncomingRequest);
-      const all = [...pending, ...approved, ...returned];
+      const all = [...pending, ...approved, ...inAction, ...returned];
 
       setStats({
         pending: pending.length,
         approved: approved.length,
+        inAction: inAction.length,
         returned: returned.length,
         total: all.length,
       });
@@ -143,6 +151,19 @@ export function RequestsPage() {
       setError(err instanceof Error ? err.message : 'Failed to approve request');
     } finally {
       setApprovingRequestID(null);
+    }
+  };
+
+  const handleCancel = async (requestID: string) => {
+    setCancellingRequestID(requestID);
+    setError(null);
+    try {
+      await api.cancelIncomingRequest(requestID);
+      await loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to cancel request');
+    } finally {
+      setCancellingRequestID(null);
     }
   };
 
@@ -179,6 +200,10 @@ export function RequestsPage() {
           <div className="stat-row">
             <span>Returned:</span>
             <span className="stat-value rejected">{stats.returned}</span>
+          </div>
+          <div className="stat-row">
+            <span>In Action:</span>
+            <span className="stat-value pending">{stats.inAction}</span>
           </div>
           <div className="stat-row">
             <span>Total:</span>
@@ -287,6 +312,17 @@ export function RequestsPage() {
                             title={request.isFulfillable ? 'Approve request' : 'Cannot approve: insufficient stock'}
                           >
                             {approvingRequestID === request.id ? 'Approving...' : 'Approve'}
+                          </button>
+                        </div>
+                      ) : request.status === 'approved' || request.status === 'inAction' ? (
+                        <div className="action-buttons">
+                          <span className={statusClass(request.status)}>{statusLabel(request.status)}</span>
+                          <button
+                            className="btn-reject"
+                            onClick={() => handleCancel(request.id)}
+                            disabled={cancellingRequestID === request.id}
+                          >
+                            {cancellingRequestID === request.id ? 'Cancelling...' : 'Cancel'}
                           </button>
                         </div>
                       ) : (

@@ -8,6 +8,7 @@ type Request struct {
 	DeliveryDate                 time.Time      `json:"deliveryDate"`
 	Status                       string         `json:"status"`
 	ApprovedDistributionCenterID *string        `json:"approvedDistributionCenterId,omitempty"`
+	OutgoingTrackingCode         *string        `json:"outgoingTrackingCode,omitempty"`
 	ShippingCustomerName         string         `json:"shippingName"`
 	ShippingAddressLine1         string         `json:"addressLine1"`
 	ShippingAddressLine2         string         `json:"addressLine2"`
