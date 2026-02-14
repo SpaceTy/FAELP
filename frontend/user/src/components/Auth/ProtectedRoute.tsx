@@ -1,6 +1,7 @@
 import { ComponentChildren } from 'preact';
 import { useAuth } from '@/context/AuthContext';
 import { LoginPage } from './LoginPage';
+import { rememberCurrentPathForLogin } from '@/utils/postLoginRedirect';
 
 interface ProtectedRouteProps {
   children: ComponentChildren;
@@ -18,6 +19,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   }
 
   if (!isAuthenticated) {
+    rememberCurrentPathForLogin();
     return <LoginPage />;
   }
 

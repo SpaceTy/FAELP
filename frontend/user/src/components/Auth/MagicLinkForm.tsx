@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks';
 import { route } from 'preact-router';
 import { useAuth } from '@/context/AuthContext';
+import { consumePostLoginRedirect } from '@/utils/postLoginRedirect';
 
 export function MagicLinkForm() {
   const [email, setEmail] = useState('');
@@ -76,7 +77,7 @@ function CodeEntryForm({ email }: CodeEntryFormProps) {
 
     try {
       await verifyCode(code, email);
-      route('/requests');
+      route(consumePostLoginRedirect());
     } catch (err: any) {
       // Check if it's a 422 error (expired/invalid code)
       if (err?.status === 422 || err?.message?.includes('422')) {

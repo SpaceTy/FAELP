@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import { route } from 'preact-router';
 import { useAuth } from '@/context/AuthContext';
+import { consumePostLoginRedirect } from '@/utils/postLoginRedirect';
 
 interface CallbackPageProps {
   code?: string;
@@ -19,7 +20,7 @@ export function CallbackPage({ code }: CallbackPageProps) {
     }
 
     verifyCode(code)
-      .then(() => route('/requests'))
+      .then(() => route(consumePostLoginRedirect()))
       .catch(() => {
         setError('Der Magic Link ist ungültig oder abgelaufen.');
         setIsVerifying(false);
