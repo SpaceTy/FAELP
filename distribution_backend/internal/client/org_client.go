@@ -44,6 +44,14 @@ type Request struct {
 	Items                        []RequestItem          `json:"items"`
 }
 
+// DistributionCenter represents a distribution center in organization backend.
+type DistributionCenter struct {
+	ID         string `json:"id"`
+	Name       string `json:"name"`
+	Address    string `json:"address"`
+	SocketPath string `json:"socketPath,omitempty"`
+}
+
 // OrgClient is a client for communicating with the organization backend
 type OrgClient struct {
 	baseURL    string
@@ -239,4 +247,45 @@ func (c *OrgClient) ApproveRequest(ctx context.Context, requestID, distributionC
 	}
 
 	return request, nil
+}
+
+// RegisterDistBackend registers this distribution backend in organization backend and returns the center.
+func (c *OrgClient) RegisterDistBackend(ctx context.Context, name, address, socketPath string) (DistributionCenter, error) {
+	endpoint := "http://unix/internal/register-dist-backend"
+	if c.unixClient == nil {
+		endpoint = fmt.Sprintf("%s/internal/register-dist-backend", c.baseURL)
+	}
+
+	body := map[string]string{
+		"name":       name,
+		"address":    address,
+		"socketPath": socketPath,
+	}
+	bodyBytes, err := json.Marshal(body)
+	if err != nil {
+		return DistributionCenter{}, fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(bodyBytes))
+	if err != nil {
+		return DistributionCenter{}, fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.do(req)
+	if err != nil {
+		return DistributionCenter{}, fmt.Errorf("failed to register dist backend: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+		return DistributionCenter{}, fmt.Errorf("organization backend returned status %d", resp.StatusCode)
+	}
+
+	var center DistributionCenter
+	if err := json.NewDecoder(resp.Body).Decode(&center); err != nil {
+		return DistributionCenter{}, fmt.Errorf("failed to decode distribution center: %w", err)
+	}
+
+	return center, nil
 }

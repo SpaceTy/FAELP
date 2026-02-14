@@ -63,8 +63,14 @@ func main() {
 
 	// Initialize organization backend client (prefer Unix socket if configured)
 	orgClient := client.NewOrgClient(cfg.OrgBackend.URL, cfg.OrgBackend.APIKey, cfg.OrgBackend.SocketPath)
+
+	distributionCenterID, err := resolveDistributionCenterID(context.Background(), store, orgClient, cfg.DistributionCenterID, cfg.Internal.SocketPath)
+	if err != nil {
+		log.Printf("Failed to resolve distribution center ID: %v", err)
+	}
+
 	inventoryHandler := handlers.NewInventoryHandler(store, orgClient)
-	requestsHandler := handlers.NewRequestsHandler(store, orgClient, cfg.DistributionCenterID)
+	requestsHandler := handlers.NewRequestsHandler(store, orgClient, distributionCenterID)
 
 	// Create cancellable context for background services
 	ctx, cancel := context.WithCancel(context.Background())
@@ -72,12 +78,12 @@ func main() {
 
 	// Initialize and start availability notifier if distribution center ID is configured
 	var availabilityNotifier *db.AvailabilityNotifier
-	if cfg.DistributionCenterID != "" {
-		availabilityNotifier = db.NewAvailabilityNotifier(cfg.DatabaseURL, orgClient, store, cfg.DistributionCenterID)
+	if distributionCenterID != "" {
+		availabilityNotifier = db.NewAvailabilityNotifier(cfg.DatabaseURL, orgClient, store, distributionCenterID)
 		if err := availabilityNotifier.Start(ctx); err != nil {
 			log.Printf("Failed to start availability notifier: %v", err)
 		} else {
-			log.Printf("Availability notifier started for distribution center: %s", cfg.DistributionCenterID)
+			log.Printf("Availability notifier started for distribution center: %s", distributionCenterID)
 		}
 	} else {
 		log.Printf("Distribution center ID not configured, availability notifier disabled")
@@ -210,6 +216,52 @@ func main() {
 			log.Printf("admin server shutdown error: %v", err)
 		}
 	}
+}
+
+func resolveDistributionCenterID(ctx context.Context, store *db.Store, orgClient *client.OrgClient, configuredID, internalSocketPath string) (string, error) {
+	if configuredID != "" {
+		if err := store.SetDistributionCenterID(ctx, configuredID); err != nil {
+			return "", err
+		}
+		return configuredID, nil
+	}
+
+	storedID, err := store.GetDistributionCenterID(ctx)
+	if err == nil && storedID != "" {
+		return storedID, nil
+	}
+	if err != nil && err != sql.ErrNoRows {
+		return "", err
+	}
+
+	if orgClient == nil {
+		return "", fmt.Errorf("organization backend client not configured")
+	}
+	if internalSocketPath == "" {
+		return "", fmt.Errorf("internal socket path not configured")
+	}
+
+	var lastErr error
+	for attempt := 1; attempt <= 10; attempt++ {
+		center, registerErr := orgClient.RegisterDistBackend(ctx,
+			"Auto-registered Distribution Center",
+			"Co-located via Unix socket",
+			internalSocketPath,
+		)
+		if registerErr == nil {
+			if center.ID == "" {
+				return "", fmt.Errorf("organization backend returned empty distribution center id")
+			}
+			if err := store.SetDistributionCenterID(ctx, center.ID); err != nil {
+				return "", err
+			}
+			return center.ID, nil
+		}
+		lastErr = registerErr
+		time.Sleep(1 * time.Second)
+	}
+
+	return "", fmt.Errorf("failed to register distribution center: %w", lastErr)
 }
 
 // initAdminUser ensures the admin user from config exists in the database

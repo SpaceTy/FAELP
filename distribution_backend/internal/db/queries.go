@@ -289,3 +289,30 @@ func mapMaterialInstance(row materialInstanceRow) domain.MaterialInstance {
 	}
 	return instance
 }
+
+const distributionCenterIDConfigKey = "distribution_center_id"
+
+// GetDistributionCenterID returns persisted distribution center ID.
+func (s *Store) GetDistributionCenterID(ctx context.Context) (string, error) {
+	var value string
+	err := s.db.QueryRowContext(ctx, `
+		SELECT value
+		FROM app_config
+		WHERE key = $1
+	`, distributionCenterIDConfigKey).Scan(&value)
+	if err != nil {
+		return "", err
+	}
+	return value, nil
+}
+
+// SetDistributionCenterID stores distribution center ID in local database config.
+func (s *Store) SetDistributionCenterID(ctx context.Context, distributionCenterID string) error {
+	_, err := s.db.ExecContext(ctx, `
+		INSERT INTO app_config (key, value, updated_at)
+		VALUES ($1, $2, now())
+		ON CONFLICT (key)
+		DO UPDATE SET value = EXCLUDED.value, updated_at = now()
+	`, distributionCenterIDConfigKey, distributionCenterID)
+	return err
+}
