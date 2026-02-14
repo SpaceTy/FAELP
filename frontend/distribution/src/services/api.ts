@@ -44,23 +44,6 @@ class ApiService {
     return response.json();
   }
 
-  async getShippingLabelPdf(requestID: string): Promise<Blob> {
-    const response = await fetch(`${API_BASE}/api/requests/${encodeURIComponent(requestID)}/shipping-label`, {
-      headers: this.getAuthHeaders(),
-    });
-
-    if (!response.ok) {
-      let errorMessage = 'Failed to load shipping label';
-      const error = await response.json().catch(() => null);
-      if (error && typeof error.error === 'string') {
-        errorMessage = error.error;
-      }
-      throw new Error(errorMessage);
-    }
-
-    return response.blob();
-  }
-
   async login(credentials: LoginRequest): Promise<LoginResponse> {
     const response = await fetch(`${API_BASE}/api/auth/login`, {
       method: 'POST',

@@ -1085,55 +1085,6 @@ body {
   flex: 1;
 }
 
-.card-actions .pack-packed-button-wrap {
-  position: relative;
-  flex: 1;
-}
-
-.pack-packed-button-wrap .btn-primary {
-  width: 100%;
-}
-
-.pack-packed-button-wrap .btn-primary:disabled {
-  cursor: not-allowed;
-  opacity: 0.7;
-}
-
-.pack-packed-tooltip {
-  position: absolute;
-  left: 50%;
-  bottom: calc(100% + 8px);
-  transform: translateX(-50%);
-  background: #2d3748;
-  color: #fff;
-  font-size: 0.75rem;
-  padding: 0.35rem 0.5rem;
-  border-radius: 4px;
-  white-space: nowrap;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s ease;
-  z-index: 2;
-}
-
-.pack-packed-button-wrap:hover .pack-packed-tooltip {
-  opacity: 1;
-}
-
-.shipping-label-preview-wrap {
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  overflow: hidden;
-  background: #ffffff;
-}
-
-.shipping-label-preview {
-  width: 100%;
-  height: 320px;
-  border: 0;
-  display: block;
-}
-
 /* Returns List */
 .returns-list {
   display: flex;
