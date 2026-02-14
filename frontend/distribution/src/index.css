@@ -225,6 +225,16 @@ body {
   background-color: #38a169;
 }
 
+.btn-primary:disabled {
+  background-color: #a0aec0;
+  color: #edf2f7;
+  cursor: not-allowed;
+}
+
+.btn-primary:disabled:hover {
+  background-color: #a0aec0;
+}
+
 .btn-secondary {
   background-color: transparent;
   color: white;
@@ -1083,6 +1093,15 @@ body {
 
 .card-actions button {
   flex: 1;
+}
+
+.button-tooltip-wrap {
+  flex: 1;
+  display: inline-block;
+}
+
+.button-tooltip-wrap .btn-primary {
+  width: 100%;
 }
 
 /* Returns List */

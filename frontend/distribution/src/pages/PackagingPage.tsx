@@ -65,8 +65,14 @@ export function PackagingPage() {
   const packedCount = packagingOrder
     ? packagingOrder.items.filter((item) => !!packChecks[item.materialTypeId]).length
     : 0;
-  const allPacked = packagingOrder ? packedCount === packagingOrder.items.length : false;
-  const canMarkPacked = allPacked && outgoingTrackingCode.trim().length > 0 && !isSubmittingPack;
+  const hasAnyPacked = packedCount > 0;
+  const hasTrackingCode = outgoingTrackingCode.trim().length > 0;
+  const canMarkPacked = hasAnyPacked && hasTrackingCode && !isSubmittingPack;
+  const markPackedDisabledReason = !hasAnyPacked
+    ? 'Check at least one material type to continue.'
+    : !hasTrackingCode
+      ? 'Enter DHL tracking code to continue.'
+      : '';
 
   const handleMarkPacked = async () => {
     if (!packagingOrder || !canMarkPacked) {
@@ -318,13 +324,16 @@ export function PackagingPage() {
                 <p className="text-text-secondary mt-1 text-sm">Required to finish packaging and mark request inAction.</p>
               </div>
               <div className="card-actions mt-4">
-                <button className="btn-primary" disabled={!canMarkPacked} onClick={handleMarkPacked}>
-                  {isSubmittingPack ? 'Saving...' : 'Mark Packed'}
-                </button>
-                {!allPacked && <span className="text-text-secondary">Check all material types to continue.</span>}
-                {allPacked && outgoingTrackingCode.trim().length === 0 && (
-                  <span className="text-text-secondary">Enter DHL tracking code to continue.</span>
-                )}
+                <span className="button-tooltip-wrap" title={markPackedDisabledReason}>
+                  <button
+                    className="btn-primary"
+                    disabled={!canMarkPacked}
+                    onClick={handleMarkPacked}
+                    title={markPackedDisabledReason}
+                  >
+                    {isSubmittingPack ? 'Saving...' : 'Mark Packed'}
+                  </button>
+                </span>
               </div>
             </div>
           </div>
