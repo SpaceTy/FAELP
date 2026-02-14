@@ -74,9 +74,9 @@ func (c *OrgClient) do(req *http.Request) (*http.Response, error) {
 // GetMaterialTypes fetches all material types from the organization backend
 func (c *OrgClient) GetMaterialTypes(ctx context.Context) ([]MaterialType, error) {
 	// Use dummy URL for Unix socket - transport ignores it
-	url := "http://unix/material-types"
+	url := "http://unix/api/material-types"
 	if c.unixClient == nil {
-		url = fmt.Sprintf("%s/material-types", c.baseURL)
+		url = fmt.Sprintf("%s/api/material-types", c.baseURL)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
