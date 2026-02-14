@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -13,6 +14,7 @@ import (
 
 	"distribution_backend/internal/client"
 	"distribution_backend/internal/db"
+	"distribution_backend/internal/shippinglabel"
 )
 
 // RequestsHandler handles incoming request endpoints.
@@ -200,6 +202,74 @@ func (h *RequestsHandler) ApproveIncomingRequest(w http.ResponseWriter, r *http.
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(approved)
+}
+
+var errRequestNotFound = errors.New("request not found")
+
+// GenerateShippingLabel returns a 4x6 shipping label PDF for a request.
+func (h *RequestsHandler) GenerateShippingLabel(w http.ResponseWriter, r *http.Request) {
+	if h.orgClient == nil {
+		http.Error(w, `{"error":"organization backend client not configured"}`, http.StatusServiceUnavailable)
+		return
+	}
+
+	requestID := strings.TrimSpace(r.PathValue("id"))
+	if requestID == "" {
+		http.Error(w, `{"error":"request id is required"}`, http.StatusBadRequest)
+		return
+	}
+
+	req, err := h.findRequestByID(r.Context(), requestID)
+	if err != nil {
+		if errors.Is(err, errRequestNotFound) {
+			http.Error(w, `{"error":"request not found"}`, http.StatusNotFound)
+			return
+		}
+		http.Error(w, `{"error":"failed to fetch request"}`, http.StatusBadGateway)
+		return
+	}
+
+	label, err := shippinglabel.Generate4x6PDF(shippinglabel.Data{
+		RequestID:      req.ID,
+		ShipToName:     req.ShippingCustomerName,
+		AddressLine1:   req.ShippingAddressLine1,
+		AddressLine2:   req.ShippingAddressLine2,
+		City:           req.ShippingCity,
+		ZipCode:        req.ShippingZipCode,
+		DeliveryDate:   req.DeliveryDate.Format("2006-01-02"),
+		GeneratedAtUTC: time.Now().UTC(),
+	})
+	if err != nil {
+		http.Error(w, `{"error":"failed to generate shipping label"}`, http.StatusInternalServerError)
+		return
+	}
+
+	filename := fmt.Sprintf("shipping-label-%s.pdf", sanitizeMaterialTypeID(req.ID))
+	w.Header().Set("Content-Type", "application/pdf")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("inline; filename=%q", filename))
+	w.Header().Set("Content-Length", fmt.Sprintf("%d", len(label)))
+	_, _ = w.Write(label)
+}
+
+func (h *RequestsHandler) findRequestByID(ctx context.Context, requestID string) (client.Request, error) {
+	statuses := []string{"approved", "inAction", "pending", "returned"}
+	var lastErr error
+	for _, status := range statuses {
+		requests, err := h.orgClient.GetRequests(ctx, status, h.distributionCenterID)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		for _, req := range requests {
+			if req.ID == requestID {
+				return req, nil
+			}
+		}
+	}
+	if lastErr != nil {
+		return client.Request{}, lastErr
+	}
+	return client.Request{}, errRequestNotFound
 }
 
 var materialTypeIDSanitizer = regexp.MustCompile(`[^a-zA-Z0-9_-]+`)

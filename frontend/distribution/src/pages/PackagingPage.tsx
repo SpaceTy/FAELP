@@ -29,6 +29,12 @@ export function PackagingPage() {
   const [selectedOrder, setSelectedOrder] = useState<IncomingRequest | null>(null);
   const [packagingOrder, setPackagingOrder] = useState<IncomingRequest | null>(null);
   const [packChecks, setPackChecks] = useState<Record<string, boolean>>({});
+  const [selectedLabelURL, setSelectedLabelURL] = useState<string | null>(null);
+  const [selectedLabelError, setSelectedLabelError] = useState<string | null>(null);
+  const [selectedLabelLoading, setSelectedLabelLoading] = useState(false);
+  const [packagingLabelURL, setPackagingLabelURL] = useState<string | null>(null);
+  const [packagingLabelError, setPackagingLabelError] = useState<string | null>(null);
+  const [packagingLabelLoading, setPackagingLabelLoading] = useState(false);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -48,6 +54,96 @@ export function PackagingPage() {
     loadData();
   }, []);
 
+  useEffect(() => {
+    if (!selectedOrder) {
+      if (selectedLabelURL) {
+        URL.revokeObjectURL(selectedLabelURL);
+      }
+      setSelectedLabelURL(null);
+      setSelectedLabelError(null);
+      setSelectedLabelLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    let createdURL: string | null = null;
+    setSelectedLabelLoading(true);
+    setSelectedLabelError(null);
+
+    api.getShippingLabelPdf(selectedOrder.id)
+      .then((blob) => {
+        if (cancelled) return;
+        createdURL = URL.createObjectURL(blob);
+        setSelectedLabelURL((previous) => {
+          if (previous) URL.revokeObjectURL(previous);
+          return createdURL;
+        });
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setSelectedLabelError(err instanceof Error ? err.message : 'Failed to load shipping label');
+        setSelectedLabelURL((previous) => {
+          if (previous) URL.revokeObjectURL(previous);
+          return null;
+        });
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setSelectedLabelLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+      if (createdURL) URL.revokeObjectURL(createdURL);
+    };
+  }, [selectedOrder]);
+
+  useEffect(() => {
+    if (!packagingOrder) {
+      if (packagingLabelURL) {
+        URL.revokeObjectURL(packagingLabelURL);
+      }
+      setPackagingLabelURL(null);
+      setPackagingLabelError(null);
+      setPackagingLabelLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    let createdURL: string | null = null;
+    setPackagingLabelLoading(true);
+    setPackagingLabelError(null);
+
+    api.getShippingLabelPdf(packagingOrder.id)
+      .then((blob) => {
+        if (cancelled) return;
+        createdURL = URL.createObjectURL(blob);
+        setPackagingLabelURL((previous) => {
+          if (previous) URL.revokeObjectURL(previous);
+          return createdURL;
+        });
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setPackagingLabelError(err instanceof Error ? err.message : 'Failed to load shipping label');
+        setPackagingLabelURL((previous) => {
+          if (previous) URL.revokeObjectURL(previous);
+          return null;
+        });
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setPackagingLabelLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+      if (createdURL) URL.revokeObjectURL(createdURL);
+    };
+  }, [packagingOrder]);
+
   const fulfillableCount = orders.filter((order) => order.isFulfillable).length;
 
   const openPackagingModal = (order: IncomingRequest) => {
@@ -62,7 +158,7 @@ export function PackagingPage() {
   const packedCount = packagingOrder
     ? packagingOrder.items.filter((item) => !!packChecks[item.materialTypeId]).length
     : 0;
-  const allPacked = packagingOrder ? packedCount === packagingOrder.items.length : false;
+  const hasAnyPacked = packedCount > 0;
 
   return (
     <main className="main-content">
@@ -227,6 +323,17 @@ export function PackagingPage() {
                 </ul>
               </div>
 
+              <div className="mb-4">
+                <h4 className="font-semibold mb-2">Shipping Label</h4>
+                {selectedLabelLoading && <p className="text-text-secondary">Loading label...</p>}
+                {selectedLabelError && <p className="text-red-600">{selectedLabelError}</p>}
+                {selectedLabelURL && (
+                  <div className="shipping-label-preview-wrap">
+                    <iframe title={`Shipping label preview ${selectedOrder.id}`} src={selectedLabelURL} className="shipping-label-preview" />
+                  </div>
+                )}
+              </div>
+
               <div>
                 <h4 className="font-semibold mb-2">Notes</h4>
                 <p>{selectedOrder.note || 'No note provided.'}</p>
@@ -280,11 +387,23 @@ export function PackagingPage() {
                   </label>
                 ))}
               </div>
+              <div className="mt-4">
+                <h4 className="font-semibold mb-2">Shipping Label</h4>
+                {packagingLabelLoading && <p className="text-text-secondary">Loading label...</p>}
+                {packagingLabelError && <p className="text-red-600">{packagingLabelError}</p>}
+                {packagingLabelURL && (
+                  <div className="shipping-label-preview-wrap">
+                    <iframe title={`Shipping label preview ${packagingOrder.id}`} src={packagingLabelURL} className="shipping-label-preview" />
+                  </div>
+                )}
+              </div>
               <div className="card-actions mt-4">
-                <button className="btn-primary" disabled={!allPacked}>
-                  Mark Packed
-                </button>
-                {!allPacked && <span className="text-text-secondary">Check all material types to continue.</span>}
+                <div className="pack-packed-button-wrap">
+                  <button className="btn-primary" disabled={!hasAnyPacked}>
+                    Mark Packed
+                  </button>
+                  {!hasAnyPacked && <span className="pack-packed-tooltip">Select at least one item to continue.</span>}
+                </div>
               </div>
             </div>
           </div>
