@@ -74,6 +74,7 @@ func Routes(handler *Handler, authHandler *AuthHandler, materialTypeHandler *Mat
 
 	// Internal endpoint for listing requests (Unix socket preferred; HTTP requires API key)
 	r.With(APIKeyMiddleware()).Get("/internal/requests", requestHandler.ListRequestsForDistribution)
+	r.With(APIKeyMiddleware()).Post("/internal/requests/{id}/approve", requestHandler.ApproveRequestForDistribution)
 
 	// Static file serving for uploads
 	uploadsDir := uploadHandler.UploadPath

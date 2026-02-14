@@ -296,12 +296,17 @@ body {
 }
 
 .btn-view-items {
+  display: block;
+  width: fit-content;
   background: none;
   border: none;
   color: #4299e1;
   cursor: pointer;
   font-size: 0.8rem;
   padding: 0;
+  margin: 0;
+  text-align: left;
+  line-height: 1.2;
   text-decoration: underline;
 }
 
@@ -706,6 +711,19 @@ body {
 .item-count {
   font-size: 0.85rem;
   color: #4a5568;
+}
+
+.stock-check {
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.stock-check-ok {
+  color: #2f855a;
+}
+
+.stock-check-missing {
+  color: #c53030;
 }
 
 .purpose-tag {

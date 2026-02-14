@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"strings"
 	"time"
@@ -18,6 +19,12 @@ import (
 type Store struct {
 	db *sql.DB
 }
+
+var (
+	ErrRequestNotFound        = errors.New("request not found")
+	ErrRequestAlreadyApproved = errors.New("request already approved by another distribution center")
+	ErrInvalidRequestStatus   = errors.New("request status does not allow this operation")
+)
 
 func NewStore(db *sql.DB) *Store {
 	return &Store{db: db}
@@ -486,13 +493,14 @@ func (s *Store) CreateRequest(ctx context.Context, input domain.CreateRequestInp
 	)
 
 	var req domain.Request
+	var approvedDistributionCenterID sql.NullString
 	var metadataBytes []byte
 	err = tx.QueryRowContext(ctx, `
-		INSERT INTO requests (customer_id, delivery_date, status, shipping_customer_name, shipping_address_line1, shipping_address_line2, shipping_city, shipping_zip_code, metadata)
-		VALUES ($1, $2, 'pending', $3, $4, $5, $6, $7, $8)
-		RETURNING id, customer_id, delivery_date, status, shipping_customer_name, shipping_address_line1, shipping_address_line2, shipping_city, shipping_zip_code, metadata, created_at, updated_at
+		INSERT INTO requests (customer_id, delivery_date, status, approved_distribution_center_id, shipping_customer_name, shipping_address_line1, shipping_address_line2, shipping_city, shipping_zip_code, metadata)
+		VALUES ($1, $2, 'pending', NULL, $3, $4, $5, $6, $7, $8)
+		RETURNING id, customer_id, delivery_date, status, approved_distribution_center_id, shipping_customer_name, shipping_address_line1, shipping_address_line2, shipping_city, shipping_zip_code, metadata, created_at, updated_at
 	`, input.CustomerID, input.DeliveryDate, input.ShippingCustomerName, input.ShippingAddressLine1, input.ShippingAddressLine2, input.ShippingCity, input.ShippingZipCode, metadataJSON).Scan(
-		&req.ID, &req.CustomerID, &req.DeliveryDate, &req.Status, &req.ShippingCustomerName,
+		&req.ID, &req.CustomerID, &req.DeliveryDate, &req.Status, &approvedDistributionCenterID, &req.ShippingCustomerName,
 		&req.ShippingAddressLine1, &req.ShippingAddressLine2, &req.ShippingCity, &req.ShippingZipCode,
 		&metadataBytes, &req.CreatedAt, &req.UpdatedAt,
 	)
@@ -509,6 +517,9 @@ func (s *Store) CreateRequest(ctx context.Context, input domain.CreateRequestInp
 			// Don't fail the request if metadata unmarshal fails
 			req.Metadata = nil
 		}
+	}
+	if approvedDistributionCenterID.Valid {
+		req.ApprovedDistributionCenterID = &approvedDistributionCenterID.String
 	}
 
 	slog.Info("store_create_request_inserted",
@@ -566,7 +577,7 @@ func (s *Store) ListRequestsByCustomerID(ctx context.Context, customerID string)
 
 	// First, get all requests for the customer
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT id, customer_id, delivery_date, status, shipping_customer_name, 
+		SELECT id, customer_id, delivery_date, status, approved_distribution_center_id, shipping_customer_name, 
 		       shipping_address_line1, shipping_address_line2, shipping_city, 
 		       shipping_zip_code, metadata, created_at, updated_at
 		FROM requests
@@ -582,15 +593,19 @@ func (s *Store) ListRequestsByCustomerID(ctx context.Context, customerID string)
 	var requests []domain.Request
 	for rows.Next() {
 		var req domain.Request
+		var approvedDistributionCenterID sql.NullString
 		var metadataBytes []byte
 		err := rows.Scan(
-			&req.ID, &req.CustomerID, &req.DeliveryDate, &req.Status, &req.ShippingCustomerName,
+			&req.ID, &req.CustomerID, &req.DeliveryDate, &req.Status, &approvedDistributionCenterID, &req.ShippingCustomerName,
 			&req.ShippingAddressLine1, &req.ShippingAddressLine2, &req.ShippingCity, &req.ShippingZipCode,
 			&metadataBytes, &req.CreatedAt, &req.UpdatedAt,
 		)
 		if err != nil {
 			slog.Info("store_list_requests_scan_failed", "customer_id", customerID, "error", err.Error())
 			return nil, err
+		}
+		if approvedDistributionCenterID.Valid {
+			req.ApprovedDistributionCenterID = &approvedDistributionCenterID.String
 		}
 
 		// Unmarshal metadata
@@ -644,19 +659,29 @@ func (s *Store) ListRequestsByCustomerID(ctx context.Context, customerID string)
 }
 
 // ListRequests returns all requests, optionally filtered by status.
-func (s *Store) ListRequests(ctx context.Context, status string) ([]domain.Request, error) {
-	slog.Info("store_list_all_requests_started", "status", status)
+func (s *Store) ListRequests(ctx context.Context, status, distributionCenterID string) ([]domain.Request, error) {
+	slog.Info("store_list_all_requests_started", "status", status, "distribution_center_id", distributionCenterID)
 
 	query := `
-		SELECT id, customer_id, delivery_date, status, shipping_customer_name,
+		SELECT id, customer_id, delivery_date, status, approved_distribution_center_id, shipping_customer_name,
 		       shipping_address_line1, shipping_address_line2, shipping_city,
 		       shipping_zip_code, metadata, created_at, updated_at
 		FROM requests
 	`
 	args := []any{}
+	where := []string{}
 	if strings.TrimSpace(status) != "" {
-		query += " WHERE status = $1"
 		args = append(args, status)
+		where = append(where, fmt.Sprintf("status = $%d", len(args)))
+	}
+	if strings.TrimSpace(distributionCenterID) != "" {
+		args = append(args, distributionCenterID)
+		where = append(where, fmt.Sprintf("(approved_distribution_center_id IS NULL OR approved_distribution_center_id = $%d)", len(args)))
+	} else {
+		where = append(where, "approved_distribution_center_id IS NULL")
+	}
+	if len(where) > 0 {
+		query += " WHERE " + strings.Join(where, " AND ")
 	}
 	query += " ORDER BY created_at DESC"
 
@@ -670,15 +695,19 @@ func (s *Store) ListRequests(ctx context.Context, status string) ([]domain.Reque
 	var requests []domain.Request
 	for rows.Next() {
 		var req domain.Request
+		var approvedDistributionCenterID sql.NullString
 		var metadataBytes []byte
 		err := rows.Scan(
-			&req.ID, &req.CustomerID, &req.DeliveryDate, &req.Status, &req.ShippingCustomerName,
+			&req.ID, &req.CustomerID, &req.DeliveryDate, &req.Status, &approvedDistributionCenterID, &req.ShippingCustomerName,
 			&req.ShippingAddressLine1, &req.ShippingAddressLine2, &req.ShippingCity, &req.ShippingZipCode,
 			&metadataBytes, &req.CreatedAt, &req.UpdatedAt,
 		)
 		if err != nil {
 			slog.Info("store_list_all_requests_scan_failed", "status", status, "error", err.Error())
 			return nil, err
+		}
+		if approvedDistributionCenterID.Valid {
+			req.ApprovedDistributionCenterID = &approvedDistributionCenterID.String
 		}
 
 		if len(metadataBytes) > 0 {
@@ -725,6 +754,81 @@ func (s *Store) ListRequests(ctx context.Context, status string) ([]domain.Reque
 		}
 	}
 
-	slog.Info("store_list_all_requests_completed", "status", status, "count", len(requests))
+	slog.Info("store_list_all_requests_completed", "status", status, "distribution_center_id", distributionCenterID, "count", len(requests))
 	return requests, nil
+}
+
+// ApproveRequest marks a pending request as approved by a distribution center.
+func (s *Store) ApproveRequest(ctx context.Context, requestID, distributionCenterID string) (domain.Request, error) {
+	var req domain.Request
+	var approvedDistributionCenterID sql.NullString
+	var metadataBytes []byte
+
+	err := s.db.QueryRowContext(ctx, `
+		UPDATE requests
+		SET status = 'approved', approved_distribution_center_id = $2
+		WHERE id = $1 AND status = 'pending'
+		RETURNING id, customer_id, delivery_date, status, approved_distribution_center_id, shipping_customer_name,
+		          shipping_address_line1, shipping_address_line2, shipping_city, shipping_zip_code, metadata, created_at, updated_at
+	`, requestID, distributionCenterID).Scan(
+		&req.ID, &req.CustomerID, &req.DeliveryDate, &req.Status, &approvedDistributionCenterID, &req.ShippingCustomerName,
+		&req.ShippingAddressLine1, &req.ShippingAddressLine2, &req.ShippingCity, &req.ShippingZipCode,
+		&metadataBytes, &req.CreatedAt, &req.UpdatedAt,
+	)
+	if err == nil {
+		if approvedDistributionCenterID.Valid {
+			req.ApprovedDistributionCenterID = &approvedDistributionCenterID.String
+		}
+		if len(metadataBytes) > 0 {
+			req.Metadata = make(map[string]any)
+			if unmarshalErr := json.Unmarshal(metadataBytes, &req.Metadata); unmarshalErr != nil {
+				req.Metadata = nil
+			}
+		}
+	} else if !errors.Is(err, sql.ErrNoRows) {
+		return domain.Request{}, err
+	}
+
+	if errors.Is(err, sql.ErrNoRows) {
+		var existingStatus string
+		var existingApprovedDistributionCenterID sql.NullString
+		err = s.db.QueryRowContext(ctx, `
+			SELECT status, approved_distribution_center_id
+			FROM requests
+			WHERE id = $1
+		`, requestID).Scan(&existingStatus, &existingApprovedDistributionCenterID)
+		if errors.Is(err, sql.ErrNoRows) {
+			return domain.Request{}, ErrRequestNotFound
+		}
+		if err != nil {
+			return domain.Request{}, err
+		}
+		if existingStatus == "approved" && existingApprovedDistributionCenterID.Valid && existingApprovedDistributionCenterID.String != distributionCenterID {
+			return domain.Request{}, ErrRequestAlreadyApproved
+		}
+		return domain.Request{}, ErrInvalidRequestStatus
+	}
+
+	itemRows, err := s.db.QueryContext(ctx, `
+		SELECT material_type_id, quantity
+		FROM request_items
+		WHERE request_id = $1
+	`, req.ID)
+	if err != nil {
+		return domain.Request{}, err
+	}
+	defer itemRows.Close()
+
+	for itemRows.Next() {
+		var item domain.RequestItem
+		if err := itemRows.Scan(&item.MaterialTypeID, &item.Quantity); err != nil {
+			return domain.Request{}, err
+		}
+		req.Items = append(req.Items, item)
+	}
+	if err := itemRows.Err(); err != nil {
+		return domain.Request{}, err
+	}
+
+	return req, nil
 }

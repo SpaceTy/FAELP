@@ -3,19 +3,20 @@ package domain
 import "time"
 
 type Request struct {
-	ID                   string         `json:"id"`
-	CustomerID           string         `json:"customerId"`
-	DeliveryDate         time.Time      `json:"deliveryDate"`
-	Status               string         `json:"status"`
-	ShippingCustomerName string         `json:"shippingName"`
-	ShippingAddressLine1 string         `json:"addressLine1"`
-	ShippingAddressLine2 string         `json:"addressLine2"`
-	ShippingCity         string         `json:"city"`
-	ShippingZipCode      string         `json:"zipCode"`
-	Metadata             map[string]any `json:"metadata"`
-	CreatedAt            time.Time      `json:"createdAt"`
-	UpdatedAt            time.Time      `json:"updatedAt"`
-	Items                []RequestItem  `json:"items"`
+	ID                           string         `json:"id"`
+	CustomerID                   string         `json:"customerId"`
+	DeliveryDate                 time.Time      `json:"deliveryDate"`
+	Status                       string         `json:"status"`
+	ApprovedDistributionCenterID *string        `json:"approvedDistributionCenterId,omitempty"`
+	ShippingCustomerName         string         `json:"shippingName"`
+	ShippingAddressLine1         string         `json:"addressLine1"`
+	ShippingAddressLine2         string         `json:"addressLine2"`
+	ShippingCity                 string         `json:"city"`
+	ShippingZipCode              string         `json:"zipCode"`
+	Metadata                     map[string]any `json:"metadata"`
+	CreatedAt                    time.Time      `json:"createdAt"`
+	UpdatedAt                    time.Time      `json:"updatedAt"`
+	Items                        []RequestItem  `json:"items"`
 }
 
 type RequestItem struct {

@@ -1,10 +1,13 @@
-export type RequestStatus = 'pending' | 'approved' | 'rejected';
+export type RequestStatus = 'pending' | 'approved' | 'inAction' | 'returned';
 export type RequestPriority = 'high' | 'normal' | 'low';
 
 export interface RequestItem {
   materialTypeId: string;
   materialName: string;
   quantity: number;
+  availableQuantity?: number;
+  shortageQuantity?: number;
+  isFulfillable?: boolean;
 }
 
 export interface BorrowRequest {
@@ -20,12 +23,13 @@ export interface BorrowRequest {
   status: RequestStatus;
   createdAt: string;
   updatedAt: string;
+  isFulfillable?: boolean;
 }
 
 export interface RequestStats {
   pending: number;
   approved: number;
-  rejected: number;
+  returned: number;
   total: number;
 }
 

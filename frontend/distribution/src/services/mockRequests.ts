@@ -73,7 +73,7 @@ const mockRequests: BorrowRequest[] = [
     purpose: 'Employee Training',
     requestedFor: '2026-01-23',
     priority: 'high',
-    status: 'approved',
+    status: 'inAction',
     createdAt: '2026-01-18T11:00:00Z',
     updatedAt: '2026-01-18T13:30:00Z',
   },
@@ -89,7 +89,7 @@ const mockRequests: BorrowRequest[] = [
     purpose: 'Emergency Training',
     requestedFor: '2026-01-20',
     priority: 'high',
-    status: 'approved',
+    status: 'inAction',
     createdAt: '2026-01-17T16:45:00Z',
     updatedAt: '2026-01-17T17:00:00Z',
   },
@@ -105,7 +105,7 @@ const mockRequests: BorrowRequest[] = [
     purpose: 'Student Training',
     requestedFor: '2026-02-01',
     priority: 'normal',
-    status: 'rejected',
+    status: 'returned',
     createdAt: '2026-01-16T09:00:00Z',
     updatedAt: '2026-01-16T10:15:00Z',
   },
@@ -187,8 +187,8 @@ class MockRequestsService {
     
     return {
       pending: mockRequests.filter((r) => r.status === 'pending').length,
-      approved: mockRequests.filter((r) => r.status === 'approved').length,
-      rejected: mockRequests.filter((r) => r.status === 'rejected').length,
+      approved: mockRequests.filter((r) => r.status === 'inAction' || r.status === 'approved').length,
+      returned: mockRequests.filter((r) => r.status === 'returned').length,
       total: mockRequests.length,
     };
   }
@@ -201,7 +201,7 @@ class MockRequestsService {
       throw new Error('Request not found');
     }
     
-    request.status = 'approved';
+    request.status = 'inAction';
     request.updatedAt = new Date().toISOString();
     return request;
   }
@@ -214,7 +214,7 @@ class MockRequestsService {
       throw new Error('Request not found');
     }
     
-    request.status = 'rejected';
+    request.status = 'returned';
     request.updatedAt = new Date().toISOString();
     return request;
   }

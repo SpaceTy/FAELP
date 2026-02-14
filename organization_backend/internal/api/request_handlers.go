@@ -2,11 +2,13 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"organization_backend/internal/db"
 	"organization_backend/internal/domain"
 )
@@ -223,11 +225,12 @@ func (h *RequestHandler) ListMyRequests(w http.ResponseWriter, r *http.Request) 
 func (h *RequestHandler) ListRequestsForDistribution(w http.ResponseWriter, r *http.Request) {
 	status := strings.TrimSpace(r.URL.Query().Get("status"))
 	if status != "" && !isValidRequestStatus(status) {
-		writeError(w, http.StatusBadRequest, "invalid_status", "Status must be one of: pending, inAction, returned")
+		writeError(w, http.StatusBadRequest, "invalid_status", "Status must be one of: pending, approved, inAction, returned")
 		return
 	}
 
-	requests, err := h.Store.ListRequests(r.Context(), status)
+	distributionCenterID := strings.TrimSpace(r.URL.Query().Get("distributionCenterId"))
+	requests, err := h.Store.ListRequests(r.Context(), status, distributionCenterID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "fetch_failed", "Failed to fetch requests")
 		return
@@ -236,9 +239,50 @@ func (h *RequestHandler) ListRequestsForDistribution(w http.ResponseWriter, r *h
 	writeJSON(w, http.StatusOK, requests)
 }
 
+type approveRequestBody struct {
+	DistributionCenterID string `json:"distributionCenterId"`
+}
+
+// ApproveRequestForDistribution sets request status to approved and binds it to a distribution center.
+func (h *RequestHandler) ApproveRequestForDistribution(w http.ResponseWriter, r *http.Request) {
+	requestID := strings.TrimSpace(chi.URLParam(r, "id"))
+	if requestID == "" {
+		writeError(w, http.StatusBadRequest, "validation_error", "Request ID is required")
+		return
+	}
+
+	var req approveRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_json", "Invalid JSON body")
+		return
+	}
+	req.DistributionCenterID = strings.TrimSpace(req.DistributionCenterID)
+	if req.DistributionCenterID == "" {
+		writeError(w, http.StatusBadRequest, "validation_error", "distributionCenterId is required")
+		return
+	}
+
+	approved, err := h.Store.ApproveRequest(r.Context(), requestID, req.DistributionCenterID)
+	if err != nil {
+		switch {
+		case errors.Is(err, db.ErrRequestNotFound):
+			writeError(w, http.StatusNotFound, "not_found", "Request not found")
+		case errors.Is(err, db.ErrRequestAlreadyApproved):
+			writeError(w, http.StatusConflict, "already_approved", "Request already approved by another distribution center")
+		case errors.Is(err, db.ErrInvalidRequestStatus):
+			writeError(w, http.StatusConflict, "invalid_status", "Request cannot be approved in its current status")
+		default:
+			writeError(w, http.StatusInternalServerError, "approve_failed", "Failed to approve request")
+		}
+		return
+	}
+
+	writeJSON(w, http.StatusOK, approved)
+}
+
 func isValidRequestStatus(status string) bool {
 	switch status {
-	case "pending", "inAction", "returned":
+	case "pending", "approved", "inAction", "returned":
 		return true
 	default:
 		return false

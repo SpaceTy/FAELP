@@ -1,45 +1,36 @@
-import { useEffect, useState, useMemo } from 'preact/hooks';
-import { mockRequestsService } from '@/services/mockRequests';
+import { useEffect, useState } from 'preact/hooks';
+import { api, type IncomingRequest } from '@/services/api';
 import type {
   BorrowRequest,
   RequestStats,
   RequestStatus,
-  RequestPriority,
-  ListRequestsParams,
 } from '@/types/requests';
 
-const STATUS_OPTIONS: Array<RequestStatus | ''> = ['', 'pending', 'approved', 'rejected'];
-const PRIORITY_OPTIONS: Array<RequestPriority | ''> = ['', 'high', 'normal', 'low'];
-const DATE_OPTIONS: Array<{ value: ListRequestsParams['dateRange']; label: string }> = [
-  { value: '', label: 'All Dates' },
-  { value: 'today', label: 'Today' },
-  { value: 'week', label: 'This Week' },
-  { value: 'older', label: 'Older' },
-];
-
-function priorityClass(priority: RequestPriority): string {
-  switch (priority) {
-    case 'high':
-      return 'priority-badge priority-high';
-    case 'normal':
-      return 'priority-badge priority-normal';
-    case 'low':
-      return 'priority-badge priority-low';
-    default:
-      return 'priority-badge';
-  }
-}
+const STATUS_OPTIONS: Array<RequestStatus | ''> = ['', 'pending', 'approved', 'returned'];
 
 function statusClass(status: RequestStatus): string {
   switch (status) {
     case 'approved':
       return 'status-badge status-approved';
-    case 'rejected':
-      return 'status-badge status-rejected';
+    case 'returned':
+      return 'status-badge status-returned';
     case 'pending':
       return 'status-badge status-pending';
     default:
       return 'status-badge';
+  }
+}
+
+function statusLabel(status: RequestStatus): string {
+  switch (status) {
+    case 'approved':
+      return 'Approved';
+    case 'returned':
+      return 'Returned';
+    case 'pending':
+      return 'Pending';
+    default:
+      return status;
   }
 }
 
@@ -49,43 +40,87 @@ function formatDate(input: string): string {
   return parsed.toLocaleDateString('de-DE', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
+async function copyToClipboard(text: string): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch (err) {
+    console.error('Failed to copy:', err);
+  }
+}
+
 function getDaysUntil(dateStr: string): string {
   const target = new Date(dateStr);
-  const now = new Date('2026-01-19'); // Mock current date
+  const now = new Date();
   const diffDays = Math.ceil((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-  
+
   if (diffDays < 0) return `${Math.abs(diffDays)} days overdue`;
   if (diffDays === 0) return 'Today';
   if (diffDays === 1) return 'Tomorrow';
   return `${diffDays} days`;
 }
 
+function mapIncomingRequest(input: IncomingRequest): BorrowRequest {
+  return {
+    id: input.id,
+    requesterName: input.shippingName,
+    requesterOrg: `Customer ${input.customerId.slice(0, 8)}`,
+    requesterEmail: '-',
+    requesterPhone: '-',
+    items: input.items.map((item) => ({
+      materialTypeId: item.materialTypeId,
+      materialName: item.materialName,
+      quantity: item.quantity,
+      availableQuantity: item.availableQuantity,
+      shortageQuantity: item.shortageQuantity,
+      isFulfillable: item.isFulfillable,
+    })),
+    purpose: input.note || 'No note provided',
+    requestedFor: input.deliveryDate,
+    priority: 'normal',
+    status: input.status,
+    createdAt: input.createdAt,
+    updatedAt: input.updatedAt,
+    isFulfillable: input.isFulfillable,
+  };
+}
+
 export function RequestsPage() {
   const [requests, setRequests] = useState<BorrowRequest[]>([]);
-  const [stats, setStats] = useState<RequestStats>({ pending: 0, approved: 0, rejected: 0, total: 0 });
+  const [stats, setStats] = useState<RequestStats>({ pending: 0, approved: 0, returned: 0, total: 0 });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedRequest, setSelectedRequest] = useState<BorrowRequest | null>(null);
-  
-  // Filters
+  const [approvingRequestID, setApprovingRequestID] = useState<string | null>(null);
+
   const [statusFilter, setStatusFilter] = useState<RequestStatus | ''>('pending');
-  const [priorityFilter, setPriorityFilter] = useState<RequestPriority | ''>('');
-  const [dateFilter, setDateFilter] = useState<ListRequestsParams['dateRange']>('');
 
   const loadData = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const [requestsData, statsData] = await Promise.all([
-        mockRequestsService.listRequests({
-          status: statusFilter,
-          priority: priorityFilter,
-          dateRange: dateFilter,
-        }),
-        mockRequestsService.getRequestStats(),
+      const [pendingRaw, approvedRaw, returnedRaw] = await Promise.all([
+        api.listIncomingRequests('pending'),
+        api.listIncomingRequests('approved'),
+        api.listIncomingRequests('returned'),
       ]);
-      setRequests(requestsData);
-      setStats(statsData);
+
+      const pending = pendingRaw.map(mapIncomingRequest);
+      const approved = approvedRaw.map(mapIncomingRequest);
+      const returned = returnedRaw.map(mapIncomingRequest);
+      const all = [...pending, ...approved, ...returned];
+
+      setStats({
+        pending: pending.length,
+        approved: approved.length,
+        returned: returned.length,
+        total: all.length,
+      });
+
+      const filtered = all
+        .filter((request) => !statusFilter || request.status === statusFilter)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+      setRequests(filtered);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load requests');
     } finally {
@@ -95,31 +130,23 @@ export function RequestsPage() {
 
   useEffect(() => {
     loadData();
-  }, [statusFilter, priorityFilter, dateFilter]);
+  }, [statusFilter]);
 
-  const handleApprove = async (requestId: string) => {
+  const handleApprove = async (requestID: string) => {
+    setApprovingRequestID(requestID);
+    setError(null);
     try {
-      await mockRequestsService.approveRequest({ requestId });
+      await api.approveIncomingRequest(requestID);
       await loadData();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to approve request');
+    } finally {
+      setApprovingRequestID(null);
     }
   };
-
-  const handleReject = async (requestId: string) => {
-    try {
-      await mockRequestsService.rejectRequest({ requestId, reason: 'Rejected by admin' });
-      await loadData();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to reject request');
-    }
-  };
-
-  const pendingRequests = useMemo(() => requests.filter((r) => r.status === 'pending'), [requests]);
 
   return (
     <main className="main-content">
-      {/* Sidebar Filters */}
       <aside className="sidebar">
         <div className="filter-section">
           <h3>Request Status</h3>
@@ -132,41 +159,7 @@ export function RequestsPage() {
                   checked={statusFilter === s}
                   onChange={() => setStatusFilter(s)}
                 />
-                <span>{s ? s.charAt(0).toUpperCase() + s.slice(1) : 'All'}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        <div className="filter-section">
-          <h3>Priority</h3>
-          <div className="filter-group">
-            {PRIORITY_OPTIONS.map((p) => (
-              <label key={p || 'all'} className="checkbox-label">
-                <input
-                  type="radio"
-                  name="priority"
-                  checked={priorityFilter === p}
-                  onChange={() => setPriorityFilter(p)}
-                />
-                <span>{p ? p.charAt(0).toUpperCase() + p.slice(1) : 'All'}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        <div className="filter-section">
-          <h3>Request Date</h3>
-          <div className="filter-group">
-            {DATE_OPTIONS.map((d) => (
-              <label key={d.value || 'all'} className="checkbox-label">
-                <input
-                  type="radio"
-                  name="date"
-                  checked={dateFilter === d.value}
-                  onChange={() => setDateFilter(d.value)}
-                />
-                <span>{d.label}</span>
+                <span>{s ? statusLabel(s) : 'All'}</span>
               </label>
             ))}
           </div>
@@ -183,8 +176,8 @@ export function RequestsPage() {
             <span className="stat-value approved">{stats.approved}</span>
           </div>
           <div className="stat-row">
-            <span>Rejected:</span>
-            <span className="stat-value rejected">{stats.rejected}</span>
+            <span>Returned:</span>
+            <span className="stat-value rejected">{stats.returned}</span>
           </div>
           <div className="stat-row">
             <span>Total:</span>
@@ -193,17 +186,13 @@ export function RequestsPage() {
         </div>
       </aside>
 
-      {/* Requests Section */}
       <section className="content-section">
         <div className="section-header">
           <h2>Incoming Requests</h2>
           <div className="section-controls">
-            <span className="results-count">{pendingRequests.length} pending requests</span>
+            <span className="results-count">{requests.length} requests</span>
             <select className="sort-select">
-              <option>Sort by: Oldest First</option>
-              <option>Newest First</option>
-              <option>Priority</option>
-              <option>Requester</option>
+              <option>Sort by: Newest First</option>
             </select>
           </div>
         </div>
@@ -226,21 +215,28 @@ export function RequestsPage() {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Request ID</th>
+                  <th className="col-id">ID</th>
                   <th>Requester</th>
                   <th>Items</th>
                   <th>Purpose</th>
                   <th>Requested For</th>
-                  <th>Priority</th>
-                  <th>Actions</th>
+                  <th>Status</th>
                 </tr>
               </thead>
               <tbody>
                 {requests.map((request) => (
-                  <tr key={request.id} className={`priority-${request.priority}`}>
-                    <td>
-                      <span className="request-id">{request.id}</span>
-                      <span className="request-date">{formatDate(request.createdAt)}</span>
+                  <tr key={request.id}>
+                    <td className="col-id">
+                      <button
+                        onClick={() => copyToClipboard(request.id)}
+                        className="copy-id-btn"
+                        title={`Copy ID: ${request.id}`}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                      </button>
                     </td>
                     <td>
                       <div className="requester-info">
@@ -252,6 +248,9 @@ export function RequestsPage() {
                       <div className="items-summary">
                         <span className="item-count">
                           {request.items[0]?.quantity}x {request.items[0]?.materialName}
+                        </span>
+                        <span className={request.isFulfillable ? 'stock-check stock-check-ok' : 'stock-check stock-check-missing'}>
+                          {request.isFulfillable ? '✓ In Stock' : '✗ Missing Stock'}
                         </span>
                         {request.items.length > 1 && (
                           <button
@@ -268,46 +267,31 @@ export function RequestsPage() {
                     </td>
                     <td>
                       <span className="date-needed">{formatDate(request.requestedFor)}</span>
-                      <span className={`days-until ${
-                        new Date(request.requestedFor) < new Date('2026-01-19') ? 'urgent' : ''
-                      }`}>
+                      <span className={`days-until ${new Date(request.requestedFor) < new Date() ? 'urgent' : ''}`}>
                         {getDaysUntil(request.requestedFor)}
                       </span>
                     </td>
                     <td>
-                      <span className={priorityClass(request.priority)}>
-                        {request.priority}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="action-buttons">
-                        {request.status === 'pending' ? (
-                          <>
-                            <button
-                              className="btn-approve"
-                              onClick={() => handleApprove(request.id)}
-                            >
-                              Approve
-                            </button>
-                            <button
-                              className="btn-reject"
-                              onClick={() => handleReject(request.id)}
-                            >
-                              Reject
-                            </button>
-                          </>
-                        ) : (
-                          <span className={statusClass(request.status)}>
-                            {request.status}
-                          </span>
-                        )}
-                      </div>
+                      {request.status === 'pending' ? (
+                        <div className="action-buttons">
+                          <button
+                            className="btn-approve"
+                            onClick={() => handleApprove(request.id)}
+                            disabled={approvingRequestID === request.id || !request.isFulfillable}
+                            title={request.isFulfillable ? 'Approve request' : 'Cannot approve: insufficient stock'}
+                          >
+                            {approvingRequestID === request.id ? 'Approving...' : 'Approve'}
+                          </button>
+                        </div>
+                      ) : (
+                        <span className={statusClass(request.status)}>{statusLabel(request.status)}</span>
+                      )}
                     </td>
                   </tr>
                 ))}
                 {requests.length === 0 && !isLoading && (
                   <tr>
-                    <td colSpan={7} className="text-center py-8 text-text-secondary">
+                    <td colSpan={6} className="text-center py-8 text-text-secondary">
                       No requests found.
                     </td>
                   </tr>
@@ -318,7 +302,6 @@ export function RequestsPage() {
         </div>
       </section>
 
-      {/* Request Details Modal */}
       {selectedRequest && (
         <div className="modal-overlay" onClick={() => setSelectedRequest(null)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -333,8 +316,6 @@ export function RequestsPage() {
                 <h4 className="font-semibold mb-2">Requester Information</h4>
                 <p><strong>Name:</strong> {selectedRequest.requesterName}</p>
                 <p><strong>Organization:</strong> {selectedRequest.requesterOrg}</p>
-                <p><strong>Email:</strong> {selectedRequest.requesterEmail}</p>
-                <p><strong>Phone:</strong> {selectedRequest.requesterPhone}</p>
               </div>
               <div className="mb-4">
                 <h4 className="font-semibold mb-2">Requested Items</h4>
@@ -342,7 +323,10 @@ export function RequestsPage() {
                   {selectedRequest.items.map((item, idx) => (
                     <li key={idx} className="flex justify-between">
                       <span>{item.materialName}</span>
-                      <span className="font-semibold">Qty: {item.quantity}</span>
+                      <span className={item.isFulfillable ? 'stock-check stock-check-ok' : 'stock-check stock-check-missing'}>
+                        {item.isFulfillable ? '✓' : '✗'} Req {item.quantity} / Avail {item.availableQuantity ?? 0}
+                        {!item.isFulfillable && item.shortageQuantity ? ` (Short ${item.shortageQuantity})` : ''}
+                      </span>
                     </li>
                   ))}
                 </ul>
@@ -351,7 +335,7 @@ export function RequestsPage() {
                 <h4 className="font-semibold mb-2">Details</h4>
                 <p><strong>Purpose:</strong> {selectedRequest.purpose}</p>
                 <p><strong>Requested For:</strong> {formatDate(selectedRequest.requestedFor)}</p>
-                <p><strong>Priority:</strong> {selectedRequest.priority}</p>
+                <p><strong>Status:</strong> {statusLabel(selectedRequest.status)}</p>
               </div>
             </div>
           </div>

@@ -28,19 +28,20 @@ type RequestItem struct {
 
 // Request represents a borrow request from organization backend.
 type Request struct {
-	ID                   string                 `json:"id"`
-	CustomerID           string                 `json:"customerId"`
-	DeliveryDate         time.Time              `json:"deliveryDate"`
-	Status               string                 `json:"status"`
-	ShippingCustomerName string                 `json:"shippingName"`
-	ShippingAddressLine1 string                 `json:"addressLine1"`
-	ShippingAddressLine2 string                 `json:"addressLine2"`
-	ShippingCity         string                 `json:"city"`
-	ShippingZipCode      string                 `json:"zipCode"`
-	Metadata             map[string]interface{} `json:"metadata"`
-	CreatedAt            time.Time              `json:"createdAt"`
-	UpdatedAt            time.Time              `json:"updatedAt"`
-	Items                []RequestItem          `json:"items"`
+	ID                           string                 `json:"id"`
+	CustomerID                   string                 `json:"customerId"`
+	DeliveryDate                 time.Time              `json:"deliveryDate"`
+	Status                       string                 `json:"status"`
+	ApprovedDistributionCenterID *string                `json:"approvedDistributionCenterId,omitempty"`
+	ShippingCustomerName         string                 `json:"shippingName"`
+	ShippingAddressLine1         string                 `json:"addressLine1"`
+	ShippingAddressLine2         string                 `json:"addressLine2"`
+	ShippingCity                 string                 `json:"city"`
+	ShippingZipCode              string                 `json:"zipCode"`
+	Metadata                     map[string]interface{} `json:"metadata"`
+	CreatedAt                    time.Time              `json:"createdAt"`
+	UpdatedAt                    time.Time              `json:"updatedAt"`
+	Items                        []RequestItem          `json:"items"`
 }
 
 // OrgClient is a client for communicating with the organization backend
@@ -162,13 +163,20 @@ func (c *OrgClient) UpdateAvailability(ctx context.Context, distributionCenterID
 }
 
 // GetRequests fetches requests from organization backend, optionally filtered by status.
-func (c *OrgClient) GetRequests(ctx context.Context, status string) ([]Request, error) {
+func (c *OrgClient) GetRequests(ctx context.Context, status, distributionCenterID string) ([]Request, error) {
 	endpoint := "http://unix/internal/requests"
 	if c.unixClient == nil {
 		endpoint = fmt.Sprintf("%s/internal/requests", c.baseURL)
 	}
+	params := url.Values{}
 	if status != "" {
-		endpoint = fmt.Sprintf("%s?status=%s", endpoint, url.QueryEscape(status))
+		params.Set("status", status)
+	}
+	if distributionCenterID != "" {
+		params.Set("distributionCenterId", distributionCenterID)
+	}
+	if params.Encode() != "" {
+		endpoint = fmt.Sprintf("%s?%s", endpoint, params.Encode())
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
@@ -192,4 +200,43 @@ func (c *OrgClient) GetRequests(ctx context.Context, status string) ([]Request, 
 	}
 
 	return requests, nil
+}
+
+// ApproveRequest updates a request in organization backend as approved by a distribution center.
+func (c *OrgClient) ApproveRequest(ctx context.Context, requestID, distributionCenterID string) (Request, error) {
+	endpoint := fmt.Sprintf("http://unix/internal/requests/%s/approve", url.PathEscape(requestID))
+	if c.unixClient == nil {
+		endpoint = fmt.Sprintf("%s/internal/requests/%s/approve", c.baseURL, url.PathEscape(requestID))
+	}
+
+	body := map[string]string{
+		"distributionCenterId": distributionCenterID,
+	}
+	bodyBytes, err := json.Marshal(body)
+	if err != nil {
+		return Request{}, fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(bodyBytes))
+	if err != nil {
+		return Request{}, fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.do(req)
+	if err != nil {
+		return Request{}, fmt.Errorf("failed to approve request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return Request{}, fmt.Errorf("organization backend returned status %d", resp.StatusCode)
+	}
+
+	var request Request
+	if err := json.NewDecoder(resp.Body).Decode(&request); err != nil {
+		return Request{}, fmt.Errorf("failed to decode approved request: %w", err)
+	}
+
+	return request, nil
 }

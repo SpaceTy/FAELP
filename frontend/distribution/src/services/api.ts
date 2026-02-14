@@ -8,10 +8,42 @@ import type {
   MaterialInstance,
   UpdateMaterialInput,
 } from '@/types/inventory';
+import type { RequestStatus } from '@/types/requests';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
 class ApiService {
+  async listIncomingRequests(status: RequestStatus | '' = 'pending'): Promise<IncomingRequest[]> {
+    const query = new URLSearchParams();
+    if (status) query.set('status', status);
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+
+    const response = await fetch(`${API_BASE}/api/requests/incoming${suffix}`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(error.error || 'Failed to load incoming requests');
+    }
+
+    return response.json();
+  }
+
+  async approveIncomingRequest(requestID: string): Promise<IncomingRequest> {
+    const response = await fetch(`${API_BASE}/api/requests/${encodeURIComponent(requestID)}/approve`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(error.error || 'Failed to approve request');
+    }
+
+    return response.json();
+  }
+
   async login(credentials: LoginRequest): Promise<LoginResponse> {
     const response = await fetch(`${API_BASE}/api/auth/login`, {
       method: 'POST',
@@ -143,3 +175,29 @@ class ApiService {
 }
 
 export const api = new ApiService();
+
+export interface IncomingRequestItem {
+  materialTypeId: string;
+  materialName: string;
+  quantity: number;
+  availableQuantity: number;
+  shortageQuantity: number;
+  isFulfillable: boolean;
+}
+
+export interface IncomingRequest {
+  id: string;
+  customerId: string;
+  deliveryDate: string;
+  status: RequestStatus;
+  shippingName: string;
+  addressLine1: string;
+  addressLine2: string;
+  city: string;
+  zipCode: string;
+  note: string;
+  createdAt: string;
+  updatedAt: string;
+  isFulfillable: boolean;
+  items: IncomingRequestItem[];
+}

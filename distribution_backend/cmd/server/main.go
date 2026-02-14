@@ -64,6 +64,7 @@ func main() {
 	// Initialize organization backend client (prefer Unix socket if configured)
 	orgClient := client.NewOrgClient(cfg.OrgBackend.URL, cfg.OrgBackend.APIKey, cfg.OrgBackend.SocketPath)
 	inventoryHandler := handlers.NewInventoryHandler(store, orgClient)
+	requestsHandler := handlers.NewRequestsHandler(store, orgClient, cfg.DistributionCenterID)
 
 	// Create cancellable context for background services
 	ctx, cancel := context.WithCancel(context.Background())
@@ -118,6 +119,8 @@ func main() {
 
 	// Material types endpoint (fetches from organization backend)
 	mux.HandleFunc("GET /api/material-types", authMiddleware.RequireAuth(inventoryHandler.GetMaterialTypes))
+	mux.HandleFunc("GET /api/requests/incoming", authMiddleware.RequireAuth(requestsHandler.ListIncomingRequests))
+	mux.HandleFunc("POST /api/requests/{id}/approve", authMiddleware.RequireAuth(requestsHandler.ApproveIncomingRequest))
 
 	// Internal endpoint for org backend to get available material counts (Unix socket only, no auth needed)
 	mux.HandleFunc("GET /internal/available-materials", inventoryHandler.GetAvailableMaterialCounts)
