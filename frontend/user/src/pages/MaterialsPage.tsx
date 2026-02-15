@@ -13,6 +13,7 @@ export function MaterialsPage() {
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredMaterials = useMemo(() => {
+    if (!materials) return [];
     return materials.filter(material => {
       const matchesCategory = selectedCategories.includes(material.category);
       const matchesSearch = searchQuery === '' || 

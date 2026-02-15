@@ -66,8 +66,7 @@ export function MaterialTypesProvider({ children }: { children: ComponentChildre
     setError(null);
     try {
       const data = await api.listMaterialTypes();
-      // Enrich materials with category and ensure image URLs
-      const enrichedMaterials = data.map(m => ({
+      const enrichedMaterials = (data || []).map(m => ({
         ...m,
         category: determineCategory(m),
         imageUrl: ensureImageUrl(m)

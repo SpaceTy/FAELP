@@ -167,6 +167,9 @@ func (s *Store) ListMaterialTypes(ctx context.Context) ([]domain.MaterialType, e
 		}
 		result = append(result, mt)
 	}
+	if result == nil {
+		result = []domain.MaterialType{}
+	}
 	return result, rows.Err()
 }
 
@@ -207,6 +210,9 @@ func (s *Store) ListMaterialTypesWithAvailability(ctx context.Context) ([]domain
 			return nil, err
 		}
 		result = append(result, mt)
+	}
+	if result == nil {
+		result = []domain.MaterialType{}
 	}
 	return result, rows.Err()
 }
@@ -353,6 +359,9 @@ func (s *Store) ListDistributionCenters(ctx context.Context) ([]domain.Distribut
 			dc.SocketPath = socketPath.String
 		}
 		result = append(result, dc)
+	}
+	if result == nil {
+		result = []domain.DistributionCenter{}
 	}
 	return result, rows.Err()
 }

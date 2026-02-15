@@ -120,6 +120,9 @@ func (s *Store) ListMaterialInstances(ctx context.Context, params ListMaterialIn
 		}
 		result = append(result, mapMaterialInstance(row))
 	}
+	if result == nil {
+		result = []domain.MaterialInstance{}
+	}
 	return result, rows.Err()
 }
 
@@ -207,6 +210,9 @@ func (s *Store) CountByTypeAndStatus(ctx context.Context) ([]InventorySummary, e
 		}
 		result = append(result, summary)
 	}
+	if result == nil {
+		result = []InventorySummary{}
+	}
 	return result, rows.Err()
 }
 
@@ -237,6 +243,9 @@ func (s *Store) GetAvailableCountsByType(ctx context.Context) ([]MaterialAvailab
 			return nil, err
 		}
 		result = append(result, avail)
+	}
+	if result == nil {
+		result = []MaterialAvailability{}
 	}
 	return result, rows.Err()
 }
@@ -269,6 +278,9 @@ func (s *Store) GetAvailableByType(ctx context.Context, typeID string, limit int
 			return nil, err
 		}
 		result = append(result, mapMaterialInstance(row))
+	}
+	if result == nil {
+		result = []domain.MaterialInstance{}
 	}
 	return result, rows.Err()
 }

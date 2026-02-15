@@ -91,6 +91,9 @@ func (s *Store) ListUsers(ctx context.Context) ([]domain.User, error) {
 		}
 		result = append(result, mapUser(row))
 	}
+	if result == nil {
+		result = []domain.User{}
+	}
 	return result, rows.Err()
 }
 
