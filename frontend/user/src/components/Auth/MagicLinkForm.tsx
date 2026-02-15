@@ -14,11 +14,14 @@ export function MagicLinkForm() {
     e.preventDefault();
     setError('');
     setIsSubmitting(true);
+    console.log('[MAGIC_LINK_FORM] handleSubmit: requesting magic link for email=', email);
 
     try {
       await login(email);
+      console.log('[MAGIC_LINK_FORM] handleSubmit: magic link sent successfully');
       setIsSent(true);
-    } catch {
+    } catch (err) {
+      console.error('[MAGIC_LINK_FORM] handleSubmit: error', err);
       setError('Fehler beim Senden des Magic Links. Bitte versuchen Sie es erneut.');
     } finally {
       setIsSubmitting(false);
@@ -74,11 +77,14 @@ function CodeEntryForm({ email }: CodeEntryFormProps) {
     e.preventDefault();
     setError('');
     setIsVerifying(true);
+    console.log('[CODE_ENTRY_FORM] handleSubmit: verifying code for email=', email);
 
     try {
       await verifyCode(code, email);
+      console.log('[CODE_ENTRY_FORM] handleSubmit: code verified successfully, redirecting');
       route(consumePostLoginRedirect());
     } catch (err: any) {
+      console.error('[CODE_ENTRY_FORM] handleSubmit: error', err);
       // Check if it's a 422 error (expired/invalid code)
       if (err?.status === 422 || err?.message?.includes('422')) {
         setError('Der Code ist abgelaufen (gültig für 10 Minuten). Bitte fordern Sie einen neuen Code an.');

@@ -1,10 +1,15 @@
 package config
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"errors"
+	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/joho/godotenv"
 	"gopkg.in/yaml.v3"
@@ -79,8 +84,11 @@ func Load() (Config, error) {
 	}
 
 	// Apply environment overrides
-	if url := os.Getenv("DATABASE_URL"); url != "" {
-		cfg.DatabaseURL = url
+	databaseURL := strings.TrimSpace(os.Getenv("DATABASE_URL"))
+	if databaseURL != "" && !strings.EqualFold(databaseURL, "replace-me") {
+		cfg.DatabaseURL = databaseURL
+	} else if builtURL, ok := buildDatabaseURLFromEnv(); ok {
+		cfg.DatabaseURL = builtURL
 	}
 	if apiKey := os.Getenv("WORKOS_API_KEY"); apiKey != "" {
 		cfg.WorkOSAPIKey = apiKey
@@ -157,8 +165,14 @@ func Load() (Config, error) {
 	if cfg.WorkOSClientID == "" {
 		return Config{}, errors.New("WORKOS_CLIENT_ID missing")
 	}
-	if cfg.JWTSecret == "" {
-		return Config{}, errors.New("JWT_SECRET missing")
+
+	jwt := strings.TrimSpace(cfg.JWTSecret)
+	if jwt == "" || strings.EqualFold(jwt, "replace-me") {
+		generated, err := generateJWTSecret()
+		if err != nil {
+			return Config{}, fmt.Errorf("failed to generate JWT_SECRET: %w", err)
+		}
+		cfg.JWTSecret = generated
 	}
 
 	return cfg, nil
@@ -167,4 +181,40 @@ func Load() (Config, error) {
 func pathExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
+}
+
+func generateJWTSecret() (string, error) {
+	const keyBytes = 32
+	buf := make([]byte, keyBytes)
+	if _, err := rand.Read(buf); err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(buf), nil
+}
+
+func buildDatabaseURLFromEnv() (string, bool) {
+	host := strings.TrimSpace(os.Getenv("DB_HOST"))
+	port := strings.TrimSpace(os.Getenv("DB_PORT"))
+	name := strings.TrimSpace(os.Getenv("DB_NAME"))
+	user := strings.TrimSpace(os.Getenv("DB_USER"))
+	password := os.Getenv("DB_PASSWORD")
+	sslMode := strings.TrimSpace(os.Getenv("DB_SSLMODE"))
+	if sslMode == "" {
+		sslMode = "disable"
+	}
+
+	if host == "" || port == "" || name == "" || user == "" || password == "" {
+		return "", false
+	}
+
+	u := &url.URL{
+		Scheme: "postgresql",
+		User:   url.UserPassword(user, password),
+		Host:   host + ":" + port,
+		Path:   name,
+	}
+	q := u.Query()
+	q.Set("sslmode", sslMode)
+	u.RawQuery = q.Encode()
+	return u.String(), true
 }

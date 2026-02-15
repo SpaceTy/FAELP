@@ -144,6 +144,8 @@ package-deploy-org:
 	cp $(ORG_BACKEND_DIR)/bin/orgbackend $(DEPLOY_ORG_CONTAINER_DIR)/app/orgbackend
 	cp -R $(USER_FRONTEND_DIR)/dist $(DEPLOY_ORG_CONTAINER_DIR)/app/frontend/user/
 	cp -R $(ORGADMIN_FRONTEND_DIR)/dist $(DEPLOY_ORG_CONTAINER_DIR)/app/frontend/orgadmin/
+	if [ -f $(DEPLOY_ORG_CONTAINER_DIR)/.env.example ]; then cp $(DEPLOY_ORG_CONTAINER_DIR)/.env.example $(DEPLOY_ORG_CONTAINER_DIR)/.env; fi
+	rm -f $(DEPLOY_ORG_CONTAINER_DIR)/.env.example
 	chmod +x $(DEPLOY_ORG_CONTAINER_DIR)/scripts/entrypoint.sh
 	chmod +x $(DEPLOY_ORG_CONTAINER_DIR)/scripts/setup_database.sh
 	@echo "Org deployment bundle ready at $(DEPLOY_ORG_CONTAINER_DIR)"

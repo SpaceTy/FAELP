@@ -66,18 +66,22 @@ export function AuthProvider({ children }: { children: ComponentChildren }) {
   }, [clearSession]);
 
   const login = useCallback(async (email: string) => {
+    console.log('[AUTH_CONTEXT] login: requesting magic link for email=', email);
     await authService.requestMagicLink(email);
+    console.log('[AUTH_CONTEXT] login: magic link request completed');
   }, []);
 
   const verifyCode = useCallback(async (code: string, email?: string) => {
+    console.log('[AUTH_CONTEXT] verifyCode: verifying code for email=', email);
     const session = await authService.verifyMagicLink(code, email);
-    // Ensure userId is set from customer.id
+    console.log('[AUTH_CONTEXT] verifyCode: got session, userId=', session.userId);
     const sessionWithUserId = {
       ...session,
       userId: session.userId || session.customer.id,
     };
     authSignal.value = sessionWithUserId;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(sessionWithUserId));
+    console.log('[AUTH_CONTEXT] verifyCode: session stored, user authenticated');
   }, []);
 
   const logout = useCallback(() => {

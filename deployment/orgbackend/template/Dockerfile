@@ -5,10 +5,10 @@ WORKDIR /app
 RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
       postgresql-client \
+      ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 COPY app /app
-COPY config.yaml /app/config.yaml
 COPY scripts /app/scripts
 
 RUN chmod +x /app/orgbackend \
