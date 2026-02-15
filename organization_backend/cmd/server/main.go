@@ -91,6 +91,7 @@ func main() {
 	// Mount user frontend at root if enabled (must be after API routes)
 	if cfg.Frontend.User.Enabled && cfg.Frontend.User.Path != "" {
 		spaHandler := api.NewSPAHandler(cfg.Frontend.User.Path)
+		router.Get("/", spaHandler.ServeHTTP)
 		router.Get("/*", spaHandler.ServeHTTP)
 		log.Printf("user frontend served from %s", cfg.Frontend.User.Path)
 	}
@@ -122,6 +123,7 @@ func main() {
 			w.Write([]byte(`{"status":"ok"}`))
 		})
 		spaHandler := api.NewSPAHandler(cfg.Frontend.Admin.Path)
+		adminRouter.Get("/", spaHandler.ServeHTTP)
 		adminRouter.Get("/*", spaHandler.ServeHTTP)
 
 		adminServer = &http.Server{

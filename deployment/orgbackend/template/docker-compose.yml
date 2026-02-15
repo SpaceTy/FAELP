@@ -1,0 +1,56 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: docker.io/library/postgres:16
+    container_name: faelp-org-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - org-postgres-data:/var/lib/postgresql/data
+
+  org-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: faelp-org-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://app_orgbackend_dev:password@postgres:5432/orgdb_dev?sslmode=disable}
+      WORKOS_API_KEY: ${WORKOS_API_KEY:-dev-workos-key}
+      WORKOS_CLIENT_ID: ${WORKOS_CLIENT_ID:-dev-client-id}
+      JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret}
+      CONFIG_PATH: /app/config.yaml
+      FRONTEND_USER_ENABLED: "true"
+      FRONTEND_USER_PATH: /app/frontend/user/dist
+      FRONTEND_ADMIN_ENABLED: "true"
+      FRONTEND_ADMIN_PATH: /app/frontend/orgadmin/dist
+      FRONTEND_ADMIN_PORT: "8082"
+      INTERNAL_SOCKET_PATH: /var/run/faelp/org-backend.sock
+      INTERNAL_SOCKET_ENABLED: ${INTERNAL_SOCKET_ENABLED:-true}
+      DIST_BACKEND_SOCKET_PATH: /var/run/faelp/dist-backend.sock
+      DB_HOST: ${DB_HOST:-postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME:-orgdb_dev}
+      DB_USER: ${DB_USER:-app_orgbackend_dev}
+      DB_PASSWORD: ${DB_PASSWORD:-password}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:8082:8082"
+    volumes:
+      - socket-volume:/var/run/faelp
+
+volumes:
+  socket-volume:
+  org-postgres-data:

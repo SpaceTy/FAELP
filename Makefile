@@ -7,12 +7,15 @@ USER_FRONTEND_DIR=frontend/user
 ORGADMIN_FRONTEND_DIR=frontend/orgadmin
 DISTADMIN_FRONTEND_DIR=frontend/distadmin
 DISTRIBUTION_FRONTEND_DIR=frontend/distribution
+DEPLOY_ORG_TEMPLATE_DIR=deployment/orgbackend/template
+DEPLOY_ORG_CONTAINER_DIR=deployment/orgbackend/container
 
 .PHONY: dev dev-org dev-dist dev-all dev-backends \
 	install install-org install-dist \
 	build build-org build-dist build-all \
 	clean clean-org clean-dist clean-all \
 	test test-org test-dist \
+	deploy-org package-deploy-org \
 	setup setup-db help
 
 # =============================================================================
@@ -129,6 +132,25 @@ build-all: build-org build-dist
 build: build-all
 
 # =============================================================================
+# Deployment Packaging
+# =============================================================================
+
+package-deploy-org:
+	@echo "Packaging org deployment bundle..."
+	rm -rf $(DEPLOY_ORG_CONTAINER_DIR)
+	mkdir -p $(DEPLOY_ORG_CONTAINER_DIR)/app/frontend/user
+	mkdir -p $(DEPLOY_ORG_CONTAINER_DIR)/app/frontend/orgadmin
+	cp -R $(DEPLOY_ORG_TEMPLATE_DIR)/. $(DEPLOY_ORG_CONTAINER_DIR)/
+	cp $(ORG_BACKEND_DIR)/bin/orgbackend $(DEPLOY_ORG_CONTAINER_DIR)/app/orgbackend
+	cp -R $(USER_FRONTEND_DIR)/dist $(DEPLOY_ORG_CONTAINER_DIR)/app/frontend/user/
+	cp -R $(ORGADMIN_FRONTEND_DIR)/dist $(DEPLOY_ORG_CONTAINER_DIR)/app/frontend/orgadmin/
+	chmod +x $(DEPLOY_ORG_CONTAINER_DIR)/scripts/entrypoint.sh
+	chmod +x $(DEPLOY_ORG_CONTAINER_DIR)/scripts/setup_database.sh
+	@echo "Org deployment bundle ready at $(DEPLOY_ORG_CONTAINER_DIR)"
+
+deploy-org: build-org-backend build-user build-orgadmin package-deploy-org
+
+# =============================================================================
 # Testing
 # =============================================================================
 
@@ -222,6 +244,9 @@ setup: install setup-db
 	@echo "  make build-org     - Build orgbackend and its frontends"
 	@echo "  make build-dist    - Build distbackend and its frontends"
 	@echo "  make build-all     - Same as 'make build'"
+	@echo ""
+	@echo "DEPLOYMENT:"
+	@echo "  make deploy-org    - Build and package orgbackend deployment bundle"
 	@echo ""
 	@echo "TESTING:"
 	@echo "  make test          - Run all Go tests"

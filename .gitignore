@@ -28,6 +28,7 @@ npm-debug.log*
 # Bin folders (build outputs)
 **/bin/
 bin/
+deployment/orgbackend/container/
 
 **server
 
