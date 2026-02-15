@@ -170,18 +170,29 @@ func (s *Store) ListMaterialTypes(ctx context.Context) ([]domain.MaterialType, e
 	return result, rows.Err()
 }
 
-// ListMaterialTypesWithAvailability returns all material types with available counts summed from material_available table
+// ListMaterialTypesWithAvailability returns all material types with available counts.
+// Availability is total material available minus material reserved in pending/approved/inAction requests.
 func (s *Store) ListMaterialTypesWithAvailability(ctx context.Context) ([]domain.MaterialType, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT 
+		SELECT
 			mt.id, 
 			mt.name, 
 			mt.description, 
 			mt.image_url,
-			COALESCE(SUM(ma.amount), 0) as available_count
+			COALESCE(ma_totals.total_amount, 0) - COALESCE(reserved_totals.reserved_amount, 0) as available_count
 		FROM material_types mt
-		LEFT JOIN material_available ma ON mt.id = ma.material_type_id
-		GROUP BY mt.id, mt.name, mt.description, mt.image_url
+		LEFT JOIN (
+			SELECT material_type_id, SUM(amount) AS total_amount
+			FROM material_available
+			GROUP BY material_type_id
+		) ma_totals ON mt.id = ma_totals.material_type_id
+		LEFT JOIN (
+			SELECT ri.material_type_id, SUM(ri.quantity) AS reserved_amount
+			FROM request_items ri
+			JOIN requests r ON r.id = ri.request_id
+			WHERE r.status IN ('pending', 'approved', 'inAction')
+			GROUP BY ri.material_type_id
+		) reserved_totals ON mt.id = reserved_totals.material_type_id
 		ORDER BY mt.name ASC
 	`)
 	if err != nil {

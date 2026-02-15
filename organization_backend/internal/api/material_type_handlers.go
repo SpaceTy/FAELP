@@ -47,27 +47,13 @@ type DistClientInterface interface {
 
 // ListMaterialTypes returns all material types with availability counts from dist backend (public)
 func (h *MaterialTypeHandler) ListMaterialTypes(w http.ResponseWriter, r *http.Request) {
-	// Fetch material types from database
-	materialTypes, err := h.Store.ListMaterialTypes(r.Context())
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "list_failed", "Failed to fetch material types")
-		return
-	}
-
 	// Fetch availability from distribution backend if configured
 	if h.DistClient != nil && h.SocketPath != "" {
 		availabilityMap, err := h.DistClient.GetAvailableMaterials(r.Context())
 		if err != nil {
-			// Log error but don't fail - return material types with zero availability
+			// Log error but don't fail; we'll return the last known DB-backed availability below.
 			log.Printf("Warning: failed to fetch availability from dist backend: %v", err)
 		} else {
-			// Update availability counts
-			for i := range materialTypes {
-				if amount, ok := availabilityMap[materialTypes[i].ID]; ok {
-					materialTypes[i].AvailableCount = amount
-				}
-			}
-
 			// Look up distribution center ID from database based on socket path
 			dc, err := h.Store.GetDistributionCenterBySocketPath(r.Context(), h.SocketPath)
 			if err != nil {
@@ -79,6 +65,13 @@ func (h *MaterialTypeHandler) ListMaterialTypes(w http.ResponseWriter, r *http.R
 				}
 			}
 		}
+	}
+
+	// Always return DB-computed availability so reserved quantities are subtracted.
+	materialTypes, err := h.Store.ListMaterialTypesWithAvailability(r.Context())
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "list_failed", "Failed to fetch material types")
+		return
 	}
 
 	writeJSON(w, http.StatusOK, materialTypes)
