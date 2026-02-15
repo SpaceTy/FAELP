@@ -261,7 +261,22 @@ func (h *RequestHandler) ListRequestsForDistribution(w http.ResponseWriter, r *h
 	}
 
 	distributionCenterID := strings.TrimSpace(r.URL.Query().Get("distributionCenterId"))
-	requests, err := h.Store.ListRequests(r.Context(), status, distributionCenterID)
+	var archivedFilter *bool
+	if rawArchived := strings.TrimSpace(r.URL.Query().Get("archived")); rawArchived != "" {
+		switch rawArchived {
+		case "true":
+			v := true
+			archivedFilter = &v
+		case "false":
+			v := false
+			archivedFilter = &v
+		default:
+			writeError(w, http.StatusBadRequest, "invalid_archived", "archived must be true or false")
+			return
+		}
+	}
+
+	requests, err := h.Store.ListRequests(r.Context(), status, distributionCenterID, archivedFilter)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "fetch_failed", "Failed to fetch requests")
 		return
@@ -280,6 +295,10 @@ type markRequestInActionBody struct {
 }
 
 type cancelAssignedRequestBody struct {
+	DistributionCenterID string `json:"distributionCenterId"`
+}
+
+type archiveRequestBody struct {
 	DistributionCenterID string `json:"distributionCenterId"`
 }
 
@@ -392,6 +411,80 @@ func (h *RequestHandler) CancelAssignedRequestForDistribution(w http.ResponseWri
 			writeError(w, http.StatusConflict, "invalid_status", "Request must be approved or inAction to cancel")
 		default:
 			writeError(w, http.StatusInternalServerError, "update_failed", "Failed to cancel request")
+		}
+		return
+	}
+
+	writeJSON(w, http.StatusOK, updated)
+}
+
+// ArchiveRequestForDistribution marks request as archived without changing request status.
+func (h *RequestHandler) ArchiveRequestForDistribution(w http.ResponseWriter, r *http.Request) {
+	requestID := strings.TrimSpace(chi.URLParam(r, "id"))
+	if requestID == "" {
+		writeError(w, http.StatusBadRequest, "validation_error", "Request ID is required")
+		return
+	}
+
+	var req archiveRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_json", "Invalid JSON body")
+		return
+	}
+	req.DistributionCenterID = strings.TrimSpace(req.DistributionCenterID)
+	if req.DistributionCenterID == "" {
+		writeError(w, http.StatusBadRequest, "validation_error", "distributionCenterId is required")
+		return
+	}
+
+	updated, err := h.Store.ArchiveRequest(r.Context(), requestID, req.DistributionCenterID)
+	if err != nil {
+		switch {
+		case errors.Is(err, db.ErrRequestNotFound):
+			writeError(w, http.StatusNotFound, "not_found", "Request not found")
+		case errors.Is(err, db.ErrRequestAlreadyApproved):
+			writeError(w, http.StatusConflict, "already_approved", "Request belongs to another distribution center")
+		case errors.Is(err, db.ErrInvalidRequestStatus):
+			writeError(w, http.StatusConflict, "invalid_state", "Request cannot be archived in its current state")
+		default:
+			writeError(w, http.StatusInternalServerError, "update_failed", "Failed to archive request")
+		}
+		return
+	}
+
+	writeJSON(w, http.StatusOK, updated)
+}
+
+// UnarchiveRequestForDistribution marks request as unarchived without changing request status.
+func (h *RequestHandler) UnarchiveRequestForDistribution(w http.ResponseWriter, r *http.Request) {
+	requestID := strings.TrimSpace(chi.URLParam(r, "id"))
+	if requestID == "" {
+		writeError(w, http.StatusBadRequest, "validation_error", "Request ID is required")
+		return
+	}
+
+	var req archiveRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_json", "Invalid JSON body")
+		return
+	}
+	req.DistributionCenterID = strings.TrimSpace(req.DistributionCenterID)
+	if req.DistributionCenterID == "" {
+		writeError(w, http.StatusBadRequest, "validation_error", "distributionCenterId is required")
+		return
+	}
+
+	updated, err := h.Store.UnarchiveRequest(r.Context(), requestID, req.DistributionCenterID)
+	if err != nil {
+		switch {
+		case errors.Is(err, db.ErrRequestNotFound):
+			writeError(w, http.StatusNotFound, "not_found", "Request not found")
+		case errors.Is(err, db.ErrRequestAlreadyApproved):
+			writeError(w, http.StatusConflict, "already_approved", "Request belongs to another distribution center")
+		case errors.Is(err, db.ErrInvalidRequestStatus):
+			writeError(w, http.StatusConflict, "invalid_state", "Request cannot be unarchived in its current state")
+		default:
+			writeError(w, http.StatusInternalServerError, "update_failed", "Failed to unarchive request")
 		}
 		return
 	}

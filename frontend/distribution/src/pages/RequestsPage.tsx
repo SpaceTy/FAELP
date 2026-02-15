@@ -83,6 +83,7 @@ function mapIncomingRequest(input: IncomingRequest): BorrowRequest {
     requestedFor: input.deliveryDate,
     priority: 'normal',
     status: input.status,
+    archived: input.archived,
     createdAt: input.createdAt,
     updatedAt: input.updatedAt,
     isFulfillable: input.isFulfillable,
@@ -91,24 +92,27 @@ function mapIncomingRequest(input: IncomingRequest): BorrowRequest {
 
 export function RequestsPage() {
   const [requests, setRequests] = useState<BorrowRequest[]>([]);
-  const [stats, setStats] = useState<RequestStats>({ pending: 0, approved: 0, inAction: 0, returned: 0, total: 0 });
+  const [stats, setStats] = useState<RequestStats>({ pending: 0, approved: 0, inAction: 0, returned: 0, archived: 0, total: 0 });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedRequest, setSelectedRequest] = useState<BorrowRequest | null>(null);
   const [approvingRequestID, setApprovingRequestID] = useState<string | null>(null);
   const [cancellingRequestID, setCancellingRequestID] = useState<string | null>(null);
+  const [archivingRequestID, setArchivingRequestID] = useState<string | null>(null);
+  const [unarchivingRequestID, setUnarchivingRequestID] = useState<string | null>(null);
 
   const [statusFilter, setStatusFilter] = useState<RequestStatus | ''>('pending');
+  const [showArchived, setShowArchived] = useState(false);
 
   const loadData = async () => {
     setIsLoading(true);
     setError(null);
     try {
       const [pendingRaw, approvedRaw, inActionRaw, returnedRaw] = await Promise.all([
-        api.listIncomingRequests('pending'),
-        api.listIncomingRequests('approved'),
-        api.listIncomingRequests('inAction'),
-        api.listIncomingRequests('returned'),
+        api.listIncomingRequests('pending', showArchived),
+        api.listIncomingRequests('approved', showArchived),
+        api.listIncomingRequests('inAction', showArchived),
+        api.listIncomingRequests('returned', showArchived),
       ]);
 
       const pending = pendingRaw.map(mapIncomingRequest);
@@ -122,6 +126,7 @@ export function RequestsPage() {
         approved: approved.length,
         inAction: inAction.length,
         returned: returned.length,
+        archived: all.filter((request) => request.archived).length,
         total: all.length,
       });
 
@@ -139,7 +144,7 @@ export function RequestsPage() {
 
   useEffect(() => {
     loadData();
-  }, [statusFilter]);
+  }, [showArchived, statusFilter]);
 
   const handleApprove = async (requestID: string) => {
     setApprovingRequestID(requestID);
@@ -167,6 +172,32 @@ export function RequestsPage() {
     }
   };
 
+  const handleArchive = async (requestID: string) => {
+    setArchivingRequestID(requestID);
+    setError(null);
+    try {
+      await api.archiveIncomingRequest(requestID);
+      await loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to archive request');
+    } finally {
+      setArchivingRequestID(null);
+    }
+  };
+
+  const handleUnarchive = async (requestID: string) => {
+    setUnarchivingRequestID(requestID);
+    setError(null);
+    try {
+      await api.unarchiveIncomingRequest(requestID);
+      await loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to unarchive request');
+    } finally {
+      setUnarchivingRequestID(null);
+    }
+  };
+
   return (
     <main className="main-content">
       <aside className="sidebar">
@@ -185,6 +216,14 @@ export function RequestsPage() {
               </label>
             ))}
           </div>
+          <label className="checkbox-label mt-3">
+            <input
+              type="checkbox"
+              checked={showArchived}
+              onChange={(e) => setShowArchived((e.target as HTMLInputElement).checked)}
+            />
+            <span>Show archived</span>
+          </label>
         </div>
 
         <div className="stats-card">
@@ -204,6 +243,10 @@ export function RequestsPage() {
           <div className="stat-row">
             <span>In Action:</span>
             <span className="stat-value pending">{stats.inAction}</span>
+          </div>
+          <div className="stat-row">
+            <span>Archived:</span>
+            <span className="stat-value">{stats.archived}</span>
           </div>
           <div className="stat-row">
             <span>Total:</span>
@@ -303,7 +346,19 @@ export function RequestsPage() {
                       </span>
                     </td>
                     <td>
-                      {request.status === 'pending' ? (
+                      {request.archived ? (
+                        <div className="action-buttons">
+                          <span className={statusClass(request.status)}>{statusLabel(request.status)}</span>
+                          <span className="status-badge">Archived</span>
+                          <button
+                            className="btn-approve"
+                            onClick={() => handleUnarchive(request.id)}
+                            disabled={unarchivingRequestID === request.id}
+                          >
+                            {unarchivingRequestID === request.id ? 'Unarchiving...' : 'Unarchive'}
+                          </button>
+                        </div>
+                      ) : request.status === 'pending' ? (
                         <div className="action-buttons">
                           <button
                             className="btn-approve"
@@ -312,6 +367,13 @@ export function RequestsPage() {
                             title={request.isFulfillable ? 'Approve request' : 'Cannot approve: insufficient stock'}
                           >
                             {approvingRequestID === request.id ? 'Approving...' : 'Approve'}
+                          </button>
+                          <button
+                            className="btn-reject"
+                            onClick={() => handleArchive(request.id)}
+                            disabled={archivingRequestID === request.id}
+                          >
+                            {archivingRequestID === request.id ? 'Archiving...' : 'Archive'}
                           </button>
                         </div>
                       ) : request.status === 'approved' || request.status === 'inAction' ? (
@@ -324,9 +386,25 @@ export function RequestsPage() {
                           >
                             {cancellingRequestID === request.id ? 'Cancelling...' : 'Cancel'}
                           </button>
+                          <button
+                            className="btn-reject"
+                            onClick={() => handleArchive(request.id)}
+                            disabled={archivingRequestID === request.id}
+                          >
+                            {archivingRequestID === request.id ? 'Archiving...' : 'Archive'}
+                          </button>
                         </div>
                       ) : (
-                        <span className={statusClass(request.status)}>{statusLabel(request.status)}</span>
+                        <div className="action-buttons">
+                          <span className={statusClass(request.status)}>{statusLabel(request.status)}</span>
+                          <button
+                            className="btn-reject"
+                            onClick={() => handleArchive(request.id)}
+                            disabled={archivingRequestID === request.id}
+                          >
+                            {archivingRequestID === request.id ? 'Archiving...' : 'Archive'}
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>

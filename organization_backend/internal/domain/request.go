@@ -8,6 +8,7 @@ type Request struct {
 	DeliveryDate                 time.Time      `json:"deliveryDate"`
 	PlannedReturnDate            *time.Time     `json:"plannedReturnDate,omitempty"`
 	Status                       string         `json:"status"`
+	Archived                     bool           `json:"archived"`
 	ApprovedDistributionCenterID *string        `json:"approvedDistributionCenterId,omitempty"`
 	OutgoingTrackingCode         *string        `json:"outgoingTrackingCode,omitempty"`
 	ShippingCustomerName         string         `json:"shippingName"`

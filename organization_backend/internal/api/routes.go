@@ -77,6 +77,8 @@ func Routes(handler *Handler, authHandler *AuthHandler, materialTypeHandler *Mat
 	r.With(APIKeyMiddleware()).Post("/internal/requests/{id}/approve", requestHandler.ApproveRequestForDistribution)
 	r.With(APIKeyMiddleware()).Post("/internal/requests/{id}/in-action", requestHandler.MarkRequestInActionForDistribution)
 	r.With(APIKeyMiddleware()).Post("/internal/requests/{id}/cancel", requestHandler.CancelAssignedRequestForDistribution)
+	r.With(APIKeyMiddleware()).Post("/internal/requests/{id}/archive", requestHandler.ArchiveRequestForDistribution)
+	r.With(APIKeyMiddleware()).Post("/internal/requests/{id}/unarchive", requestHandler.UnarchiveRequestForDistribution)
 
 	// Static file serving for uploads
 	uploadsDir := uploadHandler.UploadPath

@@ -52,6 +52,7 @@ type incomingRequest struct {
 	DeliveryDate         string                `json:"deliveryDate"`
 	PlannedReturnDate    string                `json:"plannedReturnDate,omitempty"`
 	Status               string                `json:"status"`
+	Archived             bool                  `json:"archived"`
 	OutgoingTrackingCode string                `json:"outgoingTrackingCode,omitempty"`
 	ShippingCustomerName string                `json:"shippingName"`
 	ShippingAddressLine1 string                `json:"addressLine1"`
@@ -86,10 +87,22 @@ func (h *RequestsHandler) ListIncomingRequests(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	requests, err := h.orgClient.GetRequests(r.Context(), status, h.distributionCenterID)
+	archived := false
+	if strings.EqualFold(strings.TrimSpace(r.URL.Query().Get("archived")), "true") {
+		archived = true
+	}
+
+	requests, err := h.orgClient.GetRequests(r.Context(), status, h.distributionCenterID, &archived)
 	if err != nil {
 		http.Error(w, `{"error":"failed to fetch requests from organization backend"}`, http.StatusBadGateway)
 		return
+	}
+	if h.store != nil {
+		states := make(map[string]bool, len(requests))
+		for _, req := range requests {
+			states[req.ID] = req.Archived
+		}
+		_ = h.store.UpsertRequestArchiveStates(r.Context(), states)
 	}
 
 	availabilities, err := h.store.GetAvailableCountsByType(r.Context())
@@ -152,6 +165,7 @@ func (h *RequestsHandler) ListIncomingRequests(w http.ResponseWriter, r *http.Re
 			DeliveryDate:         req.DeliveryDate.Format("2006-01-02"),
 			PlannedReturnDate:    formatOptionalDate(req.PlannedReturnDate),
 			Status:               req.Status,
+			Archived:             req.Archived,
 			OutgoingTrackingCode: derefString(req.OutgoingTrackingCode),
 			ShippingCustomerName: req.ShippingCustomerName,
 			ShippingAddressLine1: req.ShippingAddressLine1,
@@ -277,6 +291,66 @@ func (h *RequestsHandler) CancelAssignedIncomingRequest(w http.ResponseWriter, r
 	if err != nil {
 		http.Error(w, `{"error":"failed to cancel request"}`, http.StatusBadGateway)
 		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(updated)
+}
+
+// ArchiveIncomingRequest archives a request in organization backend.
+func (h *RequestsHandler) ArchiveIncomingRequest(w http.ResponseWriter, r *http.Request) {
+	if h.orgClient == nil {
+		http.Error(w, `{"error":"organization backend client not configured"}`, http.StatusServiceUnavailable)
+		return
+	}
+	if strings.TrimSpace(h.distributionCenterID) == "" {
+		http.Error(w, `{"error":"distribution center id not configured"}`, http.StatusServiceUnavailable)
+		return
+	}
+
+	requestID := strings.TrimSpace(r.PathValue("id"))
+	if requestID == "" {
+		http.Error(w, `{"error":"request id is required"}`, http.StatusBadRequest)
+		return
+	}
+
+	updated, err := h.orgClient.ArchiveRequest(r.Context(), requestID, h.distributionCenterID)
+	if err != nil {
+		http.Error(w, `{"error":"failed to archive request"}`, http.StatusBadGateway)
+		return
+	}
+	if h.store != nil {
+		_ = h.store.SetRequestArchived(r.Context(), requestID, true)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(updated)
+}
+
+// UnarchiveIncomingRequest unarchives a request in organization backend.
+func (h *RequestsHandler) UnarchiveIncomingRequest(w http.ResponseWriter, r *http.Request) {
+	if h.orgClient == nil {
+		http.Error(w, `{"error":"organization backend client not configured"}`, http.StatusServiceUnavailable)
+		return
+	}
+	if strings.TrimSpace(h.distributionCenterID) == "" {
+		http.Error(w, `{"error":"distribution center id not configured"}`, http.StatusServiceUnavailable)
+		return
+	}
+
+	requestID := strings.TrimSpace(r.PathValue("id"))
+	if requestID == "" {
+		http.Error(w, `{"error":"request id is required"}`, http.StatusBadRequest)
+		return
+	}
+
+	updated, err := h.orgClient.UnarchiveRequest(r.Context(), requestID, h.distributionCenterID)
+	if err != nil {
+		http.Error(w, `{"error":"failed to unarchive request"}`, http.StatusBadGateway)
+		return
+	}
+	if h.store != nil {
+		_ = h.store.SetRequestArchived(r.Context(), requestID, false)
 	}
 
 	w.Header().Set("Content-Type", "application/json")

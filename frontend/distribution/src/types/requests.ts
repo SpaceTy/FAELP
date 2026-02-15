@@ -22,6 +22,7 @@ export interface BorrowRequest {
   requestedFor: string;
   priority: RequestPriority;
   status: RequestStatus;
+  archived: boolean;
   createdAt: string;
   updatedAt: string;
   isFulfillable?: boolean;
@@ -32,6 +33,7 @@ export interface RequestStats {
   approved: number;
   inAction: number;
   returned: number;
+  archived: number;
   total: number;
 }
 

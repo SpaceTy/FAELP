@@ -190,7 +190,7 @@ func (s *Store) ListMaterialTypesWithAvailability(ctx context.Context) ([]domain
 			SELECT ri.material_type_id, SUM(ri.quantity) AS reserved_amount
 			FROM request_items ri
 			JOIN requests r ON r.id = ri.request_id
-			WHERE r.status IN ('pending', 'approved', 'inAction')
+			WHERE r.status IN ('pending', 'approved', 'inAction') AND r.archived = FALSE
 			GROUP BY ri.material_type_id
 		) reserved_totals ON mt.id = reserved_totals.material_type_id
 		ORDER BY mt.name ASC
@@ -511,9 +511,9 @@ func (s *Store) CreateRequest(ctx context.Context, input domain.CreateRequestInp
 	err = tx.QueryRowContext(ctx, `
 		INSERT INTO requests (customer_id, delivery_date, planned_return_date, status, approved_distribution_center_id, shipping_customer_name, shipping_address_line1, shipping_address_line2, shipping_city, shipping_zip_code, metadata)
 		VALUES ($1, $2, $3, 'pending', NULL, $4, $5, $6, $7, $8, $9)
-		RETURNING id, customer_id, delivery_date, planned_return_date, status, approved_distribution_center_id, "outgoingTrackingCode", shipping_customer_name, shipping_address_line1, shipping_address_line2, shipping_city, shipping_zip_code, metadata, created_at, updated_at
+		RETURNING id, customer_id, delivery_date, planned_return_date, status, archived, approved_distribution_center_id, "outgoingTrackingCode", shipping_customer_name, shipping_address_line1, shipping_address_line2, shipping_city, shipping_zip_code, metadata, created_at, updated_at
 	`, input.CustomerID, input.DeliveryDate, input.PlannedReturnDate, input.ShippingCustomerName, input.ShippingAddressLine1, input.ShippingAddressLine2, input.ShippingCity, input.ShippingZipCode, metadataJSON).Scan(
-		&req.ID, &req.CustomerID, &req.DeliveryDate, &plannedReturnDate, &req.Status, &approvedDistributionCenterID, &outgoingTrackingCode, &req.ShippingCustomerName,
+		&req.ID, &req.CustomerID, &req.DeliveryDate, &plannedReturnDate, &req.Status, &req.Archived, &approvedDistributionCenterID, &outgoingTrackingCode, &req.ShippingCustomerName,
 		&req.ShippingAddressLine1, &req.ShippingAddressLine2, &req.ShippingCity, &req.ShippingZipCode,
 		&metadataBytes, &req.CreatedAt, &req.UpdatedAt,
 	)
@@ -596,7 +596,7 @@ func (s *Store) ListRequestsByCustomerID(ctx context.Context, customerID string)
 
 	// First, get all requests for the customer
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT id, customer_id, delivery_date, planned_return_date, status, approved_distribution_center_id, shipping_customer_name, 
+		SELECT id, customer_id, delivery_date, planned_return_date, status, archived, approved_distribution_center_id, shipping_customer_name,
 		       "outgoingTrackingCode", shipping_address_line1, shipping_address_line2, shipping_city,
 		       shipping_zip_code, metadata, created_at, updated_at
 		FROM requests
@@ -617,7 +617,7 @@ func (s *Store) ListRequestsByCustomerID(ctx context.Context, customerID string)
 		var plannedReturnDate sql.NullTime
 		var metadataBytes []byte
 		err := rows.Scan(
-			&req.ID, &req.CustomerID, &req.DeliveryDate, &plannedReturnDate, &req.Status, &approvedDistributionCenterID, &req.ShippingCustomerName, &outgoingTrackingCode,
+			&req.ID, &req.CustomerID, &req.DeliveryDate, &plannedReturnDate, &req.Status, &req.Archived, &approvedDistributionCenterID, &req.ShippingCustomerName, &outgoingTrackingCode,
 			&req.ShippingAddressLine1, &req.ShippingAddressLine2, &req.ShippingCity, &req.ShippingZipCode,
 			&metadataBytes, &req.CreatedAt, &req.UpdatedAt,
 		)
@@ -685,12 +685,12 @@ func (s *Store) ListRequestsByCustomerID(ctx context.Context, customerID string)
 	return requests, nil
 }
 
-// ListRequests returns all requests, optionally filtered by status.
-func (s *Store) ListRequests(ctx context.Context, status, distributionCenterID string) ([]domain.Request, error) {
-	slog.Info("store_list_all_requests_started", "status", status, "distribution_center_id", distributionCenterID)
+// ListRequests returns all requests, optionally filtered by status and archive state.
+func (s *Store) ListRequests(ctx context.Context, status, distributionCenterID string, archived *bool) ([]domain.Request, error) {
+	slog.Info("store_list_all_requests_started", "status", status, "distribution_center_id", distributionCenterID, "archived", archived)
 
 	query := `
-		SELECT id, customer_id, delivery_date, planned_return_date, status, approved_distribution_center_id, shipping_customer_name,
+		SELECT id, customer_id, delivery_date, planned_return_date, status, archived, approved_distribution_center_id, shipping_customer_name,
 		       "outgoingTrackingCode", shipping_address_line1, shipping_address_line2, shipping_city,
 		       shipping_zip_code, metadata, created_at, updated_at
 		FROM requests
@@ -700,6 +700,10 @@ func (s *Store) ListRequests(ctx context.Context, status, distributionCenterID s
 	if strings.TrimSpace(status) != "" {
 		args = append(args, status)
 		where = append(where, fmt.Sprintf("status = $%d", len(args)))
+	}
+	if archived != nil {
+		args = append(args, *archived)
+		where = append(where, fmt.Sprintf("archived = $%d", len(args)))
 	}
 	if strings.TrimSpace(distributionCenterID) != "" {
 		args = append(args, distributionCenterID)
@@ -727,7 +731,7 @@ func (s *Store) ListRequests(ctx context.Context, status, distributionCenterID s
 		var plannedReturnDate sql.NullTime
 		var metadataBytes []byte
 		err := rows.Scan(
-			&req.ID, &req.CustomerID, &req.DeliveryDate, &plannedReturnDate, &req.Status, &approvedDistributionCenterID, &req.ShippingCustomerName, &outgoingTrackingCode,
+			&req.ID, &req.CustomerID, &req.DeliveryDate, &plannedReturnDate, &req.Status, &req.Archived, &approvedDistributionCenterID, &req.ShippingCustomerName, &outgoingTrackingCode,
 			&req.ShippingAddressLine1, &req.ShippingAddressLine2, &req.ShippingCity, &req.ShippingZipCode,
 			&metadataBytes, &req.CreatedAt, &req.UpdatedAt,
 		)
@@ -804,11 +808,11 @@ func (s *Store) ApproveRequest(ctx context.Context, requestID, distributionCente
 	err := s.db.QueryRowContext(ctx, `
 		UPDATE requests
 		SET status = 'approved', approved_distribution_center_id = $2
-		WHERE id = $1 AND status = 'pending'
-		RETURNING id, customer_id, delivery_date, planned_return_date, status, approved_distribution_center_id, "outgoingTrackingCode", shipping_customer_name,
+		WHERE id = $1 AND status = 'pending' AND archived = FALSE
+		RETURNING id, customer_id, delivery_date, planned_return_date, status, archived, approved_distribution_center_id, "outgoingTrackingCode", shipping_customer_name,
 		          shipping_address_line1, shipping_address_line2, shipping_city, shipping_zip_code, metadata, created_at, updated_at
 	`, requestID, distributionCenterID).Scan(
-		&req.ID, &req.CustomerID, &req.DeliveryDate, &plannedReturnDate, &req.Status, &approvedDistributionCenterID, &outgoingTrackingCode, &req.ShippingCustomerName,
+		&req.ID, &req.CustomerID, &req.DeliveryDate, &plannedReturnDate, &req.Status, &req.Archived, &approvedDistributionCenterID, &outgoingTrackingCode, &req.ShippingCustomerName,
 		&req.ShippingAddressLine1, &req.ShippingAddressLine2, &req.ShippingCity, &req.ShippingZipCode,
 		&metadataBytes, &req.CreatedAt, &req.UpdatedAt,
 	)
@@ -887,11 +891,11 @@ func (s *Store) MarkRequestInAction(ctx context.Context, requestID, distribution
 	err := s.db.QueryRowContext(ctx, `
 		UPDATE requests
 		SET status = 'inAction', "outgoingTrackingCode" = $3
-		WHERE id = $1 AND status = 'approved' AND approved_distribution_center_id = $2
-		RETURNING id, customer_id, delivery_date, planned_return_date, status, approved_distribution_center_id, "outgoingTrackingCode", shipping_customer_name,
+		WHERE id = $1 AND status = 'approved' AND archived = FALSE AND approved_distribution_center_id = $2
+		RETURNING id, customer_id, delivery_date, planned_return_date, status, archived, approved_distribution_center_id, "outgoingTrackingCode", shipping_customer_name,
 		          shipping_address_line1, shipping_address_line2, shipping_city, shipping_zip_code, metadata, created_at, updated_at
 	`, requestID, distributionCenterID, outgoingTrackingCode).Scan(
-		&req.ID, &req.CustomerID, &req.DeliveryDate, &plannedReturnDate, &req.Status, &approvedDistributionCenterID, &currentOutgoingTrackingCode, &req.ShippingCustomerName,
+		&req.ID, &req.CustomerID, &req.DeliveryDate, &plannedReturnDate, &req.Status, &req.Archived, &approvedDistributionCenterID, &currentOutgoingTrackingCode, &req.ShippingCustomerName,
 		&req.ShippingAddressLine1, &req.ShippingAddressLine2, &req.ShippingCity, &req.ShippingZipCode,
 		&metadataBytes, &req.CreatedAt, &req.UpdatedAt,
 	)
@@ -970,11 +974,11 @@ func (s *Store) CancelAssignedRequest(ctx context.Context, requestID, distributi
 	err := s.db.QueryRowContext(ctx, `
 		UPDATE requests
 		SET status = 'pending', approved_distribution_center_id = NULL, "outgoingTrackingCode" = NULL
-		WHERE id = $1 AND status IN ('approved', 'inAction') AND approved_distribution_center_id = $2
-		RETURNING id, customer_id, delivery_date, planned_return_date, status, approved_distribution_center_id, "outgoingTrackingCode", shipping_customer_name,
+		WHERE id = $1 AND status IN ('approved', 'inAction') AND archived = FALSE AND approved_distribution_center_id = $2
+		RETURNING id, customer_id, delivery_date, planned_return_date, status, archived, approved_distribution_center_id, "outgoingTrackingCode", shipping_customer_name,
 		          shipping_address_line1, shipping_address_line2, shipping_city, shipping_zip_code, metadata, created_at, updated_at
 	`, requestID, distributionCenterID).Scan(
-		&req.ID, &req.CustomerID, &req.DeliveryDate, &plannedReturnDate, &req.Status, &approvedDistributionCenterID, &currentOutgoingTrackingCode, &req.ShippingCustomerName,
+		&req.ID, &req.CustomerID, &req.DeliveryDate, &plannedReturnDate, &req.Status, &req.Archived, &approvedDistributionCenterID, &currentOutgoingTrackingCode, &req.ShippingCustomerName,
 		&req.ShippingAddressLine1, &req.ShippingAddressLine2, &req.ShippingCity, &req.ShippingZipCode,
 		&metadataBytes, &req.CreatedAt, &req.UpdatedAt,
 	)
@@ -1016,6 +1020,182 @@ func (s *Store) CancelAssignedRequest(ctx context.Context, requestID, distributi
 			return domain.Request{}, ErrRequestAlreadyApproved
 		}
 		return domain.Request{}, ErrInvalidRequestStatus
+	}
+
+	itemRows, err := s.db.QueryContext(ctx, `
+		SELECT material_type_id, quantity
+		FROM request_items
+		WHERE request_id = $1
+	`, req.ID)
+	if err != nil {
+		return domain.Request{}, err
+	}
+	defer itemRows.Close()
+
+	for itemRows.Next() {
+		var item domain.RequestItem
+		if err := itemRows.Scan(&item.MaterialTypeID, &item.Quantity); err != nil {
+			return domain.Request{}, err
+		}
+		req.Items = append(req.Items, item)
+	}
+	if err := itemRows.Err(); err != nil {
+		return domain.Request{}, err
+	}
+
+	return req, nil
+}
+
+// ArchiveRequest marks request as archived without changing its status.
+func (s *Store) ArchiveRequest(ctx context.Context, requestID, distributionCenterID string) (domain.Request, error) {
+	var req domain.Request
+	var approvedDistributionCenterID sql.NullString
+	var outgoingTrackingCode sql.NullString
+	var plannedReturnDate sql.NullTime
+	var metadataBytes []byte
+
+	err := s.db.QueryRowContext(ctx, `
+		UPDATE requests
+		SET archived = TRUE
+		WHERE id = $1
+		  AND archived = FALSE
+		  AND (approved_distribution_center_id IS NULL OR approved_distribution_center_id = $2)
+		RETURNING id, customer_id, delivery_date, planned_return_date, status, archived, approved_distribution_center_id, "outgoingTrackingCode", shipping_customer_name,
+		          shipping_address_line1, shipping_address_line2, shipping_city, shipping_zip_code, metadata, created_at, updated_at
+	`, requestID, distributionCenterID).Scan(
+		&req.ID, &req.CustomerID, &req.DeliveryDate, &plannedReturnDate, &req.Status, &req.Archived, &approvedDistributionCenterID, &outgoingTrackingCode, &req.ShippingCustomerName,
+		&req.ShippingAddressLine1, &req.ShippingAddressLine2, &req.ShippingCity, &req.ShippingZipCode,
+		&metadataBytes, &req.CreatedAt, &req.UpdatedAt,
+	)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return domain.Request{}, err
+	}
+
+	if errors.Is(err, sql.ErrNoRows) {
+		var existingApprovedDistributionCenterID sql.NullString
+		var alreadyArchived bool
+		err = s.db.QueryRowContext(ctx, `
+			SELECT approved_distribution_center_id, archived
+			FROM requests
+			WHERE id = $1
+		`, requestID).Scan(&existingApprovedDistributionCenterID, &alreadyArchived)
+		if errors.Is(err, sql.ErrNoRows) {
+			return domain.Request{}, ErrRequestNotFound
+		}
+		if err != nil {
+			return domain.Request{}, err
+		}
+		if existingApprovedDistributionCenterID.Valid && existingApprovedDistributionCenterID.String != distributionCenterID {
+			return domain.Request{}, ErrRequestAlreadyApproved
+		}
+		if alreadyArchived {
+			return domain.Request{}, ErrInvalidRequestStatus
+		}
+		return domain.Request{}, ErrInvalidRequestStatus
+	}
+
+	if approvedDistributionCenterID.Valid {
+		req.ApprovedDistributionCenterID = &approvedDistributionCenterID.String
+	}
+	if outgoingTrackingCode.Valid {
+		req.OutgoingTrackingCode = &outgoingTrackingCode.String
+	}
+	if plannedReturnDate.Valid {
+		req.PlannedReturnDate = &plannedReturnDate.Time
+	}
+	if len(metadataBytes) > 0 {
+		req.Metadata = make(map[string]any)
+		if unmarshalErr := json.Unmarshal(metadataBytes, &req.Metadata); unmarshalErr != nil {
+			req.Metadata = nil
+		}
+	}
+
+	itemRows, err := s.db.QueryContext(ctx, `
+		SELECT material_type_id, quantity
+		FROM request_items
+		WHERE request_id = $1
+	`, req.ID)
+	if err != nil {
+		return domain.Request{}, err
+	}
+	defer itemRows.Close()
+
+	for itemRows.Next() {
+		var item domain.RequestItem
+		if err := itemRows.Scan(&item.MaterialTypeID, &item.Quantity); err != nil {
+			return domain.Request{}, err
+		}
+		req.Items = append(req.Items, item)
+	}
+	if err := itemRows.Err(); err != nil {
+		return domain.Request{}, err
+	}
+
+	return req, nil
+}
+
+// UnarchiveRequest marks request as unarchived without changing its status.
+func (s *Store) UnarchiveRequest(ctx context.Context, requestID, distributionCenterID string) (domain.Request, error) {
+	var req domain.Request
+	var approvedDistributionCenterID sql.NullString
+	var outgoingTrackingCode sql.NullString
+	var plannedReturnDate sql.NullTime
+	var metadataBytes []byte
+
+	err := s.db.QueryRowContext(ctx, `
+		UPDATE requests
+		SET archived = FALSE
+		WHERE id = $1
+		  AND archived = TRUE
+		  AND (approved_distribution_center_id IS NULL OR approved_distribution_center_id = $2)
+		RETURNING id, customer_id, delivery_date, planned_return_date, status, archived, approved_distribution_center_id, "outgoingTrackingCode", shipping_customer_name,
+		          shipping_address_line1, shipping_address_line2, shipping_city, shipping_zip_code, metadata, created_at, updated_at
+	`, requestID, distributionCenterID).Scan(
+		&req.ID, &req.CustomerID, &req.DeliveryDate, &plannedReturnDate, &req.Status, &req.Archived, &approvedDistributionCenterID, &outgoingTrackingCode, &req.ShippingCustomerName,
+		&req.ShippingAddressLine1, &req.ShippingAddressLine2, &req.ShippingCity, &req.ShippingZipCode,
+		&metadataBytes, &req.CreatedAt, &req.UpdatedAt,
+	)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return domain.Request{}, err
+	}
+
+	if errors.Is(err, sql.ErrNoRows) {
+		var existingApprovedDistributionCenterID sql.NullString
+		var alreadyArchived bool
+		err = s.db.QueryRowContext(ctx, `
+			SELECT approved_distribution_center_id, archived
+			FROM requests
+			WHERE id = $1
+		`, requestID).Scan(&existingApprovedDistributionCenterID, &alreadyArchived)
+		if errors.Is(err, sql.ErrNoRows) {
+			return domain.Request{}, ErrRequestNotFound
+		}
+		if err != nil {
+			return domain.Request{}, err
+		}
+		if existingApprovedDistributionCenterID.Valid && existingApprovedDistributionCenterID.String != distributionCenterID {
+			return domain.Request{}, ErrRequestAlreadyApproved
+		}
+		if !alreadyArchived {
+			return domain.Request{}, ErrInvalidRequestStatus
+		}
+		return domain.Request{}, ErrInvalidRequestStatus
+	}
+
+	if approvedDistributionCenterID.Valid {
+		req.ApprovedDistributionCenterID = &approvedDistributionCenterID.String
+	}
+	if outgoingTrackingCode.Valid {
+		req.OutgoingTrackingCode = &outgoingTrackingCode.String
+	}
+	if plannedReturnDate.Valid {
+		req.PlannedReturnDate = &plannedReturnDate.Time
+	}
+	if len(metadataBytes) > 0 {
+		req.Metadata = make(map[string]any)
+		if unmarshalErr := json.Unmarshal(metadataBytes, &req.Metadata); unmarshalErr != nil {
+			req.Metadata = nil
+		}
 	}
 
 	itemRows, err := s.db.QueryContext(ctx, `

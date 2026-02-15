@@ -13,9 +13,10 @@ import type { RequestStatus } from '@/types/requests';
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
 class ApiService {
-  async listIncomingRequests(status: RequestStatus | '' = 'pending'): Promise<IncomingRequest[]> {
+  async listIncomingRequests(status: RequestStatus | '' = 'pending', archived = false): Promise<IncomingRequest[]> {
     const query = new URLSearchParams();
     if (status) query.set('status', status);
+    query.set('archived', archived ? 'true' : 'false');
     const suffix = query.toString() ? `?${query.toString()}` : '';
 
     const response = await fetch(`${API_BASE}/api/requests/incoming${suffix}`, {
@@ -68,6 +69,34 @@ class ApiService {
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'Unknown error' }));
       throw new Error(error.error || 'Failed to cancel request');
+    }
+
+    return response.json();
+  }
+
+  async archiveIncomingRequest(requestID: string): Promise<IncomingRequest> {
+    const response = await fetch(`${API_BASE}/api/requests/${encodeURIComponent(requestID)}/archive`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(error.error || 'Failed to archive request');
+    }
+
+    return response.json();
+  }
+
+  async unarchiveIncomingRequest(requestID: string): Promise<IncomingRequest> {
+    const response = await fetch(`${API_BASE}/api/requests/${encodeURIComponent(requestID)}/unarchive`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(error.error || 'Failed to unarchive request');
     }
 
     return response.json();
@@ -221,6 +250,7 @@ export interface IncomingRequest {
   deliveryDate: string;
   plannedReturnDate?: string;
   status: RequestStatus;
+  archived: boolean;
   outgoingTrackingCode?: string;
   shippingName: string;
   addressLine1: string;

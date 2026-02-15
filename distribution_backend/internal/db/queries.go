@@ -292,6 +292,39 @@ func mapMaterialInstance(row materialInstanceRow) domain.MaterialInstance {
 
 const distributionCenterIDConfigKey = "distribution_center_id"
 
+// SetRequestArchived stores archived state for a request in local dist db.
+func (s *Store) SetRequestArchived(ctx context.Context, requestID string, archived bool) error {
+	_, err := s.db.ExecContext(ctx, `
+		INSERT INTO request_archive_state (request_id, archived, updated_at)
+		VALUES ($1, $2, now())
+		ON CONFLICT (request_id)
+		DO UPDATE SET archived = EXCLUDED.archived, updated_at = now()
+	`, requestID, archived)
+	return err
+}
+
+// UpsertRequestArchiveStates syncs local archive state for many requests.
+func (s *Store) UpsertRequestArchiveStates(ctx context.Context, states map[string]bool) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	for requestID, archived := range states {
+		if _, err := tx.ExecContext(ctx, `
+			INSERT INTO request_archive_state (request_id, archived, updated_at)
+			VALUES ($1, $2, now())
+			ON CONFLICT (request_id)
+			DO UPDATE SET archived = EXCLUDED.archived, updated_at = now()
+		`, requestID, archived); err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
+}
+
 // GetDistributionCenterID returns persisted distribution center ID.
 func (s *Store) GetDistributionCenterID(ctx context.Context) (string, error) {
 	var value string

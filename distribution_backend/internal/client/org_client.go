@@ -35,6 +35,7 @@ type Request struct {
 	DeliveryDate                 time.Time              `json:"deliveryDate"`
 	PlannedReturnDate            *time.Time             `json:"plannedReturnDate,omitempty"`
 	Status                       string                 `json:"status"`
+	Archived                     bool                   `json:"archived"`
 	ApprovedDistributionCenterID *string                `json:"approvedDistributionCenterId,omitempty"`
 	OutgoingTrackingCode         *string                `json:"outgoingTrackingCode,omitempty"`
 	ShippingCustomerName         string                 `json:"shippingName"`
@@ -175,7 +176,7 @@ func (c *OrgClient) UpdateAvailability(ctx context.Context, distributionCenterID
 }
 
 // GetRequests fetches requests from organization backend, optionally filtered by status.
-func (c *OrgClient) GetRequests(ctx context.Context, status, distributionCenterID string) ([]Request, error) {
+func (c *OrgClient) GetRequests(ctx context.Context, status, distributionCenterID string, archived *bool) ([]Request, error) {
 	endpoint := "http://unix/internal/requests"
 	if c.unixClient == nil {
 		endpoint = fmt.Sprintf("%s/internal/requests", c.baseURL)
@@ -186,6 +187,9 @@ func (c *OrgClient) GetRequests(ctx context.Context, status, distributionCenterI
 	}
 	if distributionCenterID != "" {
 		params.Set("distributionCenterId", distributionCenterID)
+	}
+	if archived != nil {
+		params.Set("archived", fmt.Sprintf("%t", *archived))
 	}
 	if params.Encode() != "" {
 		endpoint = fmt.Sprintf("%s?%s", endpoint, params.Encode())
@@ -327,6 +331,84 @@ func (c *OrgClient) CancelAssignedRequest(ctx context.Context, requestID, distri
 	var request Request
 	if err := json.NewDecoder(resp.Body).Decode(&request); err != nil {
 		return Request{}, fmt.Errorf("failed to decode updated request: %w", err)
+	}
+
+	return request, nil
+}
+
+// ArchiveRequest marks a request as archived without changing request status.
+func (c *OrgClient) ArchiveRequest(ctx context.Context, requestID, distributionCenterID string) (Request, error) {
+	endpoint := fmt.Sprintf("http://unix/internal/requests/%s/archive", url.PathEscape(requestID))
+	if c.unixClient == nil {
+		endpoint = fmt.Sprintf("%s/internal/requests/%s/archive", c.baseURL, url.PathEscape(requestID))
+	}
+
+	body := map[string]string{
+		"distributionCenterId": distributionCenterID,
+	}
+	bodyBytes, err := json.Marshal(body)
+	if err != nil {
+		return Request{}, fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(bodyBytes))
+	if err != nil {
+		return Request{}, fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.do(req)
+	if err != nil {
+		return Request{}, fmt.Errorf("failed to archive request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return Request{}, fmt.Errorf("organization backend returned status %d", resp.StatusCode)
+	}
+
+	var request Request
+	if err := json.NewDecoder(resp.Body).Decode(&request); err != nil {
+		return Request{}, fmt.Errorf("failed to decode archived request: %w", err)
+	}
+
+	return request, nil
+}
+
+// UnarchiveRequest marks a request as unarchived without changing request status.
+func (c *OrgClient) UnarchiveRequest(ctx context.Context, requestID, distributionCenterID string) (Request, error) {
+	endpoint := fmt.Sprintf("http://unix/internal/requests/%s/unarchive", url.PathEscape(requestID))
+	if c.unixClient == nil {
+		endpoint = fmt.Sprintf("%s/internal/requests/%s/unarchive", c.baseURL, url.PathEscape(requestID))
+	}
+
+	body := map[string]string{
+		"distributionCenterId": distributionCenterID,
+	}
+	bodyBytes, err := json.Marshal(body)
+	if err != nil {
+		return Request{}, fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(bodyBytes))
+	if err != nil {
+		return Request{}, fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.do(req)
+	if err != nil {
+		return Request{}, fmt.Errorf("failed to unarchive request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return Request{}, fmt.Errorf("organization backend returned status %d", resp.StatusCode)
+	}
+
+	var request Request
+	if err := json.NewDecoder(resp.Body).Decode(&request); err != nil {
+		return Request{}, fmt.Errorf("failed to decode unarchived request: %w", err)
 	}
 
 	return request, nil
