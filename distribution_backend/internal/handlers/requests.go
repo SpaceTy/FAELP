@@ -50,6 +50,7 @@ type incomingRequest struct {
 	ID                   string                `json:"id"`
 	CustomerID           string                `json:"customerId"`
 	DeliveryDate         string                `json:"deliveryDate"`
+	PlannedReturnDate    string                `json:"plannedReturnDate,omitempty"`
 	Status               string                `json:"status"`
 	OutgoingTrackingCode string                `json:"outgoingTrackingCode,omitempty"`
 	ShippingCustomerName string                `json:"shippingName"`
@@ -149,6 +150,7 @@ func (h *RequestsHandler) ListIncomingRequests(w http.ResponseWriter, r *http.Re
 			ID:                   req.ID,
 			CustomerID:           req.CustomerID,
 			DeliveryDate:         req.DeliveryDate.Format("2006-01-02"),
+			PlannedReturnDate:    formatOptionalDate(req.PlannedReturnDate),
 			Status:               req.Status,
 			OutgoingTrackingCode: derefString(req.OutgoingTrackingCode),
 			ShippingCustomerName: req.ShippingCustomerName,
@@ -166,6 +168,13 @@ func (h *RequestsHandler) ListIncomingRequests(w http.ResponseWriter, r *http.Re
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(resp)
+}
+
+func formatOptionalDate(value *time.Time) string {
+	if value == nil {
+		return ""
+	}
+	return value.Format("2006-01-02")
 }
 
 func isValidRequestStatus(status string) bool {

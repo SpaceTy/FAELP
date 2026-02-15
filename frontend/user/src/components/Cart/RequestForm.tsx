@@ -10,6 +10,7 @@ interface RequestFormProps {
 
 export function RequestForm({ items, onSuccess }: RequestFormProps) {
   const [deliveryDate, setDeliveryDate] = useState('');
+  const [plannedReturnDate, setPlannedReturnDate] = useState('');
   const [shippingName, setShippingName] = useState('');
   const [addressLine1, setAddressLine1] = useState('');
   const [addressLine2, setAddressLine2] = useState('');
@@ -38,6 +39,7 @@ export function RequestForm({ items, onSuccess }: RequestFormProps) {
     try {
       const input: CreateRequestInput = {
         deliveryDate,
+        plannedReturnDate,
         shippingName,
         addressLine1,
         addressLine2: addressLine2 || undefined,
@@ -71,6 +73,20 @@ export function RequestForm({ items, onSuccess }: RequestFormProps) {
           value={deliveryDate}
           onInput={(e) => setDeliveryDate(e.currentTarget.value)}
           min={minDateStr}
+          required
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-text-primary mb-1">
+          Geplantes Rückgabedatum
+        </label>
+        <input
+          type="date"
+          value={plannedReturnDate}
+          onInput={(e) => setPlannedReturnDate(e.currentTarget.value)}
+          min={deliveryDate || minDateStr}
           required
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
         />

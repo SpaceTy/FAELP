@@ -19,6 +19,7 @@ type RequestHandler struct {
 
 type createRequestRequest struct {
 	DeliveryDate         string `json:"deliveryDate"`
+	PlannedReturnDate    string `json:"plannedReturnDate"`
 	ShippingCustomerName string `json:"shippingName"`
 	ShippingAddressLine1 string `json:"addressLine1"`
 	ShippingAddressLine2 string `json:"addressLine2"`
@@ -60,6 +61,7 @@ func (h *RequestHandler) CreateRequest(w http.ResponseWriter, r *http.Request) {
 	slog.Info("create_request_json_decoded",
 		"shipping_name", req.ShippingCustomerName,
 		"delivery_date", req.DeliveryDate,
+		"planned_return_date", req.PlannedReturnDate,
 		"item_count", len(req.Items),
 	)
 
@@ -88,6 +90,11 @@ func (h *RequestHandler) CreateRequest(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "validation_error", "Delivery date is required")
 		return
 	}
+	if req.PlannedReturnDate == "" {
+		slog.Info("create_request_validation_failed", "field", "planned_return_date", "reason", "empty")
+		writeError(w, http.StatusBadRequest, "validation_error", "Planned return date is required")
+		return
+	}
 	if len(req.Items) == 0 {
 		slog.Info("create_request_validation_failed", "field", "items", "reason", "empty")
 		writeError(w, http.StatusBadRequest, "validation_error", "At least one item is required")
@@ -105,6 +112,17 @@ func (h *RequestHandler) CreateRequest(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "validation_error", "Invalid delivery date format (use YYYY-MM-DD)")
 		return
 	}
+	plannedReturnDate, err := time.Parse("2006-01-02", req.PlannedReturnDate)
+	if err != nil {
+		slog.Info("create_request_validation_failed",
+			"field", "planned_return_date",
+			"reason", "invalid_format",
+			"value", req.PlannedReturnDate,
+			"error", err.Error(),
+		)
+		writeError(w, http.StatusBadRequest, "validation_error", "Invalid planned return date format (use YYYY-MM-DD)")
+		return
+	}
 
 	now := time.Now()
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
@@ -117,8 +135,20 @@ func (h *RequestHandler) CreateRequest(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "validation_error", "Delivery date must be in the future")
 		return
 	}
+	if plannedReturnDate.Before(deliveryDate) {
+		slog.Info("create_request_validation_failed",
+			"field", "planned_return_date",
+			"reason", "before_delivery_date",
+			"value", req.PlannedReturnDate,
+		)
+		writeError(w, http.StatusBadRequest, "validation_error", "Planned return date must be on or after delivery date")
+		return
+	}
 
-	slog.Info("create_request_date_validated", "delivery_date", deliveryDate)
+	slog.Info("create_request_date_validated",
+		"delivery_date", deliveryDate,
+		"planned_return_date", plannedReturnDate,
+	)
 
 	items := make([]domain.RequestItem, len(req.Items))
 	for i, item := range req.Items {
@@ -153,6 +183,7 @@ func (h *RequestHandler) CreateRequest(w http.ResponseWriter, r *http.Request) {
 	input := domain.CreateRequestInput{
 		CustomerID:           claims.CustomerID,
 		DeliveryDate:         deliveryDate,
+		PlannedReturnDate:    plannedReturnDate,
 		ShippingCustomerName: strings.TrimSpace(req.ShippingCustomerName),
 		ShippingAddressLine1: strings.TrimSpace(req.ShippingAddressLine1),
 		ShippingAddressLine2: strings.TrimSpace(req.ShippingAddressLine2),

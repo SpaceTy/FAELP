@@ -7,6 +7,7 @@ export interface Request {
   id: string;
   customerId: string;
   deliveryDate: string;
+  plannedReturnDate?: string;
   status: 'pending' | 'approved' | 'inAction' | 'returned';
   outgoingTrackingCode?: string;
   shippingName: string;
@@ -22,6 +23,7 @@ export interface Request {
 
 export interface CreateRequestInput {
   deliveryDate: string;
+  plannedReturnDate: string;
   shippingName: string;
   addressLine1: string;
   addressLine2?: string;

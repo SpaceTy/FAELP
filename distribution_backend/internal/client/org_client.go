@@ -33,6 +33,7 @@ type Request struct {
 	ID                           string                 `json:"id"`
 	CustomerID                   string                 `json:"customerId"`
 	DeliveryDate                 time.Time              `json:"deliveryDate"`
+	PlannedReturnDate            *time.Time             `json:"plannedReturnDate,omitempty"`
 	Status                       string                 `json:"status"`
 	ApprovedDistributionCenterID *string                `json:"approvedDistributionCenterId,omitempty"`
 	OutgoingTrackingCode         *string                `json:"outgoingTrackingCode,omitempty"`

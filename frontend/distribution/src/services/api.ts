@@ -219,6 +219,7 @@ export interface IncomingRequest {
   id: string;
   customerId: string;
   deliveryDate: string;
+  plannedReturnDate?: string;
   status: RequestStatus;
   outgoingTrackingCode?: string;
   shippingName: string;
