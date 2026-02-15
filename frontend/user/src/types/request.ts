@@ -8,6 +8,7 @@ export interface Request {
   customerId: string;
   deliveryDate: string;
   plannedReturnDate?: string;
+  intendedStudents: number;
   status: 'pending' | 'approved' | 'inAction' | 'returned';
   outgoingTrackingCode?: string;
   shippingName: string;
@@ -24,6 +25,7 @@ export interface Request {
 export interface CreateRequestInput {
   deliveryDate: string;
   plannedReturnDate: string;
+  intendedStudents: number;
   shippingName: string;
   addressLine1: string;
   addressLine2?: string;

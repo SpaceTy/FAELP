@@ -34,6 +34,7 @@ type Request struct {
 	CustomerID                   string                 `json:"customerId"`
 	DeliveryDate                 time.Time              `json:"deliveryDate"`
 	PlannedReturnDate            *time.Time             `json:"plannedReturnDate,omitempty"`
+	IntendedStudents             int                    `json:"intendedStudents"`
 	Status                       string                 `json:"status"`
 	Archived                     bool                   `json:"archived"`
 	ApprovedDistributionCenterID *string                `json:"approvedDistributionCenterId,omitempty"`

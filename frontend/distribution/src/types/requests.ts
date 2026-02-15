@@ -17,6 +17,7 @@ export interface BorrowRequest {
   requesterOrg: string;
   requesterEmail: string;
   requesterPhone: string;
+  intendedStudents: number;
   items: RequestItem[];
   purpose: string;
   requestedFor: string;

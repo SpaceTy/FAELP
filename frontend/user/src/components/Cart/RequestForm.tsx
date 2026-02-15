@@ -11,6 +11,7 @@ interface RequestFormProps {
 export function RequestForm({ items, onSuccess }: RequestFormProps) {
   const [deliveryDate, setDeliveryDate] = useState('');
   const [plannedReturnDate, setPlannedReturnDate] = useState('');
+  const [intendedStudents, setIntendedStudents] = useState('1');
   const [shippingName, setShippingName] = useState('');
   const [addressLine1, setAddressLine1] = useState('');
   const [addressLine2, setAddressLine2] = useState('');
@@ -28,10 +29,16 @@ export function RequestForm({ items, onSuccess }: RequestFormProps) {
     e.preventDefault();
     setError('');
     setIsSubmitting(true);
+    const parsedIntendedStudents = Number.parseInt(intendedStudents, 10);
 
     const token = authSignal.value?.token;
     if (!token) {
       setError('Sie müssen angemeldet sein, um eine Anfrage zu senden.');
+      setIsSubmitting(false);
+      return;
+    }
+    if (!Number.isFinite(parsedIntendedStudents) || parsedIntendedStudents <= 0) {
+      setError('Bitte geben Sie eine gültige Anzahl geplanter Schüler:innen an.');
       setIsSubmitting(false);
       return;
     }
@@ -40,6 +47,7 @@ export function RequestForm({ items, onSuccess }: RequestFormProps) {
       const input: CreateRequestInput = {
         deliveryDate,
         plannedReturnDate,
+        intendedStudents: parsedIntendedStudents,
         shippingName,
         addressLine1,
         addressLine2: addressLine2 || undefined,
@@ -87,6 +95,21 @@ export function RequestForm({ items, onSuccess }: RequestFormProps) {
           value={plannedReturnDate}
           onInput={(e) => setPlannedReturnDate(e.currentTarget.value)}
           min={deliveryDate || minDateStr}
+          required
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-text-primary mb-1">
+          Geplante Anzahl Schüler:innen
+        </label>
+        <input
+          type="number"
+          value={intendedStudents}
+          onInput={(e) => setIntendedStudents(e.currentTarget.value)}
+          min="1"
+          step="1"
           required
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
         />

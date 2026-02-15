@@ -20,6 +20,7 @@ type RequestHandler struct {
 type createRequestRequest struct {
 	DeliveryDate         string `json:"deliveryDate"`
 	PlannedReturnDate    string `json:"plannedReturnDate"`
+	IntendedStudents     int    `json:"intendedStudents"`
 	ShippingCustomerName string `json:"shippingName"`
 	ShippingAddressLine1 string `json:"addressLine1"`
 	ShippingAddressLine2 string `json:"addressLine2"`
@@ -93,6 +94,11 @@ func (h *RequestHandler) CreateRequest(w http.ResponseWriter, r *http.Request) {
 	if req.PlannedReturnDate == "" {
 		slog.Info("create_request_validation_failed", "field", "planned_return_date", "reason", "empty")
 		writeError(w, http.StatusBadRequest, "validation_error", "Planned return date is required")
+		return
+	}
+	if req.IntendedStudents <= 0 {
+		slog.Info("create_request_validation_failed", "field", "intended_students", "reason", "not_positive", "value", req.IntendedStudents)
+		writeError(w, http.StatusBadRequest, "validation_error", "Intended students must be greater than 0")
 		return
 	}
 	if len(req.Items) == 0 {
@@ -184,6 +190,7 @@ func (h *RequestHandler) CreateRequest(w http.ResponseWriter, r *http.Request) {
 		CustomerID:           claims.CustomerID,
 		DeliveryDate:         deliveryDate,
 		PlannedReturnDate:    plannedReturnDate,
+		IntendedStudents:     req.IntendedStudents,
 		ShippingCustomerName: strings.TrimSpace(req.ShippingCustomerName),
 		ShippingAddressLine1: strings.TrimSpace(req.ShippingAddressLine1),
 		ShippingAddressLine2: strings.TrimSpace(req.ShippingAddressLine2),

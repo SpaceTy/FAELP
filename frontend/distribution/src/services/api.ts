@@ -249,6 +249,7 @@ export interface IncomingRequest {
   customerId: string;
   deliveryDate: string;
   plannedReturnDate?: string;
+  intendedStudents: number;
   status: RequestStatus;
   archived: boolean;
   outgoingTrackingCode?: string;

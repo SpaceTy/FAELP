@@ -51,6 +51,7 @@ type incomingRequest struct {
 	CustomerID           string                `json:"customerId"`
 	DeliveryDate         string                `json:"deliveryDate"`
 	PlannedReturnDate    string                `json:"plannedReturnDate,omitempty"`
+	IntendedStudents     int                   `json:"intendedStudents"`
 	Status               string                `json:"status"`
 	Archived             bool                  `json:"archived"`
 	OutgoingTrackingCode string                `json:"outgoingTrackingCode,omitempty"`
@@ -164,6 +165,7 @@ func (h *RequestsHandler) ListIncomingRequests(w http.ResponseWriter, r *http.Re
 			CustomerID:           req.CustomerID,
 			DeliveryDate:         req.DeliveryDate.Format("2006-01-02"),
 			PlannedReturnDate:    formatOptionalDate(req.PlannedReturnDate),
+			IntendedStudents:     req.IntendedStudents,
 			Status:               req.Status,
 			Archived:             req.Archived,
 			OutgoingTrackingCode: derefString(req.OutgoingTrackingCode),

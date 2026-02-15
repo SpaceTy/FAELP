@@ -232,6 +232,7 @@ export function PackagingPage() {
                 <p><strong>City:</strong> {selectedOrder.city}</p>
                 <p><strong>Zip:</strong> {selectedOrder.zipCode}</p>
                 <p><strong>Delivery Date:</strong> {formatDate(selectedOrder.deliveryDate)}</p>
+                <p><strong>Intended Students:</strong> {selectedOrder.intendedStudents}</p>
               </div>
 
               <div className="mb-4">

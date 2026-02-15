@@ -14,6 +14,7 @@ const mockRequests: BorrowRequest[] = [
     requesterOrg: 'Red Cross Berlin',
     requesterEmail: 'thomas.weber@redcross.de',
     requesterPhone: '+49 30 12345678',
+    intendedStudents: 30,
     items: [
       { materialTypeId: 'tourniquet-001', materialName: 'Tourniquet', quantity: 5 },
       { materialTypeId: 'bandage-001', materialName: 'Fixierbinde', quantity: 10 },
@@ -33,6 +34,7 @@ const mockRequests: BorrowRequest[] = [
     requesterOrg: 'Hospital Training Dept',
     requesterEmail: 's.mueller@hospital.de',
     requesterPhone: '+49 30 87654321',
+    intendedStudents: 18,
     items: [
       { materialTypeId: 'aed-001', materialName: 'AED Trainer', quantity: 2 },
       { materialTypeId: 'manikin-001', materialName: 'QCPR Little Anne', quantity: 5 },
@@ -51,6 +53,7 @@ const mockRequests: BorrowRequest[] = [
     requesterOrg: 'Sports Club Munich',
     requesterEmail: 'klaus@sportsclub.de',
     requesterPhone: '+49 89 1234567',
+    intendedStudents: 24,
     items: [
       { materialTypeId: 'triangle-001', materialName: 'Dreieckstuch', quantity: 10 },
       { materialTypeId: 'blanket-001', materialName: 'Rettungsdecke', quantity: 5 },
@@ -69,6 +72,7 @@ const mockRequests: BorrowRequest[] = [
     requesterOrg: 'Company Safety Team',
     requesterEmail: 'maria.schmidt@company.de',
     requesterPhone: '+49 40 98765432',
+    intendedStudents: 15,
     items: [
       { materialTypeId: 'family-set', materialName: 'Laerdal Family Satz', quantity: 1 },
       { materialTypeId: 'mat-001', materialName: 'Apollo Uebungsmatte', quantity: 10 },
@@ -87,6 +91,7 @@ const mockRequests: BorrowRequest[] = [
     requesterOrg: 'Fire Department',
     requesterEmail: 'p.johnson@fire.de',
     requesterPhone: '+49 221 11223344',
+    intendedStudents: 12,
     items: [
       { materialTypeId: 'trauma-kit', materialName: 'Trauma Kit', quantity: 3 },
     ],
@@ -104,6 +109,7 @@ const mockRequests: BorrowRequest[] = [
     requesterOrg: 'School District',
     requesterEmail: 'anna.fischer@schools.de',
     requesterPhone: '+49 89 55667788',
+    intendedStudents: 40,
     items: [
       { materialTypeId: 'mini-anne', materialName: 'Mini Anne', quantity: 20 },
     ],
@@ -121,6 +127,7 @@ const mockRequests: BorrowRequest[] = [
     requesterOrg: 'Community Center',
     requesterEmail: 'john@community.de',
     requesterPhone: '+49 30 33445566',
+    intendedStudents: 10,
     items: [
       { materialTypeId: 'aed-001', materialName: 'AED Trainer', quantity: 1 },
       { materialTypeId: 'manikin-002', materialName: 'QCPR Junior Puppe', quantity: 2 },
@@ -139,6 +146,7 @@ const mockRequests: BorrowRequest[] = [
     requesterOrg: 'Nursing School',
     requesterEmail: 'lisa.wagner@nursing.de',
     requesterPhone: '+49 69 77889900',
+    intendedStudents: 22,
     items: [
       { materialTypeId: 'wound-kit', materialName: 'Wound Care Kit', quantity: 5 },
       { materialTypeId: 'bandage-002', materialName: 'Elastische Binde', quantity: 15 },

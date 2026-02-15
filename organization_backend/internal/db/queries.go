@@ -509,11 +509,11 @@ func (s *Store) CreateRequest(ctx context.Context, input domain.CreateRequestInp
 	var plannedReturnDate sql.NullTime
 	var metadataBytes []byte
 	err = tx.QueryRowContext(ctx, `
-		INSERT INTO requests (customer_id, delivery_date, planned_return_date, status, approved_distribution_center_id, shipping_customer_name, shipping_address_line1, shipping_address_line2, shipping_city, shipping_zip_code, metadata)
-		VALUES ($1, $2, $3, 'pending', NULL, $4, $5, $6, $7, $8, $9)
-		RETURNING id, customer_id, delivery_date, planned_return_date, status, archived, approved_distribution_center_id, "outgoingTrackingCode", shipping_customer_name, shipping_address_line1, shipping_address_line2, shipping_city, shipping_zip_code, metadata, created_at, updated_at
-	`, input.CustomerID, input.DeliveryDate, input.PlannedReturnDate, input.ShippingCustomerName, input.ShippingAddressLine1, input.ShippingAddressLine2, input.ShippingCity, input.ShippingZipCode, metadataJSON).Scan(
-		&req.ID, &req.CustomerID, &req.DeliveryDate, &plannedReturnDate, &req.Status, &req.Archived, &approvedDistributionCenterID, &outgoingTrackingCode, &req.ShippingCustomerName,
+		INSERT INTO requests (customer_id, delivery_date, planned_return_date, intended_students, status, approved_distribution_center_id, shipping_customer_name, shipping_address_line1, shipping_address_line2, shipping_city, shipping_zip_code, metadata)
+		VALUES ($1, $2, $3, $4, 'pending', NULL, $5, $6, $7, $8, $9, $10)
+		RETURNING id, customer_id, delivery_date, planned_return_date, intended_students, status, archived, approved_distribution_center_id, "outgoingTrackingCode", shipping_customer_name, shipping_address_line1, shipping_address_line2, shipping_city, shipping_zip_code, metadata, created_at, updated_at
+	`, input.CustomerID, input.DeliveryDate, input.PlannedReturnDate, input.IntendedStudents, input.ShippingCustomerName, input.ShippingAddressLine1, input.ShippingAddressLine2, input.ShippingCity, input.ShippingZipCode, metadataJSON).Scan(
+		&req.ID, &req.CustomerID, &req.DeliveryDate, &plannedReturnDate, &req.IntendedStudents, &req.Status, &req.Archived, &approvedDistributionCenterID, &outgoingTrackingCode, &req.ShippingCustomerName,
 		&req.ShippingAddressLine1, &req.ShippingAddressLine2, &req.ShippingCity, &req.ShippingZipCode,
 		&metadataBytes, &req.CreatedAt, &req.UpdatedAt,
 	)
@@ -596,7 +596,7 @@ func (s *Store) ListRequestsByCustomerID(ctx context.Context, customerID string)
 
 	// First, get all requests for the customer
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT id, customer_id, delivery_date, planned_return_date, status, archived, approved_distribution_center_id, shipping_customer_name,
+		SELECT id, customer_id, delivery_date, planned_return_date, intended_students, status, archived, approved_distribution_center_id, shipping_customer_name,
 		       "outgoingTrackingCode", shipping_address_line1, shipping_address_line2, shipping_city,
 		       shipping_zip_code, metadata, created_at, updated_at
 		FROM requests
@@ -617,7 +617,7 @@ func (s *Store) ListRequestsByCustomerID(ctx context.Context, customerID string)
 		var plannedReturnDate sql.NullTime
 		var metadataBytes []byte
 		err := rows.Scan(
-			&req.ID, &req.CustomerID, &req.DeliveryDate, &plannedReturnDate, &req.Status, &req.Archived, &approvedDistributionCenterID, &req.ShippingCustomerName, &outgoingTrackingCode,
+			&req.ID, &req.CustomerID, &req.DeliveryDate, &plannedReturnDate, &req.IntendedStudents, &req.Status, &req.Archived, &approvedDistributionCenterID, &req.ShippingCustomerName, &outgoingTrackingCode,
 			&req.ShippingAddressLine1, &req.ShippingAddressLine2, &req.ShippingCity, &req.ShippingZipCode,
 			&metadataBytes, &req.CreatedAt, &req.UpdatedAt,
 		)
@@ -690,7 +690,7 @@ func (s *Store) ListRequests(ctx context.Context, status, distributionCenterID s
 	slog.Info("store_list_all_requests_started", "status", status, "distribution_center_id", distributionCenterID, "archived", archived)
 
 	query := `
-		SELECT id, customer_id, delivery_date, planned_return_date, status, archived, approved_distribution_center_id, shipping_customer_name,
+		SELECT id, customer_id, delivery_date, planned_return_date, intended_students, status, archived, approved_distribution_center_id, shipping_customer_name,
 		       "outgoingTrackingCode", shipping_address_line1, shipping_address_line2, shipping_city,
 		       shipping_zip_code, metadata, created_at, updated_at
 		FROM requests
@@ -731,7 +731,7 @@ func (s *Store) ListRequests(ctx context.Context, status, distributionCenterID s
 		var plannedReturnDate sql.NullTime
 		var metadataBytes []byte
 		err := rows.Scan(
-			&req.ID, &req.CustomerID, &req.DeliveryDate, &plannedReturnDate, &req.Status, &req.Archived, &approvedDistributionCenterID, &req.ShippingCustomerName, &outgoingTrackingCode,
+			&req.ID, &req.CustomerID, &req.DeliveryDate, &plannedReturnDate, &req.IntendedStudents, &req.Status, &req.Archived, &approvedDistributionCenterID, &req.ShippingCustomerName, &outgoingTrackingCode,
 			&req.ShippingAddressLine1, &req.ShippingAddressLine2, &req.ShippingCity, &req.ShippingZipCode,
 			&metadataBytes, &req.CreatedAt, &req.UpdatedAt,
 		)
@@ -809,10 +809,10 @@ func (s *Store) ApproveRequest(ctx context.Context, requestID, distributionCente
 		UPDATE requests
 		SET status = 'approved', approved_distribution_center_id = $2
 		WHERE id = $1 AND status = 'pending' AND archived = FALSE
-		RETURNING id, customer_id, delivery_date, planned_return_date, status, archived, approved_distribution_center_id, "outgoingTrackingCode", shipping_customer_name,
+		RETURNING id, customer_id, delivery_date, planned_return_date, intended_students, status, archived, approved_distribution_center_id, "outgoingTrackingCode", shipping_customer_name,
 		          shipping_address_line1, shipping_address_line2, shipping_city, shipping_zip_code, metadata, created_at, updated_at
 	`, requestID, distributionCenterID).Scan(
-		&req.ID, &req.CustomerID, &req.DeliveryDate, &plannedReturnDate, &req.Status, &req.Archived, &approvedDistributionCenterID, &outgoingTrackingCode, &req.ShippingCustomerName,
+		&req.ID, &req.CustomerID, &req.DeliveryDate, &plannedReturnDate, &req.IntendedStudents, &req.Status, &req.Archived, &approvedDistributionCenterID, &outgoingTrackingCode, &req.ShippingCustomerName,
 		&req.ShippingAddressLine1, &req.ShippingAddressLine2, &req.ShippingCity, &req.ShippingZipCode,
 		&metadataBytes, &req.CreatedAt, &req.UpdatedAt,
 	)
@@ -892,10 +892,10 @@ func (s *Store) MarkRequestInAction(ctx context.Context, requestID, distribution
 		UPDATE requests
 		SET status = 'inAction', "outgoingTrackingCode" = $3
 		WHERE id = $1 AND status = 'approved' AND archived = FALSE AND approved_distribution_center_id = $2
-		RETURNING id, customer_id, delivery_date, planned_return_date, status, archived, approved_distribution_center_id, "outgoingTrackingCode", shipping_customer_name,
+		RETURNING id, customer_id, delivery_date, planned_return_date, intended_students, status, archived, approved_distribution_center_id, "outgoingTrackingCode", shipping_customer_name,
 		          shipping_address_line1, shipping_address_line2, shipping_city, shipping_zip_code, metadata, created_at, updated_at
 	`, requestID, distributionCenterID, outgoingTrackingCode).Scan(
-		&req.ID, &req.CustomerID, &req.DeliveryDate, &plannedReturnDate, &req.Status, &req.Archived, &approvedDistributionCenterID, &currentOutgoingTrackingCode, &req.ShippingCustomerName,
+		&req.ID, &req.CustomerID, &req.DeliveryDate, &plannedReturnDate, &req.IntendedStudents, &req.Status, &req.Archived, &approvedDistributionCenterID, &currentOutgoingTrackingCode, &req.ShippingCustomerName,
 		&req.ShippingAddressLine1, &req.ShippingAddressLine2, &req.ShippingCity, &req.ShippingZipCode,
 		&metadataBytes, &req.CreatedAt, &req.UpdatedAt,
 	)
@@ -975,10 +975,10 @@ func (s *Store) CancelAssignedRequest(ctx context.Context, requestID, distributi
 		UPDATE requests
 		SET status = 'pending', approved_distribution_center_id = NULL, "outgoingTrackingCode" = NULL
 		WHERE id = $1 AND status IN ('approved', 'inAction') AND archived = FALSE AND approved_distribution_center_id = $2
-		RETURNING id, customer_id, delivery_date, planned_return_date, status, archived, approved_distribution_center_id, "outgoingTrackingCode", shipping_customer_name,
+		RETURNING id, customer_id, delivery_date, planned_return_date, intended_students, status, archived, approved_distribution_center_id, "outgoingTrackingCode", shipping_customer_name,
 		          shipping_address_line1, shipping_address_line2, shipping_city, shipping_zip_code, metadata, created_at, updated_at
 	`, requestID, distributionCenterID).Scan(
-		&req.ID, &req.CustomerID, &req.DeliveryDate, &plannedReturnDate, &req.Status, &req.Archived, &approvedDistributionCenterID, &currentOutgoingTrackingCode, &req.ShippingCustomerName,
+		&req.ID, &req.CustomerID, &req.DeliveryDate, &plannedReturnDate, &req.IntendedStudents, &req.Status, &req.Archived, &approvedDistributionCenterID, &currentOutgoingTrackingCode, &req.ShippingCustomerName,
 		&req.ShippingAddressLine1, &req.ShippingAddressLine2, &req.ShippingCity, &req.ShippingZipCode,
 		&metadataBytes, &req.CreatedAt, &req.UpdatedAt,
 	)
@@ -1060,10 +1060,10 @@ func (s *Store) ArchiveRequest(ctx context.Context, requestID, distributionCente
 		WHERE id = $1
 		  AND archived = FALSE
 		  AND (approved_distribution_center_id IS NULL OR approved_distribution_center_id = $2)
-		RETURNING id, customer_id, delivery_date, planned_return_date, status, archived, approved_distribution_center_id, "outgoingTrackingCode", shipping_customer_name,
+		RETURNING id, customer_id, delivery_date, planned_return_date, intended_students, status, archived, approved_distribution_center_id, "outgoingTrackingCode", shipping_customer_name,
 		          shipping_address_line1, shipping_address_line2, shipping_city, shipping_zip_code, metadata, created_at, updated_at
 	`, requestID, distributionCenterID).Scan(
-		&req.ID, &req.CustomerID, &req.DeliveryDate, &plannedReturnDate, &req.Status, &req.Archived, &approvedDistributionCenterID, &outgoingTrackingCode, &req.ShippingCustomerName,
+		&req.ID, &req.CustomerID, &req.DeliveryDate, &plannedReturnDate, &req.IntendedStudents, &req.Status, &req.Archived, &approvedDistributionCenterID, &outgoingTrackingCode, &req.ShippingCustomerName,
 		&req.ShippingAddressLine1, &req.ShippingAddressLine2, &req.ShippingCity, &req.ShippingZipCode,
 		&metadataBytes, &req.CreatedAt, &req.UpdatedAt,
 	)
@@ -1148,10 +1148,10 @@ func (s *Store) UnarchiveRequest(ctx context.Context, requestID, distributionCen
 		WHERE id = $1
 		  AND archived = TRUE
 		  AND (approved_distribution_center_id IS NULL OR approved_distribution_center_id = $2)
-		RETURNING id, customer_id, delivery_date, planned_return_date, status, archived, approved_distribution_center_id, "outgoingTrackingCode", shipping_customer_name,
+		RETURNING id, customer_id, delivery_date, planned_return_date, intended_students, status, archived, approved_distribution_center_id, "outgoingTrackingCode", shipping_customer_name,
 		          shipping_address_line1, shipping_address_line2, shipping_city, shipping_zip_code, metadata, created_at, updated_at
 	`, requestID, distributionCenterID).Scan(
-		&req.ID, &req.CustomerID, &req.DeliveryDate, &plannedReturnDate, &req.Status, &req.Archived, &approvedDistributionCenterID, &outgoingTrackingCode, &req.ShippingCustomerName,
+		&req.ID, &req.CustomerID, &req.DeliveryDate, &plannedReturnDate, &req.IntendedStudents, &req.Status, &req.Archived, &approvedDistributionCenterID, &outgoingTrackingCode, &req.ShippingCustomerName,
 		&req.ShippingAddressLine1, &req.ShippingAddressLine2, &req.ShippingCity, &req.ShippingZipCode,
 		&metadataBytes, &req.CreatedAt, &req.UpdatedAt,
 	)

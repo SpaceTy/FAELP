@@ -70,6 +70,7 @@ function mapIncomingRequest(input: IncomingRequest): BorrowRequest {
     requesterOrg: `Customer ${input.customerId.slice(0, 8)}`,
     requesterEmail: '-',
     requesterPhone: '-',
+    intendedStudents: input.intendedStudents,
     items: input.items.map((item) => ({
       materialTypeId: item.materialTypeId,
       materialName: item.materialName,
@@ -461,6 +462,7 @@ export function RequestsPage() {
               <div>
                 <h4 className="font-semibold mb-2">Details</h4>
                 <p><strong>Purpose:</strong> {selectedRequest.purpose}</p>
+                <p><strong>Intended Students:</strong> {selectedRequest.intendedStudents}</p>
                 <p><strong>Requested For:</strong> {formatDate(selectedRequest.requestedFor)}</p>
                 <p><strong>Status:</strong> {statusLabel(selectedRequest.status)}</p>
               </div>
