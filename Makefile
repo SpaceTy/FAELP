@@ -9,6 +9,8 @@ DISTADMIN_FRONTEND_DIR=frontend/distadmin
 DISTRIBUTION_FRONTEND_DIR=frontend/distribution
 DEPLOY_ORG_TEMPLATE_DIR=deployment/orgbackend/template
 DEPLOY_ORG_CONTAINER_DIR=deployment/orgbackend/container
+DEPLOY_DIST_TEMPLATE_DIR=deployment/distbackend/template
+DEPLOY_DIST_CONTAINER_DIR=deployment/distbackend/container
 
 .PHONY: dev dev-org dev-dist dev-all dev-backends \
 	install install-org install-dist \
@@ -16,6 +18,7 @@ DEPLOY_ORG_CONTAINER_DIR=deployment/orgbackend/container
 	clean clean-org clean-dist clean-all \
 	test test-org test-dist \
 	deploy-org package-deploy-org \
+	deploy-dist package-deploy-dist \
 	setup setup-db help
 
 # =============================================================================
@@ -152,6 +155,23 @@ package-deploy-org:
 
 deploy-org: build-org-backend build-user build-orgadmin package-deploy-org
 
+package-deploy-dist:
+	@echo "Packaging dist deployment bundle..."
+	rm -rf $(DEPLOY_DIST_CONTAINER_DIR)
+	mkdir -p $(DEPLOY_DIST_CONTAINER_DIR)/app/frontend/distribution
+	mkdir -p $(DEPLOY_DIST_CONTAINER_DIR)/app/frontend/distadmin
+	cp -R $(DEPLOY_DIST_TEMPLATE_DIR)/. $(DEPLOY_DIST_CONTAINER_DIR)/
+	cp $(DIST_BACKEND_DIR)/bin/distbackend $(DEPLOY_DIST_CONTAINER_DIR)/app/distbackend
+	cp -R $(DISTRIBUTION_FRONTEND_DIR)/dist $(DEPLOY_DIST_CONTAINER_DIR)/app/frontend/distribution/
+	cp -R $(DISTADMIN_FRONTEND_DIR)/dist $(DEPLOY_DIST_CONTAINER_DIR)/app/frontend/distadmin/
+	if [ -f $(DEPLOY_DIST_CONTAINER_DIR)/.env.example ]; then cp $(DEPLOY_DIST_CONTAINER_DIR)/.env.example $(DEPLOY_DIST_CONTAINER_DIR)/.env; fi
+	rm -f $(DEPLOY_DIST_CONTAINER_DIR)/.env.example
+	chmod +x $(DEPLOY_DIST_CONTAINER_DIR)/scripts/entrypoint.sh
+	chmod +x $(DEPLOY_DIST_CONTAINER_DIR)/scripts/setup_database.sh
+	@echo "Dist deployment bundle ready at $(DEPLOY_DIST_CONTAINER_DIR)"
+
+deploy-dist: build-dist-backend build-distribution build-distadmin package-deploy-dist
+
 # =============================================================================
 # Testing
 # =============================================================================
@@ -249,6 +269,7 @@ setup: install setup-db
 	@echo ""
 	@echo "DEPLOYMENT:"
 	@echo "  make deploy-org    - Build and package orgbackend deployment bundle"
+	@echo "  make deploy-dist   - Build and package distbackend deployment bundle"
 	@echo ""
 	@echo "TESTING:"
 	@echo "  make test          - Run all Go tests"

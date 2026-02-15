@@ -1,0 +1,59 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: docker.io/library/postgres:16
+    container_name: faelp-dist-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5433}:5432"
+    volumes:
+      - dist-postgres-data:/var/lib/postgresql/data
+
+  dist-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: faelp-dist-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-changeme123}
+      FRONTEND_DISTRIBUTION_ENABLED: ${FRONTEND_DISTRIBUTION_ENABLED:-true}
+      FRONTEND_DISTRIBUTION_PATH: ${FRONTEND_DISTRIBUTION_PATH:-/app/frontend/distribution/dist}
+      FRONTEND_ADMIN_ENABLED: ${FRONTEND_ADMIN_ENABLED:-true}
+      FRONTEND_ADMIN_PATH: ${FRONTEND_ADMIN_PATH:-/app/frontend/distadmin/dist}
+      FRONTEND_ADMIN_PORT: ${FRONTEND_ADMIN_PORT:-8083}
+      INTERNAL_SOCKET_PATH: ${INTERNAL_SOCKET_PATH:-/var/run/faelp/dist-backend.sock}
+      INTERNAL_SOCKET_ENABLED: ${INTERNAL_SOCKET_ENABLED:-true}
+      ORG_BACKEND_SOCKET_PATH: ${ORG_BACKEND_SOCKET_PATH:-/var/run/faelp/org-backend.sock}
+      DISTRIBUTION_CENTER_ID: ${DISTRIBUTION_CENTER_ID:-}
+      DB_HOST: ${DB_HOST:-postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME:-distdb_dev}
+      DB_USER: ${DB_USER:-app_distbackend_dev}
+      DB_PASSWORD: ${DB_PASSWORD:-password}
+      DB_SSLMODE: ${DB_SSLMODE:-disable}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "127.0.0.1:8081:8081"
+      - "127.0.0.1:8083:8083"
+    volumes:
+      - socket-volume:/var/run/faelp
+      - ./.env:/app/.env
+
+volumes:
+  socket-volume:
+  dist-postgres-data:

@@ -168,9 +168,11 @@ func main() {
 	var adminServer *http.Server
 	if cfg.Frontend.Admin.Enabled && cfg.Frontend.Admin.Port != 0 && cfg.Frontend.Admin.Path != "" {
 		adminMux := http.NewServeMux()
+		adminMux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+		})
 		spaHandler := handlers.NewSPAHandler(cfg.Frontend.Admin.Path)
-		adminMux.Handle("/api/", mux)
-		adminMux.Handle("/health", mux)
 		adminMux.Handle("/", spaHandler)
 
 		adminServer = &http.Server{

@@ -29,6 +29,7 @@ npm-debug.log*
 **/bin/
 bin/
 deployment/orgbackend/container/
+deployment/distbackend/container/
 
 **server
 

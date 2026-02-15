@@ -4,47 +4,46 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
+	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 
+	"github.com/joho/godotenv"
 	"gopkg.in/yaml.v3"
 )
 
 const defaultDatabaseURL = "postgresql://app_distributionbackend_dev:password@localhost:5432/distdb_dev?sslmode=disable"
 
-// AdminConfig holds the initial admin account configuration
 type AdminConfig struct {
 	Username string `yaml:"username"`
 	Password string `yaml:"password"`
 }
 
-// OrgBackendConfig holds configuration for connecting to organization backend
 type OrgBackendConfig struct {
 	URL        string `yaml:"url"`
 	SocketPath string `yaml:"socket_path"`
 	APIKey     string `yaml:"api_key"`
 }
 
-// InternalConfig holds Unix socket configuration for internal communication
 type InternalConfig struct {
 	SocketPath    string `yaml:"socket_path"`
 	SocketEnabled bool   `yaml:"socket_enabled"`
 }
 
-// FrontendConfig for serving static frontend files
 type FrontendConfig struct {
 	Enabled bool   `yaml:"enabled"`
 	Path    string `yaml:"path"`
 }
 
-// AdminFrontendConfig includes port for admin frontends
 type AdminFrontendConfig struct {
 	Enabled bool   `yaml:"enabled"`
 	Port    int    `yaml:"port"`
 	Path    string `yaml:"path"`
 }
 
-// Frontend holds all frontend configurations
 type Frontend struct {
 	Distribution FrontendConfig      `yaml:"distribution"`
 	Admin        AdminFrontendConfig `yaml:"admin"`
@@ -59,15 +58,14 @@ type Config struct {
 	OrgBackend                OrgBackendConfig `yaml:"organization_backend"`
 	Internal                  InternalConfig   `yaml:"internal"`
 	DistributionCenterID      string           `yaml:"distribution_center_id"`
-
-	// Frontend serving configuration
-	Frontend Frontend `yaml:"frontend"`
+	Frontend                  Frontend         `yaml:"frontend"`
 }
 
 func Load() (Config, error) {
+	_ = godotenv.Load(".env")
+
 	var cfg Config
 
-	// Try to load from config.yaml first to get all settings
 	path := os.Getenv("CONFIG_PATH")
 	if path == "" {
 		path = "config.yaml"
@@ -78,11 +76,15 @@ func Load() (Config, error) {
 		if err := yaml.Unmarshal(data, &cfg); err != nil {
 			return Config{}, err
 		}
+	} else if !os.IsNotExist(err) {
+		return Config{}, err
 	}
 
-	// Override with environment variables if set
-	if url := os.Getenv("DATABASE_URL"); url != "" {
-		cfg.DatabaseURL = url
+	databaseURL := strings.TrimSpace(os.Getenv("DATABASE_URL"))
+	if databaseURL != "" && !strings.EqualFold(databaseURL, "replace-me") {
+		cfg.DatabaseURL = databaseURL
+	} else if builtURL, ok := buildDatabaseURLFromEnv(); ok {
+		cfg.DatabaseURL = builtURL
 	}
 	if secret := os.Getenv("JWT_SECRET"); secret != "" {
 		cfg.JWTSecret = secret
@@ -100,7 +102,6 @@ func Load() (Config, error) {
 		cfg.Admin.Password = adminPass
 	}
 
-	// Override organization backend config with environment variables
 	if orgURL := os.Getenv("ORG_BACKEND_URL"); orgURL != "" {
 		cfg.OrgBackend.URL = orgURL
 	}
@@ -111,7 +112,6 @@ func Load() (Config, error) {
 		cfg.OrgBackend.APIKey = apiKey
 	}
 
-	// Override internal socket config with environment variables
 	if socketPath := os.Getenv("INTERNAL_SOCKET_PATH"); socketPath != "" {
 		cfg.Internal.SocketPath = socketPath
 	}
@@ -121,17 +121,38 @@ func Load() (Config, error) {
 		cfg.Internal.SocketEnabled = false
 	}
 
-	// Override distribution center ID with environment variable
 	if dcID := os.Getenv("DISTRIBUTION_CENTER_ID"); dcID != "" {
 		cfg.DistributionCenterID = dcID
 	}
 
-	// Apply defaults
+	if distPath := os.Getenv("FRONTEND_DISTRIBUTION_PATH"); distPath != "" {
+		cfg.Frontend.Distribution.Path = distPath
+	}
+	if distEnabled := os.Getenv("FRONTEND_DISTRIBUTION_ENABLED"); distEnabled == "true" {
+		cfg.Frontend.Distribution.Enabled = true
+	} else if distEnabled == "false" {
+		cfg.Frontend.Distribution.Enabled = false
+	}
+	if adminPath := os.Getenv("FRONTEND_ADMIN_PATH"); adminPath != "" {
+		cfg.Frontend.Admin.Path = adminPath
+	}
+	if adminEnabled := os.Getenv("FRONTEND_ADMIN_ENABLED"); adminEnabled == "true" {
+		cfg.Frontend.Admin.Enabled = true
+	} else if adminEnabled == "false" {
+		cfg.Frontend.Admin.Enabled = false
+	}
+	if adminPort := os.Getenv("FRONTEND_ADMIN_PORT"); adminPort != "" {
+		port, err := strconv.Atoi(adminPort)
+		if err != nil {
+			return Config{}, errors.New("FRONTEND_ADMIN_PORT must be a valid integer")
+		}
+		cfg.Frontend.Admin.Port = port
+	}
+
 	if cfg.DatabaseURL == "" {
 		cfg.DatabaseURL = defaultDatabaseURL
 	}
 
-	// Backwards compatibility: use old config if new org_backend not set
 	if cfg.OrgBackend.URL == "" && cfg.OrganizationBackendURL != "" {
 		cfg.OrgBackend.URL = cfg.OrganizationBackendURL
 	}
@@ -139,19 +160,30 @@ func Load() (Config, error) {
 		cfg.OrgBackend.APIKey = cfg.OrganizationBackendAPIKey
 	}
 
-	// Generate a random JWT secret if not configured (for development only)
-	if cfg.JWTSecret == "" {
-		secret, err := generateRandomSecret(32)
+	jwt := strings.TrimSpace(cfg.JWTSecret)
+	if jwt == "" || strings.EqualFold(jwt, "replace-me") {
+		generated, err := generateJWTSecret()
 		if err != nil {
-			return Config{}, errors.New("JWT_SECRET not configured and failed to generate random secret")
+			return Config{}, fmt.Errorf("failed to generate JWT_SECRET: %w", err)
 		}
-		cfg.JWTSecret = secret
+		cfg.JWTSecret = generated
+	}
+
+	if cfg.Frontend.Distribution.Path == "" && pathExists("/app/frontend/distribution/dist/index.html") {
+		cfg.Frontend.Distribution.Path = "/app/frontend/distribution/dist"
+		cfg.Frontend.Distribution.Enabled = true
+	}
+	if cfg.Frontend.Admin.Path == "" && pathExists("/app/frontend/distadmin/dist/index.html") {
+		cfg.Frontend.Admin.Path = "/app/frontend/distadmin/dist"
+		cfg.Frontend.Admin.Enabled = true
+		if cfg.Frontend.Admin.Port == 0 {
+			cfg.Frontend.Admin.Port = 8083
+		}
 	}
 
 	return cfg, nil
 }
 
-// Validate checks if required configuration is present
 func (c *Config) Validate() error {
 	if c.Admin.Username == "" {
 		return errors.New("admin username is required in config")
@@ -168,10 +200,43 @@ func (c *Config) Validate() error {
 	return nil
 }
 
-func generateRandomSecret(length int) (string, error) {
-	bytes := make([]byte, length)
-	if _, err := rand.Read(bytes); err != nil {
+func pathExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
+}
+
+func generateJWTSecret() (string, error) {
+	const keyBytes = 32
+	buf := make([]byte, keyBytes)
+	if _, err := rand.Read(buf); err != nil {
 		return "", err
 	}
-	return base64.URLEncoding.EncodeToString(bytes), nil
+	return base64.RawURLEncoding.EncodeToString(buf), nil
+}
+
+func buildDatabaseURLFromEnv() (string, bool) {
+	host := strings.TrimSpace(os.Getenv("DB_HOST"))
+	port := strings.TrimSpace(os.Getenv("DB_PORT"))
+	name := strings.TrimSpace(os.Getenv("DB_NAME"))
+	user := strings.TrimSpace(os.Getenv("DB_USER"))
+	password := os.Getenv("DB_PASSWORD")
+	sslMode := strings.TrimSpace(os.Getenv("DB_SSLMODE"))
+	if sslMode == "" {
+		sslMode = "disable"
+	}
+
+	if host == "" || port == "" || name == "" || user == "" || password == "" {
+		return "", false
+	}
+
+	u := &url.URL{
+		Scheme: "postgresql",
+		User:   url.UserPassword(user, password),
+		Host:   host + ":" + port,
+		Path:   name,
+	}
+	q := u.Query()
+	q.Set("sslmode", sslMode)
+	u.RawQuery = q.Encode()
+	return u.String(), true
 }
