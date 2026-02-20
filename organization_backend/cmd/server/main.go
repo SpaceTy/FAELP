@@ -16,6 +16,7 @@ import (
 	"organization_backend/internal/client"
 	"organization_backend/internal/config"
 	"organization_backend/internal/db"
+	"organization_backend/internal/email"
 	"organization_backend/internal/socket"
 )
 
@@ -82,8 +83,17 @@ func main() {
 		Store: store,
 	}
 
+	var emailService *email.Service
+	if cfg.ResendAPIKey != "" {
+		emailService = email.NewService(cfg.ResendAPIKey, cfg.ResendFromEmail)
+		log.Printf("email service initialized with Resend API")
+	} else {
+		log.Printf("email service disabled: RESEND_API_KEY not set")
+	}
+
 	requestHandler := &api.RequestHandler{
-		Store: store,
+		Store:        store,
+		EmailService: emailService,
 	}
 
 	router := api.Routes(handler, authHandler, materialTypeHandler, uploadHandler, dcHandler, requestHandler, cfg.JWTSecret)

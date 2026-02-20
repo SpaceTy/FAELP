@@ -47,10 +47,12 @@ type Frontend struct {
 }
 
 type Config struct {
-	DatabaseURL    string `yaml:"DATABASE_URL"`
-	WorkOSAPIKey   string
-	WorkOSClientID string
-	JWTSecret      string
+	DatabaseURL     string `yaml:"DATABASE_URL"`
+	WorkOSAPIKey    string
+	WorkOSClientID  string
+	JWTSecret       string
+	ResendAPIKey    string
+	ResendFromEmail string
 
 	// Internal communication config
 	Internal InternalConfig `yaml:"internal"`
@@ -98,6 +100,12 @@ func Load() (Config, error) {
 	}
 	if jwtSecret := os.Getenv("JWT_SECRET"); jwtSecret != "" {
 		cfg.JWTSecret = jwtSecret
+	}
+	if resendAPIKey := os.Getenv("RESEND_API_KEY"); resendAPIKey != "" {
+		cfg.ResendAPIKey = resendAPIKey
+	}
+	if resendFromEmail := strings.TrimSpace(os.Getenv("RESEND_FROM_EMAIL")); resendFromEmail != "" {
+		cfg.ResendFromEmail = resendFromEmail
 	}
 
 	// Override internal config with environment variables if set

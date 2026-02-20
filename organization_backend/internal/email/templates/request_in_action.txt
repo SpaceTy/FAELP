@@ -1,0 +1,9 @@
+Dear {{.CustomerName}},
+
+Good news! Your material request (#{{.RequestID}}) has been shipped and is now in action.
+
+Tracking Code: {{.TrackingCode}}
+
+You can use this tracking code to monitor the delivery status of your materials.
+
+Thank you for using FAELP.

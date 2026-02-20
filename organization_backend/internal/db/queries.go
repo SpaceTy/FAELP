@@ -1230,3 +1230,14 @@ func (s *Store) UnarchiveRequest(ctx context.Context, requestID, distributionCen
 
 	return req, nil
 }
+
+func (s *Store) GetRequestStatus(ctx context.Context, requestID string) string {
+	var status string
+	err := s.db.QueryRowContext(ctx, `
+		SELECT status FROM requests WHERE id = $1
+	`, requestID).Scan(&status)
+	if err != nil {
+		return ""
+	}
+	return status
+}

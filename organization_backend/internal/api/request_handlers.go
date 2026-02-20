@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -11,10 +12,12 @@ import (
 	"github.com/go-chi/chi/v5"
 	"organization_backend/internal/db"
 	"organization_backend/internal/domain"
+	"organization_backend/internal/email"
 )
 
 type RequestHandler struct {
-	Store *db.Store
+	Store        *db.Store
+	EmailService *email.Service
 }
 
 type createRequestRequest struct {
@@ -385,6 +388,10 @@ func (h *RequestHandler) MarkRequestInActionForDistribution(w http.ResponseWrite
 		return
 	}
 
+	if h.EmailService != nil && updated.CustomerID != "" {
+		h.sendStatusNotificationAsync(updated, "approved", "inAction", req.OutgoingTrackingCode)
+	}
+
 	writeJSON(w, http.StatusOK, updated)
 }
 
@@ -407,6 +414,12 @@ func (h *RequestHandler) CancelAssignedRequestForDistribution(w http.ResponseWri
 		return
 	}
 
+	previousStatus := ""
+	statusRow := h.Store.GetRequestStatus(r.Context(), requestID)
+	if statusRow != "" {
+		previousStatus = statusRow
+	}
+
 	updated, err := h.Store.CancelAssignedRequest(r.Context(), requestID, req.DistributionCenterID)
 	if err != nil {
 		switch {
@@ -420,6 +433,10 @@ func (h *RequestHandler) CancelAssignedRequestForDistribution(w http.ResponseWri
 			writeError(w, http.StatusInternalServerError, "update_failed", "Failed to cancel request")
 		}
 		return
+	}
+
+	if h.EmailService != nil && updated.CustomerID != "" && previousStatus == "inAction" {
+		h.sendStatusNotificationAsync(updated, previousStatus, "pending", "")
 	}
 
 	writeJSON(w, http.StatusOK, updated)
@@ -506,4 +523,38 @@ func isValidRequestStatus(status string) bool {
 	default:
 		return false
 	}
+}
+
+func (h *RequestHandler) sendStatusNotification(ctx context.Context, req domain.Request, previousStatus, newStatus, trackingCode string) {
+	customer, err := h.Store.GetCustomerByID(ctx, req.CustomerID)
+	if err != nil {
+		slog.Error("failed_to_get_customer_for_notification", "request_id", req.ID, "customer_id", req.CustomerID, "error", err.Error())
+		return
+	}
+
+	customerName := customer.Name
+	if customerName == "" {
+		customerName = customer.Email
+	}
+
+	params := email.RequestStatusNotificationParams{
+		CustomerName:   customerName,
+		CustomerEmail:  customer.Email,
+		RequestID:      req.ID,
+		PreviousStatus: previousStatus,
+		NewStatus:      newStatus,
+		TrackingCode:   trackingCode,
+	}
+
+	if err := h.EmailService.SendRequestStatusNotification(ctx, params); err != nil {
+		slog.Error("failed_to_send_status_notification", "request_id", req.ID, "error", err.Error())
+	}
+}
+
+func (h *RequestHandler) sendStatusNotificationAsync(req domain.Request, previousStatus, newStatus, trackingCode string) {
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		h.sendStatusNotification(ctx, req, previousStatus, newStatus, trackingCode)
+	}()
 }
