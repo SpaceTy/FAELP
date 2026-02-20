@@ -159,7 +159,7 @@ func main() {
 	}
 
 	server := &http.Server{
-		Addr:              ":8081",
+		Addr:              fmt.Sprintf(":%d", cfg.Frontend.Distribution.Port),
 		Handler:           mux,
 		ReadHeaderTimeout: 5 * time.Second,
 	}

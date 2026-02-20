@@ -30,6 +30,7 @@ admin:
 frontend:
   distribution:
     enabled: true
+    port: 8081
     path: "../frontend/distribution/dist"
   admin:
     enabled: true

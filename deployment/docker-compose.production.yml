@@ -87,11 +87,12 @@ services:
       INTERNAL_SOCKET_PATH: /var/run/faelp/dist-backend.sock
       INTERNAL_SOCKET_ENABLED: "true"
       ORG_BACKEND_SOCKET_PATH: /var/run/faelp/org-backend.sock
+      FRONTEND_DISTRIBUTION_PORT: ${DIST_FRONTEND_PORT:-8081}
       FRONTEND_DISTRIBUTION_PATH: /app/frontend/distribution/dist
       FRONTEND_ADMIN_PATH: /app/frontend/distadmin/dist
       FRONTEND_ADMIN_PORT: 8083
     ports:
-      - "127.0.0.1:${DIST_API_PORT:-8081}:8081"
+      - "127.0.0.1:${DIST_FRONTEND_PORT:-8081}:${DIST_FRONTEND_PORT:-8081}"
       - "127.0.0.1:${DIST_ADMIN_PORT:-8083}:8083"
     volumes:
       - socket-volume:/var/run/faelp

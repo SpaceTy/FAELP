@@ -35,6 +35,7 @@ type InternalConfig struct {
 
 type FrontendConfig struct {
 	Enabled bool   `yaml:"enabled"`
+	Port    int    `yaml:"port"`
 	Path    string `yaml:"path"`
 }
 
@@ -133,6 +134,13 @@ func Load() (Config, error) {
 	} else if distEnabled == "false" {
 		cfg.Frontend.Distribution.Enabled = false
 	}
+	if distPort := os.Getenv("FRONTEND_DISTRIBUTION_PORT"); distPort != "" {
+		port, err := strconv.Atoi(distPort)
+		if err != nil {
+			return Config{}, errors.New("FRONTEND_DISTRIBUTION_PORT must be a valid integer")
+		}
+		cfg.Frontend.Distribution.Port = port
+	}
 	if adminPath := os.Getenv("FRONTEND_ADMIN_PATH"); adminPath != "" {
 		cfg.Frontend.Admin.Path = adminPath
 	}
@@ -172,6 +180,9 @@ func Load() (Config, error) {
 	if cfg.Frontend.Distribution.Path == "" && pathExists("/app/frontend/distribution/dist/index.html") {
 		cfg.Frontend.Distribution.Path = "/app/frontend/distribution/dist"
 		cfg.Frontend.Distribution.Enabled = true
+	}
+	if cfg.Frontend.Distribution.Port == 0 {
+		cfg.Frontend.Distribution.Port = 8081
 	}
 	if cfg.Frontend.Admin.Path == "" && pathExists("/app/frontend/distadmin/dist/index.html") {
 		cfg.Frontend.Admin.Path = "/app/frontend/distadmin/dist"
