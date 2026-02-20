@@ -16,6 +16,7 @@ DEPLOY_DIST_ENV_DEV=deployment/distbackend/.env.dev
 DEPLOY_ORG_ENV_DEV_TEMPLATE=$(DEPLOY_ORG_TEMPLATE_DIR)/.env.dev
 DEPLOY_DIST_ENV_DEV_TEMPLATE=$(DEPLOY_DIST_TEMPLATE_DIR)/.env.dev
 DEPLOY_BUNDLE_SCRIPT=deployment/scripts/create_release_tarball.sh
+DEPLOY_SYNC_ENV_SCRIPT=deployment/scripts/sync_compose_env.sh
 
 .PHONY: dev dev-org dev-dist dev-all dev-backends \
 	install install-org install-dist \
@@ -24,6 +25,7 @@ DEPLOY_BUNDLE_SCRIPT=deployment/scripts/create_release_tarball.sh
 	test test-org test-dist \
 	deploy-org package-deploy-org \
 	deploy-dist package-deploy-dist \
+	sync-deploy-env \
 	package-release \
 	setup setup-db help
 
@@ -172,7 +174,7 @@ package-deploy-org:
 	chmod +x $(DEPLOY_ORG_CONTAINER_DIR)/scripts/setup_database.sh
 	@echo "Org deployment bundle ready at $(DEPLOY_ORG_CONTAINER_DIR)"
 
-deploy-org: build-org-backend build-user build-orgadmin package-deploy-org
+deploy-org: build-org-backend build-user build-orgadmin package-deploy-org sync-deploy-env
 
 package-deploy-dist:
 	@echo "Packaging dist deployment bundle..."
@@ -202,7 +204,11 @@ package-deploy-dist:
 	chmod +x $(DEPLOY_DIST_CONTAINER_DIR)/scripts/setup_database.sh
 	@echo "Dist deployment bundle ready at $(DEPLOY_DIST_CONTAINER_DIR)"
 
-deploy-dist: build-dist-backend build-distribution build-distadmin package-deploy-dist
+deploy-dist: build-dist-backend build-distribution build-distadmin package-deploy-dist sync-deploy-env
+
+sync-deploy-env:
+	@chmod +x $(DEPLOY_SYNC_ENV_SCRIPT)
+	@$(DEPLOY_SYNC_ENV_SCRIPT)
 
 package-release: deploy-org deploy-dist
 	@chmod +x $(DEPLOY_BUNDLE_SCRIPT)

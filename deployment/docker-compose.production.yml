@@ -50,16 +50,16 @@ services:
       - ./orgbackend/container/.env
     environment:
       DB_HOST: org-postgres
-      DB_PORT: 5432
+      DB_PORT: ${ORG_DB_PORT:-5432}
       POSTGRES_USER: ${ORG_POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${ORG_POSTGRES_PASSWORD:-postgres}
-      INTERNAL_SOCKET_PATH: /var/run/faelp/org-backend.sock
-      INTERNAL_SOCKET_ENABLED: "true"
-      DIST_BACKEND_SOCKET_PATH: /var/run/faelp/dist-backend.sock
+      INTERNAL_SOCKET_PATH: ${ORG_INTERNAL_SOCKET_PATH:-/var/run/faelp/org-backend.sock}
+      INTERNAL_SOCKET_ENABLED: ${ORG_INTERNAL_SOCKET_ENABLED:-true}
+      DIST_BACKEND_SOCKET_PATH: ${ORG_DIST_BACKEND_SOCKET_PATH:-/var/run/faelp/dist-backend.sock}
       FRONTEND_USER_PORT: ${ORG_FRONTEND_PORT:-8080}
-      FRONTEND_USER_PATH: /app/frontend/user/dist
-      FRONTEND_ADMIN_PATH: /app/frontend/orgadmin/dist
-      FRONTEND_ADMIN_PORT: 8082
+      FRONTEND_USER_PATH: ${ORG_FRONTEND_USER_PATH:-/app/frontend/user/dist}
+      FRONTEND_ADMIN_PATH: ${ORG_FRONTEND_ADMIN_PATH:-/app/frontend/orgadmin/dist}
+      FRONTEND_ADMIN_PORT: ${ORG_ADMIN_PORT:-8082}
     ports:
       - "127.0.0.1:${ORG_FRONTEND_PORT:-8080}:${ORG_FRONTEND_PORT:-8080}"
       - "127.0.0.1:${ORG_ADMIN_PORT:-8082}:${ORG_ADMIN_PORT:-8082}"
@@ -82,19 +82,19 @@ services:
       - ./distbackend/container/.env
     environment:
       DB_HOST: dist-postgres
-      DB_PORT: 5432
+      DB_PORT: ${DIST_DB_PORT:-5432}
       POSTGRES_USER: ${DIST_POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${DIST_POSTGRES_PASSWORD:-postgres}
-      INTERNAL_SOCKET_PATH: /var/run/faelp/dist-backend.sock
-      INTERNAL_SOCKET_ENABLED: "true"
-      ORG_BACKEND_SOCKET_PATH: /var/run/faelp/org-backend.sock
+      INTERNAL_SOCKET_PATH: ${DIST_INTERNAL_SOCKET_PATH:-/var/run/faelp/dist-backend.sock}
+      INTERNAL_SOCKET_ENABLED: ${DIST_INTERNAL_SOCKET_ENABLED:-true}
+      ORG_BACKEND_SOCKET_PATH: ${DIST_ORG_BACKEND_SOCKET_PATH:-/var/run/faelp/org-backend.sock}
       FRONTEND_DISTRIBUTION_PORT: ${DIST_FRONTEND_PORT:-8081}
-      FRONTEND_DISTRIBUTION_PATH: /app/frontend/distribution/dist
-      FRONTEND_ADMIN_PATH: /app/frontend/distadmin/dist
-      FRONTEND_ADMIN_PORT: 8083
+      FRONTEND_DISTRIBUTION_PATH: ${DIST_FRONTEND_DISTRIBUTION_PATH:-/app/frontend/distribution/dist}
+      FRONTEND_ADMIN_PATH: ${DIST_FRONTEND_ADMIN_PATH:-/app/frontend/distadmin/dist}
+      FRONTEND_ADMIN_PORT: ${DIST_ADMIN_PORT:-8083}
     ports:
       - "127.0.0.1:${DIST_FRONTEND_PORT:-8081}:${DIST_FRONTEND_PORT:-8081}"
-      - "127.0.0.1:${DIST_ADMIN_PORT:-8083}:8083"
+      - "127.0.0.1:${DIST_ADMIN_PORT:-8083}:${DIST_ADMIN_PORT:-8083}"
     volumes:
       - socket-volume:/var/run/faelp
       - ./distbackend/container/.env:/app/.env
