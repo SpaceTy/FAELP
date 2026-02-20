@@ -2,7 +2,16 @@
 
 This repository currently expects org and dist backends to communicate via Unix sockets, so both services should run on the same host with a shared socket volume.
 
-## 1) Build deployment bundles
+## 1) Create local deployment secret files (gitignored)
+
+Create these files on your machine:
+
+- `deployment/orgbackend/.env.dev`
+- `deployment/distbackend/.env.dev`
+
+When present, `make deploy-org` / `make deploy-dist` copies them into the packaged container folders as `.env`.
+
+## 2) Build deployment bundles
 
 From repo root:
 
@@ -15,9 +24,11 @@ This refreshes:
 - `deployment/orgbackend/container`
 - `deployment/distbackend/container`
 
-## 2) Configure runtime env files
+If `.env.dev` files do not exist, packaging falls back to template defaults.
 
-Edit:
+## 3) Configure runtime env files
+
+Ensure these files exist and are correct:
 
 - `deployment/orgbackend/container/.env`
 - `deployment/distbackend/container/.env`
@@ -27,7 +38,7 @@ Minimum production requirements:
 - Org: `WORKOS_API_KEY`, `WORKOS_CLIENT_ID`, strong `JWT_SECRET`, DB credentials
 - Dist: strong `JWT_SECRET`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`, DB credentials
 
-## 3) Start full stack
+## 4) Start full stack
 
 From `deployment/`:
 
@@ -35,14 +46,14 @@ From `deployment/`:
 docker compose -f docker-compose.production.yml up -d --build
 ```
 
-## 4) Verify health
+## 5) Verify health
 
 ```bash
 curl -fsS http://127.0.0.1:8080/health
 curl -fsS http://127.0.0.1:8081/health
 ```
 
-## 5) Reverse proxy
+## 6) Reverse proxy
 
 Expose only your reverse proxy publicly, and proxy to:
 
@@ -50,6 +61,21 @@ Expose only your reverse proxy publicly, and proxy to:
 - org admin: `127.0.0.1:8082`
 - dist user/API: `127.0.0.1:8081`
 - dist admin: `127.0.0.1:8083`
+
+## Optional: Build a transfer tarball
+
+From repo root:
+
+```bash
+make package-release
+```
+
+This creates `deployment/releases/faelp_deployment_<timestamp>.tar.gz` containing:
+
+- `deployment/orgbackend/container`
+- `deployment/distbackend/container`
+- `deployment/docker-compose.production.yml`
+- `deployment/PRODUCTION.md`
 
 ## Notes
 

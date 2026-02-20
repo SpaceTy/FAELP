@@ -11,6 +11,9 @@ DEPLOY_ORG_TEMPLATE_DIR=deployment/orgbackend/template
 DEPLOY_ORG_CONTAINER_DIR=deployment/orgbackend/container
 DEPLOY_DIST_TEMPLATE_DIR=deployment/distbackend/template
 DEPLOY_DIST_CONTAINER_DIR=deployment/distbackend/container
+DEPLOY_ORG_ENV_DEV=deployment/orgbackend/.env.dev
+DEPLOY_DIST_ENV_DEV=deployment/distbackend/.env.dev
+DEPLOY_BUNDLE_SCRIPT=deployment/scripts/create_release_tarball.sh
 
 .PHONY: dev dev-org dev-dist dev-all dev-backends \
 	install install-org install-dist \
@@ -19,6 +22,7 @@ DEPLOY_DIST_CONTAINER_DIR=deployment/distbackend/container
 	test test-org test-dist \
 	deploy-org package-deploy-org \
 	deploy-dist package-deploy-dist \
+	package-release \
 	setup setup-db help
 
 # =============================================================================
@@ -147,10 +151,19 @@ package-deploy-org:
 	cp $(ORG_BACKEND_DIR)/bin/orgbackend $(DEPLOY_ORG_CONTAINER_DIR)/app/orgbackend
 	cp -R $(USER_FRONTEND_DIR)/dist $(DEPLOY_ORG_CONTAINER_DIR)/app/frontend/user/
 	cp -R $(ORGADMIN_FRONTEND_DIR)/dist $(DEPLOY_ORG_CONTAINER_DIR)/app/frontend/orgadmin/
-	if [ -f $(DEPLOY_ORG_CONTAINER_DIR)/.env.example ]; then cp $(DEPLOY_ORG_CONTAINER_DIR)/.env.example $(DEPLOY_ORG_CONTAINER_DIR)/.env; fi
+	if [ -f $(DEPLOY_ORG_ENV_DEV) ]; then \
+		cp $(DEPLOY_ORG_ENV_DEV) $(DEPLOY_ORG_CONTAINER_DIR)/.env; \
+	elif [ -f $(DEPLOY_ORG_CONTAINER_DIR)/.env.example ]; then \
+		cp $(DEPLOY_ORG_CONTAINER_DIR)/.env.example $(DEPLOY_ORG_CONTAINER_DIR)/.env; \
+	fi
 	rm -f $(DEPLOY_ORG_CONTAINER_DIR)/.env.example
 	chmod +x $(DEPLOY_ORG_CONTAINER_DIR)/scripts/entrypoint.sh
 	chmod +x $(DEPLOY_ORG_CONTAINER_DIR)/scripts/setup_database.sh
+	@if [ -f $(DEPLOY_ORG_ENV_DEV) ]; then \
+		echo "Loaded org deployment env from $(DEPLOY_ORG_ENV_DEV)"; \
+	else \
+		echo "No org .env.dev found, using template defaults"; \
+	fi
 	@echo "Org deployment bundle ready at $(DEPLOY_ORG_CONTAINER_DIR)"
 
 deploy-org: build-org-backend build-user build-orgadmin package-deploy-org
@@ -164,13 +177,26 @@ package-deploy-dist:
 	cp $(DIST_BACKEND_DIR)/bin/distbackend $(DEPLOY_DIST_CONTAINER_DIR)/app/distbackend
 	cp -R $(DISTRIBUTION_FRONTEND_DIR)/dist $(DEPLOY_DIST_CONTAINER_DIR)/app/frontend/distribution/
 	cp -R $(DISTADMIN_FRONTEND_DIR)/dist $(DEPLOY_DIST_CONTAINER_DIR)/app/frontend/distadmin/
-	if [ -f $(DEPLOY_DIST_CONTAINER_DIR)/.env.example ]; then cp $(DEPLOY_DIST_CONTAINER_DIR)/.env.example $(DEPLOY_DIST_CONTAINER_DIR)/.env; fi
+	if [ -f $(DEPLOY_DIST_ENV_DEV) ]; then \
+		cp $(DEPLOY_DIST_ENV_DEV) $(DEPLOY_DIST_CONTAINER_DIR)/.env; \
+	elif [ -f $(DEPLOY_DIST_CONTAINER_DIR)/.env.example ]; then \
+		cp $(DEPLOY_DIST_CONTAINER_DIR)/.env.example $(DEPLOY_DIST_CONTAINER_DIR)/.env; \
+	fi
 	rm -f $(DEPLOY_DIST_CONTAINER_DIR)/.env.example
 	chmod +x $(DEPLOY_DIST_CONTAINER_DIR)/scripts/entrypoint.sh
 	chmod +x $(DEPLOY_DIST_CONTAINER_DIR)/scripts/setup_database.sh
+	@if [ -f $(DEPLOY_DIST_ENV_DEV) ]; then \
+		echo "Loaded dist deployment env from $(DEPLOY_DIST_ENV_DEV)"; \
+	else \
+		echo "No dist .env.dev found, using template defaults"; \
+	fi
 	@echo "Dist deployment bundle ready at $(DEPLOY_DIST_CONTAINER_DIR)"
 
 deploy-dist: build-dist-backend build-distribution build-distadmin package-deploy-dist
+
+package-release: deploy-org deploy-dist
+	@chmod +x $(DEPLOY_BUNDLE_SCRIPT)
+	@$(DEPLOY_BUNDLE_SCRIPT)
 
 # =============================================================================
 # Testing
@@ -270,6 +296,7 @@ setup: install setup-db
 	@echo "DEPLOYMENT:"
 	@echo "  make deploy-org    - Build and package orgbackend deployment bundle"
 	@echo "  make deploy-dist   - Build and package distbackend deployment bundle"
+	@echo "  make package-release - Build both bundles and create release tarball"
 	@echo ""
 	@echo "TESTING:"
 	@echo "  make test          - Run all Go tests"

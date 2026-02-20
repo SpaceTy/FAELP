@@ -25,12 +25,20 @@ npm-debug.log*
 
 .env
 
+# Local deployment secrets (developer-managed)
+deployment/orgbackend/.env.dev
+deployment/distbackend/.env.dev
+
 # Bin folders (build outputs)
 **/bin/
 bin/
 deployment/orgbackend/container/
 deployment/distbackend/container/
+deployment/releases/
 
 **server
 
 .gocache/
+
+deployment/orgbackend/template/.env.dev
+deployment/distbackend/template/.env.dev
