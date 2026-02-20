@@ -45,6 +45,7 @@ services:
       DB_NAME: ${DB_NAME:-orgdb_dev}
       DB_USER: ${DB_USER:-app_orgbackend_dev}
       DB_PASSWORD: ${DB_PASSWORD:-password}
+      UPLOAD_PATH: ${UPLOAD_PATH:-/app/uploads}
       DB_SSLMODE: ${DB_SSLMODE:-disable}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
@@ -53,8 +54,10 @@ services:
       - "127.0.0.1:${FRONTEND_ADMIN_PORT:-8082}:${FRONTEND_ADMIN_PORT:-8082}"
     volumes:
       - socket-volume:/var/run/faelp
+      - org-uploads:/app/uploads
       - ./.env:/app/.env
 
 volumes:
   socket-volume:
+  org-uploads:
   org-postgres-data:

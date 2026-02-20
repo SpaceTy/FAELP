@@ -1,11 +1,15 @@
 package api
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
 	"image"
+	_ "image/gif"
 	"image/jpeg"
 	"image/png"
 	"io"
+	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -24,6 +28,7 @@ type UploadHandler struct {
 
 // UploadMaterialTypeImage handles image upload for material types
 func (h *UploadHandler) UploadMaterialTypeImage(w http.ResponseWriter, r *http.Request) {
+	const maxUploadBytes = 12 << 20 // 12MB hard limit on request body
 	id := chi.URLParam(r, "id")
 
 	// Check material type exists
@@ -34,7 +39,13 @@ func (h *UploadHandler) UploadMaterialTypeImage(w http.ResponseWriter, r *http.R
 	}
 
 	// Parse multipart form with 10MB max memory
+	r.Body = http.MaxBytesReader(w, r.Body, maxUploadBytes)
 	if err := r.ParseMultipartForm(10 << 20); err != nil {
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(err, &maxBytesErr) {
+			writeError(w, http.StatusRequestEntityTooLarge, "file_too_large", "Image exceeds upload size limit")
+			return
+		}
 		writeError(w, http.StatusBadRequest, "invalid_form", "Failed to parse form")
 		return
 	}
@@ -47,15 +58,26 @@ func (h *UploadHandler) UploadMaterialTypeImage(w http.ResponseWriter, r *http.R
 	}
 	defer file.Close()
 
-	// Validate file type
-	contentType := header.Header.Get("Content-Type")
-	if !isValidImageType(contentType) {
+	contentType := normalizeContentType(header.Header.Get("Content-Type"))
+	fileBytes, err := io.ReadAll(file)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "read_error", "Failed to read image")
+		return
+	}
+
+	detectedType := normalizeContentType(http.DetectContentType(fileBytes))
+	if !isValidImageType(contentType) && !isValidImageType(detectedType) {
 		writeError(w, http.StatusBadRequest, "invalid_type", "Invalid image type. Allowed: jpeg, png, webp, gif")
 		return
 	}
 
+	decodeType := detectedType
+	if isValidImageType(contentType) {
+		decodeType = contentType
+	}
+
 	// Decode the image
-	img, format, err := decodeImage(file, contentType)
+	img, format, err := decodeImage(bytes.NewReader(fileBytes), decodeType)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "decode_error", "Failed to decode image")
 		return
@@ -73,10 +95,10 @@ func (h *UploadHandler) UploadMaterialTypeImage(w http.ResponseWriter, r *http.R
 
 	// Generate filename with webp extension
 	filename := fmt.Sprintf("%s.webp", id)
-	filepath := filepath.Join(uploadDir, filename)
+	outputPath := filepath.Join(uploadDir, filename)
 
 	// Create the output file
-	outFile, err := os.Create(filepath)
+	outFile, err := os.Create(outputPath)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "file_error", "Failed to create file")
 		return
@@ -106,6 +128,7 @@ func (h *UploadHandler) UploadMaterialTypeImage(w http.ResponseWriter, r *http.R
 
 // isValidImageType checks if the content type is a valid image type
 func isValidImageType(contentType string) bool {
+	contentType = normalizeContentType(contentType)
 	validTypes := []string{
 		"image/jpeg",
 		"image/jpg",
@@ -123,6 +146,7 @@ func isValidImageType(contentType string) bool {
 
 // decodeImage decodes an image from a reader based on content type
 func decodeImage(r io.Reader, contentType string) (image.Image, string, error) {
+	contentType = normalizeContentType(contentType)
 	switch contentType {
 	case "image/jpeg", "image/jpg":
 		img, err := jpeg.Decode(r)
@@ -133,11 +157,22 @@ func decodeImage(r io.Reader, contentType string) (image.Image, string, error) {
 	case "image/webp":
 		img, err := webp.Decode(r)
 		return img, "webp", err
+	case "image/gif":
+		img, format, err := image.Decode(r)
+		return img, format, err
 	default:
 		// Try to detect format automatically
 		img, format, err := image.Decode(r)
 		return img, format, err
 	}
+}
+
+func normalizeContentType(contentType string) string {
+	mediaType, _, err := mime.ParseMediaType(contentType)
+	if err == nil {
+		return strings.ToLower(strings.TrimSpace(mediaType))
+	}
+	return strings.ToLower(strings.TrimSpace(contentType))
 }
 
 // resizeImage resizes an image to fit within maxWidth and maxHeight while maintaining aspect ratio

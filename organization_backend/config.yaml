@@ -1,4 +1,5 @@
 DATABASE_URL: "postgresql://app_orgbackend_dev:password@localhost:5432/orgdb_dev?sslmode=disable"
+upload_path: "uploads"
 
 # Internal communication config
 internal:

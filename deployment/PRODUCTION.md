@@ -37,6 +37,9 @@ Minimum production requirements:
 
 - Org: `WORKOS_API_KEY`, `WORKOS_CLIENT_ID`, strong `JWT_SECRET`, DB credentials
 - Dist: strong `JWT_SECRET`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`, DB credentials
+- Optional upload paths:
+  - Org: `ORG_UPLOAD_PATH` (defaults to `/app/uploads`)
+  - Dist: `DIST_UPLOAD_PATH` (defaults to `/app/uploads`)
 
 ## 4) Start full stack
 
@@ -81,3 +84,4 @@ This creates `deployment/releases/faelp_deployment_<timestamp>.tar.gz` containin
 
 - `entrypoint.sh` in each backend auto-runs DB bootstrap and will auto-generate `JWT_SECRET` only when it is missing or placeholder (`replace-me`).
 - Backend binaries still run migrations at startup; keep migration files and binary versions aligned in each release.
+- Production compose now mounts persistent upload volumes (`org-uploads`, `dist-uploads`) so uploaded/synced images survive container recreation.

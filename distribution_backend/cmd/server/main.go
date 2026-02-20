@@ -69,7 +69,7 @@ func main() {
 		log.Printf("Failed to resolve distribution center ID: %v", err)
 	}
 
-	uploadsPath := "uploads"
+	uploadsPath := cfg.UploadPath
 	inventoryHandler := handlers.NewInventoryHandler(store, orgClient)
 	requestsHandler := handlers.NewRequestsHandler(store, orgClient, distributionCenterID, uploadsPath)
 

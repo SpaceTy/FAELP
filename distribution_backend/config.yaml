@@ -1,4 +1,5 @@
 DATABASE_URL: "postgresql://app_distributionbackend_dev:password@localhost:5432/distdb_dev?sslmode=disable"
+upload_path: "uploads"
 
 # JWT secret for signing tokens - CHANGE THIS IN PRODUCTION
 JWT_SECRET: "your-secure-jwt-secret-change-in-production"

@@ -54,6 +54,7 @@ type Config struct {
 	JWTSecret       string
 	ResendAPIKey    string
 	ResendFromEmail string
+	UploadPath      string `yaml:"upload_path"`
 
 	// Internal communication config
 	Internal InternalConfig `yaml:"internal"`
@@ -107,6 +108,9 @@ func Load() (Config, error) {
 	}
 	if resendFromEmail := strings.TrimSpace(os.Getenv("RESEND_FROM_EMAIL")); resendFromEmail != "" {
 		cfg.ResendFromEmail = resendFromEmail
+	}
+	if uploadPath := strings.TrimSpace(os.Getenv("UPLOAD_PATH")); uploadPath != "" {
+		cfg.UploadPath = uploadPath
 	}
 
 	// Override internal config with environment variables if set
@@ -177,6 +181,9 @@ func Load() (Config, error) {
 
 	if cfg.DatabaseURL == "" {
 		return Config{}, errors.New("DATABASE_URL missing")
+	}
+	if strings.TrimSpace(cfg.UploadPath) == "" {
+		cfg.UploadPath = "uploads"
 	}
 	if cfg.WorkOSAPIKey == "" {
 		return Config{}, errors.New("WORKOS_API_KEY missing")

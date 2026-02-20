@@ -55,6 +55,7 @@ type Config struct {
 	JWTSecret                 string           `yaml:"JWT_SECRET"`
 	OrganizationBackendURL    string           `yaml:"ORGANIZATION_BACKEND_URL"`
 	OrganizationBackendAPIKey string           `yaml:"ORGANIZATION_BACKEND_API_KEY"`
+	UploadPath                string           `yaml:"upload_path"`
 	Admin                     AdminConfig      `yaml:"admin"`
 	OrgBackend                OrgBackendConfig `yaml:"organization_backend"`
 	Internal                  InternalConfig   `yaml:"internal"`
@@ -101,6 +102,9 @@ func Load() (Config, error) {
 	}
 	if adminPass := os.Getenv("ADMIN_PASSWORD"); adminPass != "" {
 		cfg.Admin.Password = adminPass
+	}
+	if uploadPath := strings.TrimSpace(os.Getenv("UPLOAD_PATH")); uploadPath != "" {
+		cfg.UploadPath = uploadPath
 	}
 
 	if orgURL := os.Getenv("ORG_BACKEND_URL"); orgURL != "" {
@@ -159,6 +163,9 @@ func Load() (Config, error) {
 
 	if cfg.DatabaseURL == "" {
 		cfg.DatabaseURL = defaultDatabaseURL
+	}
+	if strings.TrimSpace(cfg.UploadPath) == "" {
+		cfg.UploadPath = "uploads"
 	}
 
 	if cfg.OrgBackend.URL == "" && cfg.OrganizationBackendURL != "" {

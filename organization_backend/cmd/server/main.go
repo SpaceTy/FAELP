@@ -69,14 +69,14 @@ func main() {
 
 	materialTypeHandler := &api.MaterialTypeHandler{
 		Store:      store,
-		UploadPath: "uploads",
+		UploadPath: cfg.UploadPath,
 		DistClient: distClient,
 		SocketPath: cfg.DistBackend.SocketPath,
 	}
 
 	uploadHandler := &api.UploadHandler{
 		Store:      store,
-		UploadPath: "uploads",
+		UploadPath: cfg.UploadPath,
 	}
 
 	dcHandler := &api.DistributionCenterHandler{
