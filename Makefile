@@ -15,8 +15,8 @@ DEPLOY_ORG_ENV_DEV=deployment/orgbackend/.env.dev
 DEPLOY_DIST_ENV_DEV=deployment/distbackend/.env.dev
 DEPLOY_ORG_ENV_DEV_TEMPLATE=$(DEPLOY_ORG_TEMPLATE_DIR)/.env.dev
 DEPLOY_DIST_ENV_DEV_TEMPLATE=$(DEPLOY_DIST_TEMPLATE_DIR)/.env.dev
-DEPLOY_BUNDLE_SCRIPT=deployment/scripts/create_release_tarball.sh
 DEPLOY_SYNC_ENV_SCRIPT=deployment/scripts/sync_compose_env.sh
+DEPLOY_RELEASES_DIR=deployment/releases
 
 .PHONY: dev dev-org dev-dist dev-all dev-backends \
 	install install-org install-dist \
@@ -26,8 +26,19 @@ DEPLOY_SYNC_ENV_SCRIPT=deployment/scripts/sync_compose_env.sh
 	deploy-org package-deploy-org \
 	deploy-dist package-deploy-dist \
 	sync-deploy-env \
-	package-release \
+	package-release package-release-org package-release-dist \
+	tarball-org tarball-dist tarball-release tarball-org-full tarball-dist-full \
+	release-org release-dist \
 	setup setup-db help
+
+define create_release_tarball
+	@set -e; \
+	mkdir -p $(DEPLOY_RELEASES_DIR); \
+	TIMESTAMP=$$(date +%Y%m%d_%H%M%S); \
+	ARCHIVE_PATH="$(DEPLOY_RELEASES_DIR)/$(1)_$$TIMESTAMP.tar.gz"; \
+	tar -C . -czf "$$ARCHIVE_PATH" $(2); \
+	echo "Created deployment archive: $$ARCHIVE_PATH"
+endef
 
 # =============================================================================
 # Development - Run everything
@@ -211,8 +222,79 @@ sync-deploy-env:
 	@$(DEPLOY_SYNC_ENV_SCRIPT)
 
 package-release: deploy-org deploy-dist
-	@chmod +x $(DEPLOY_BUNDLE_SCRIPT)
-	@$(DEPLOY_BUNDLE_SCRIPT)
+	$(call create_release_tarball,faelp_deployment,\
+deployment/orgbackend/container \
+deployment/distbackend/container \
+deployment/docker-compose.production.yml \
+deployment/PRODUCTION.md)
+
+package-release-org: deploy-org
+	$(call create_release_tarball,faelp_orgbackend_deployment,\
+deployment/orgbackend/container \
+deployment/docker-compose.production.yml \
+deployment/PRODUCTION.md)
+
+package-release-dist: deploy-dist
+	$(call create_release_tarball,faelp_distbackend_deployment,\
+deployment/distbackend/container \
+deployment/docker-compose.production.yml \
+deployment/PRODUCTION.md)
+
+tarball-org:
+	@if [ ! -e deployment/orgbackend/container/app/frontend ]; then \
+		echo "Missing required path: deployment/orgbackend/container/app/frontend"; \
+		echo "Run 'make deploy-org' first."; \
+		exit 1; \
+	fi
+	$(call create_release_tarball,faelp_orgbackend_frontend,\
+deployment/orgbackend/container/app/frontend)
+
+tarball-dist:
+	@if [ ! -e deployment/distbackend/container/app/frontend ]; then \
+		echo "Missing required path: deployment/distbackend/container/app/frontend"; \
+		echo "Run 'make deploy-dist' first."; \
+		exit 1; \
+	fi
+	$(call create_release_tarball,faelp_distbackend_frontend,\
+deployment/distbackend/container/app/frontend)
+
+tarball-release:
+	@if [ ! -e deployment/orgbackend/container ] || [ ! -e deployment/distbackend/container ]; then \
+		echo "Missing required deployment containers."; \
+		echo "Run 'make deploy-org deploy-dist' first."; \
+		exit 1; \
+	fi
+	$(call create_release_tarball,faelp_deployment,\
+deployment/orgbackend/container \
+deployment/distbackend/container \
+deployment/docker-compose.production.yml \
+deployment/PRODUCTION.md)
+
+tarball-org-full:
+	@if [ ! -e deployment/orgbackend/container ]; then \
+		echo "Missing required path: deployment/orgbackend/container"; \
+		echo "Run 'make deploy-org' first."; \
+		exit 1; \
+	fi
+	$(call create_release_tarball,faelp_orgbackend_deployment,\
+deployment/orgbackend/container \
+deployment/docker-compose.production.yml \
+deployment/PRODUCTION.md)
+
+tarball-dist-full:
+	@if [ ! -e deployment/distbackend/container ]; then \
+		echo "Missing required path: deployment/distbackend/container"; \
+		echo "Run 'make deploy-dist' first."; \
+		exit 1; \
+	fi
+	$(call create_release_tarball,faelp_distbackend_deployment,\
+deployment/distbackend/container \
+deployment/docker-compose.production.yml \
+deployment/PRODUCTION.md)
+
+release-org: package-release-org
+
+release-dist: package-release-dist
 
 # =============================================================================
 # Testing
@@ -313,6 +395,15 @@ setup: install setup-db
 	@echo "  make deploy-org    - Build and package orgbackend deployment bundle"
 	@echo "  make deploy-dist   - Build and package distbackend deployment bundle"
 	@echo "  make package-release - Build both bundles and create release tarball"
+	@echo "  make package-release-org - Build org bundle and create org-only tarball"
+	@echo "  make package-release-dist - Build dist bundle and create dist-only tarball"
+	@echo "  make tarball-org    - Tar only org frontend bundle (container/app/frontend)"
+	@echo "  make tarball-dist   - Tar only dist frontend bundle (container/app/frontend)"
+	@echo "  make tarball-release - Tar both existing deployment bundles (no build/package)"
+	@echo "  make tarball-org-full - Tar full org deployment bundle (no build/package)"
+	@echo "  make tarball-dist-full - Tar full dist deployment bundle (no build/package)"
+	@echo "  make release-org   - Alias for package-release-org"
+	@echo "  make release-dist  - Alias for package-release-dist"
 	@echo ""
 	@echo "TESTING:"
 	@echo "  make test          - Run all Go tests"
