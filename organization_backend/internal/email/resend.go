@@ -8,7 +8,6 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"strings"
 	"time"
 )
 
@@ -18,18 +17,13 @@ type Service struct {
 	fromEmail  string
 }
 
-func NewService(apiKey, fromEmail string) *Service {
-	from := strings.TrimSpace(fromEmail)
-	if from == "" {
-		from = "onboarding@resend.dev"
-	}
-
+func NewService(apiKey string) *Service {
 	return &Service{
 		apiKey: apiKey,
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
-		fromEmail: from,
+		fromEmail: "automated@ehalp.spacety.dev",
 	}
 }
 
@@ -120,39 +114,65 @@ type RequestStatusNotificationParams struct {
 }
 
 func (s *Service) SendRequestStatusNotification(ctx context.Context, params RequestStatusNotificationParams) error {
-	var (
-		subject      string
-		htmlTemplate string
-		textTemplate string
-	)
+	var subject, htmlBody, textBody string
 
 	switch params.NewStatus {
 	case "inAction":
 		subject = "Your material request is now being processed"
-		htmlTemplate = "request_in_action.html"
-		textTemplate = "request_in_action.txt"
+		htmlBody = fmt.Sprintf(`
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+<h2 style="color: #333;">Your Material Request is Being Processed</h2>
+<p>Dear %s,</p>
+<p>Good news! Your material request (#%s) has been shipped and is now in action.</p>
+<p><strong>Tracking Code:</strong> %s</p>
+<p>You can use this tracking code to monitor the delivery status of your materials.</p>
+<p>Thank you for using FAELP.</p>
+</body>
+</html>`, params.CustomerName, params.RequestID, params.TrackingCode)
+		textBody = fmt.Sprintf(`Dear %s,
+
+Good news! Your material request (#%s) has been shipped and is now in action.
+
+Tracking Code: %s
+
+You can use this tracking code to monitor the delivery status of your materials.
+
+Thank you for using FAELP.`, params.CustomerName, params.RequestID, params.TrackingCode)
 
 	case "pending":
 		if params.PreviousStatus == "inAction" {
 			subject = "Your material request status has changed"
-			htmlTemplate = "request_pending_from_in_action.html"
-			textTemplate = "request_pending_from_in_action.txt"
+			htmlBody = fmt.Sprintf(`
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+<h2 style="color: #333;">Material Request Status Update</h2>
+<p>Dear %s,</p>
+<p>Your material request (#%s) has been cancelled and returned to pending status.</p>
+<p>The distribution center is no longer able to fulfill this request. Your request will be available for other distribution centers to claim.</p>
+<p>If you have any questions, please contact support.</p>
+<p>Thank you for your understanding.</p>
+</body>
+</html>`, params.CustomerName, params.RequestID)
+			textBody = fmt.Sprintf(`Dear %s,
+
+Your material request (#%s) has been cancelled and returned to pending status.
+
+The distribution center is no longer able to fulfill this request. Your request will be available for other distribution centers to claim.
+
+If you have any questions, please contact support.
+
+Thank you for your understanding.`, params.CustomerName, params.RequestID)
 		} else {
 			return nil
 		}
 
 	default:
 		return nil
-	}
-
-	htmlBody, err := renderHTMLTemplate(htmlTemplate, params)
-	if err != nil {
-		return fmt.Errorf("failed to render html email template %q: %w", htmlTemplate, err)
-	}
-
-	textBody, err := renderTextTemplate(textTemplate, params)
-	if err != nil {
-		return fmt.Errorf("failed to render text email template %q: %w", textTemplate, err)
 	}
 
 	return s.Send(ctx, params.CustomerEmail, subject, htmlBody, textBody)
