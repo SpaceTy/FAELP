@@ -1,5 +1,6 @@
 import { authSignal } from '@/context/AuthContext';
 import type { MaterialType } from '@/types/inventory';
+import { resolveAssetUrl } from '@/utils/url';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -24,7 +25,11 @@ class MaterialTypesService {
       throw new Error(error.error || 'Failed to fetch material types');
     }
 
-    return response.json();
+    const materialTypes: MaterialType[] = await response.json();
+    return materialTypes.map((mt) => ({
+      ...mt,
+      imageUrl: resolveAssetUrl(mt.imageUrl),
+    }));
   }
 }
 

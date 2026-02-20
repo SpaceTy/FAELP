@@ -9,6 +9,7 @@ import type {
   UpdateMaterialInput,
 } from '@/types/inventory';
 import type { RequestStatus } from '@/types/requests';
+import { resolveAssetUrl } from '@/utils/url';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -28,7 +29,8 @@ class ApiService {
       throw new Error(error.error || 'Failed to load incoming requests');
     }
 
-    return response.json();
+    const data: IncomingRequest[] = await response.json();
+    return data.map(normalizeIncomingRequest);
   }
 
   async approveIncomingRequest(requestID: string): Promise<IncomingRequest> {
@@ -42,7 +44,8 @@ class ApiService {
       throw new Error(error.error || 'Failed to approve request');
     }
 
-    return response.json();
+    const data: IncomingRequest = await response.json();
+    return normalizeIncomingRequest(data);
   }
 
   async markIncomingRequestInAction(requestID: string, outgoingTrackingCode: string): Promise<IncomingRequest> {
@@ -57,7 +60,8 @@ class ApiService {
       throw new Error(error.error || 'Failed to mark request inAction');
     }
 
-    return response.json();
+    const data: IncomingRequest = await response.json();
+    return normalizeIncomingRequest(data);
   }
 
   async cancelIncomingRequest(requestID: string): Promise<IncomingRequest> {
@@ -71,7 +75,8 @@ class ApiService {
       throw new Error(error.error || 'Failed to cancel request');
     }
 
-    return response.json();
+    const data: IncomingRequest = await response.json();
+    return normalizeIncomingRequest(data);
   }
 
   async archiveIncomingRequest(requestID: string): Promise<IncomingRequest> {
@@ -85,7 +90,8 @@ class ApiService {
       throw new Error(error.error || 'Failed to archive request');
     }
 
-    return response.json();
+    const data: IncomingRequest = await response.json();
+    return normalizeIncomingRequest(data);
   }
 
   async unarchiveIncomingRequest(requestID: string): Promise<IncomingRequest> {
@@ -99,7 +105,8 @@ class ApiService {
       throw new Error(error.error || 'Failed to unarchive request');
     }
 
-    return response.json();
+    const data: IncomingRequest = await response.json();
+    return normalizeIncomingRequest(data);
   }
 
   async login(credentials: LoginRequest): Promise<LoginResponse> {
@@ -233,6 +240,16 @@ class ApiService {
 }
 
 export const api = new ApiService();
+
+function normalizeIncomingRequest(request: IncomingRequest): IncomingRequest {
+  return {
+    ...request,
+    items: request.items.map((item) => ({
+      ...item,
+      materialImageUrl: resolveAssetUrl(item.materialImageUrl),
+    })),
+  };
+}
 
 export interface IncomingRequestItem {
   materialTypeId: string;
