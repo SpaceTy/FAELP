@@ -18,6 +18,7 @@ distribution_backend:
 frontend:
   user:
     enabled: true
+    port: 8080
     path: "../frontend/user/dist"  # Path to built user frontend
   admin:
     enabled: true

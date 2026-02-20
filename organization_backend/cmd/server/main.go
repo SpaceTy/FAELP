@@ -107,7 +107,7 @@ func main() {
 	}
 
 	server := &http.Server{
-		Addr:              ":8080",
+		Addr:              fmt.Sprintf(":%d", cfg.Frontend.User.Port),
 		Handler:           router,
 		ReadHeaderTimeout: 5 * time.Second,
 	}

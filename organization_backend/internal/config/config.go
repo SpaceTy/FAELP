@@ -30,6 +30,7 @@ type DistBackendConfig struct {
 // FrontendConfig for serving static frontend files
 type FrontendConfig struct {
 	Enabled bool   `yaml:"enabled"`
+	Port    int    `yaml:"port"`
 	Path    string `yaml:"path"`
 }
 
@@ -135,6 +136,13 @@ func Load() (Config, error) {
 	} else if userEnabled == "false" {
 		cfg.Frontend.User.Enabled = false
 	}
+	if userPort := os.Getenv("FRONTEND_USER_PORT"); userPort != "" {
+		port, err := strconv.Atoi(userPort)
+		if err != nil {
+			return Config{}, errors.New("FRONTEND_USER_PORT must be a valid integer")
+		}
+		cfg.Frontend.User.Port = port
+	}
 	if adminPath := os.Getenv("FRONTEND_ADMIN_PATH"); adminPath != "" {
 		cfg.Frontend.Admin.Path = adminPath
 	}
@@ -155,6 +163,9 @@ func Load() (Config, error) {
 	if cfg.Frontend.User.Path == "" && pathExists("/app/frontend/user/dist/index.html") {
 		cfg.Frontend.User.Path = "/app/frontend/user/dist"
 		cfg.Frontend.User.Enabled = true
+	}
+	if cfg.Frontend.User.Port == 0 {
+		cfg.Frontend.User.Port = 8080
 	}
 	if cfg.Frontend.Admin.Path == "" && pathExists("/app/frontend/orgadmin/dist/index.html") {
 		cfg.Frontend.Admin.Path = "/app/frontend/orgadmin/dist"

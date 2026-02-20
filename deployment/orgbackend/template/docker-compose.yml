@@ -31,6 +31,7 @@ services:
       WORKOS_CLIENT_ID: ${WORKOS_CLIENT_ID:-dev-client-id}
       JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret}
       FRONTEND_USER_ENABLED: ${FRONTEND_USER_ENABLED:-true}
+      FRONTEND_USER_PORT: ${FRONTEND_USER_PORT:-8080}
       FRONTEND_USER_PATH: ${FRONTEND_USER_PATH:-/app/frontend/user/dist}
       FRONTEND_ADMIN_ENABLED: ${FRONTEND_ADMIN_ENABLED:-true}
       FRONTEND_ADMIN_PATH: ${FRONTEND_ADMIN_PATH:-/app/frontend/orgadmin/dist}
@@ -48,8 +49,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     ports:
-      - "127.0.0.1:8080:8080"
-      - "127.0.0.1:8082:8082"
+      - "127.0.0.1:${FRONTEND_USER_PORT:-8080}:${FRONTEND_USER_PORT:-8080}"
+      - "127.0.0.1:${FRONTEND_ADMIN_PORT:-8082}:${FRONTEND_ADMIN_PORT:-8082}"
     volumes:
       - socket-volume:/var/run/faelp
       - ./.env:/app/.env
