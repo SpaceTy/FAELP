@@ -1,0 +1,103 @@
+version: "3.8"
+
+services:
+  org-postgres:
+    image: docker.io/library/postgres:16
+    container_name: faelp-org-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${ORG_POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${ORG_POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${ORG_POSTGRES_DB:-postgres}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${ORG_POSTGRES_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    ports:
+      - "127.0.0.1:${ORG_POSTGRES_HOST_PORT:-5432}:5432"
+    volumes:
+      - org-postgres-data:/var/lib/postgresql/data
+
+  dist-postgres:
+    image: docker.io/library/postgres:16
+    container_name: faelp-dist-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DIST_POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${DIST_POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${DIST_POSTGRES_DB:-postgres}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DIST_POSTGRES_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    ports:
+      - "127.0.0.1:${DIST_POSTGRES_HOST_PORT:-5433}:5432"
+    volumes:
+      - dist-postgres-data:/var/lib/postgresql/data
+
+  org-backend:
+    build:
+      context: ./orgbackend/container
+      dockerfile: Dockerfile
+    container_name: faelp-org-backend
+    restart: unless-stopped
+    depends_on:
+      org-postgres:
+        condition: service_healthy
+    env_file:
+      - ./orgbackend/container/.env
+    environment:
+      DB_HOST: org-postgres
+      DB_PORT: 5432
+      POSTGRES_USER: ${ORG_POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${ORG_POSTGRES_PASSWORD:-postgres}
+      INTERNAL_SOCKET_PATH: /var/run/faelp/org-backend.sock
+      INTERNAL_SOCKET_ENABLED: "true"
+      DIST_BACKEND_SOCKET_PATH: /var/run/faelp/dist-backend.sock
+      FRONTEND_USER_PATH: /app/frontend/user/dist
+      FRONTEND_ADMIN_PATH: /app/frontend/orgadmin/dist
+      FRONTEND_ADMIN_PORT: 8082
+    ports:
+      - "127.0.0.1:${ORG_API_PORT:-8080}:8080"
+      - "127.0.0.1:${ORG_ADMIN_PORT:-8082}:8082"
+    volumes:
+      - socket-volume:/var/run/faelp
+      - ./orgbackend/container/.env:/app/.env
+
+  dist-backend:
+    build:
+      context: ./distbackend/container
+      dockerfile: Dockerfile
+    container_name: faelp-dist-backend
+    restart: unless-stopped
+    depends_on:
+      dist-postgres:
+        condition: service_healthy
+      org-backend:
+        condition: service_started
+    env_file:
+      - ./distbackend/container/.env
+    environment:
+      DB_HOST: dist-postgres
+      DB_PORT: 5432
+      POSTGRES_USER: ${DIST_POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${DIST_POSTGRES_PASSWORD:-postgres}
+      INTERNAL_SOCKET_PATH: /var/run/faelp/dist-backend.sock
+      INTERNAL_SOCKET_ENABLED: "true"
+      ORG_BACKEND_SOCKET_PATH: /var/run/faelp/org-backend.sock
+      FRONTEND_DISTRIBUTION_PATH: /app/frontend/distribution/dist
+      FRONTEND_ADMIN_PATH: /app/frontend/distadmin/dist
+      FRONTEND_ADMIN_PORT: 8083
+    ports:
+      - "127.0.0.1:${DIST_API_PORT:-8081}:8081"
+      - "127.0.0.1:${DIST_ADMIN_PORT:-8083}:8083"
+    volumes:
+      - socket-volume:/var/run/faelp
+      - ./distbackend/container/.env:/app/.env
+
+volumes:
+  socket-volume:
+  org-postgres-data:
+  dist-postgres-data:

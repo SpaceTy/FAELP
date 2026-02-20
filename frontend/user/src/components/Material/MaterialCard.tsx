@@ -1,16 +1,13 @@
 import type { Material } from '@/types/material';
 import { addItem, getItem } from '@/hooks/useCart';
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+import { resolveAssetUrl } from '@/utils/url';
 
 interface MaterialCardProps {
   material: Material;
 }
 
 function getFullImageUrl(imageUrl: string | undefined): string {
-  if (!imageUrl) return '';
-  if (imageUrl.startsWith('http')) return imageUrl;
-  return `${API_BASE}${imageUrl}`;
+  return resolveAssetUrl(imageUrl);
 }
 
 export function MaterialCard({ material }: MaterialCardProps) {

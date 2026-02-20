@@ -5,13 +5,10 @@ import { useMaterialTypes } from '@/context/MaterialTypesContext';
 import { API_REFRESH_INTERVAL_MS } from '@/constants/polling';
 import type { Request, RequestItem } from '@/types/request';
 import type { Material } from '@/types/material';
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+import { resolveAssetUrl } from '@/utils/url';
 
 function getFullImageUrl(imageUrl: string | undefined): string {
-  if (!imageUrl) return '';
-  if (imageUrl.startsWith('http')) return imageUrl;
-  return `${API_BASE}${imageUrl}`;
+  return resolveAssetUrl(imageUrl);
 }
 
 interface MaterialCarouselProps {

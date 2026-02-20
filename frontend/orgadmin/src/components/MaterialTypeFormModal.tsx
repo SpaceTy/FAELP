@@ -1,7 +1,6 @@
 import { useState, useCallback } from 'preact/hooks';
 import type { MaterialType, CreateMaterialTypeInput, UpdateMaterialTypeInput } from '@/types/material';
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+import { resolveAssetUrl } from '@/utils/url';
 
 interface MaterialTypeFormModalProps {
   materialType: MaterialType | null;
@@ -11,8 +10,7 @@ interface MaterialTypeFormModalProps {
 
 function getFullImageUrl(imageUrl: string | undefined): string | null {
   if (!imageUrl) return null;
-  if (imageUrl.startsWith('http')) return imageUrl;
-  return `${API_BASE}${imageUrl}`;
+  return resolveAssetUrl(imageUrl);
 }
 
 export function MaterialTypeFormModal({ materialType, onSubmit, onClose }: MaterialTypeFormModalProps) {

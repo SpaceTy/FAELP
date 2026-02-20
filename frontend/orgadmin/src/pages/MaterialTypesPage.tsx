@@ -3,13 +3,11 @@ import type { MaterialType, CreateMaterialTypeInput, UpdateMaterialTypeInput } f
 import { materialTypeService } from '@/services/materialTypes';
 import { MaterialTypeFormModal } from '@/components/MaterialTypeFormModal';
 import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+import { resolveAssetUrl } from '@/utils/url';
 
 function getFullImageUrl(imageUrl: string | undefined): string | null {
   if (!imageUrl) return null;
-  if (imageUrl.startsWith('http')) return imageUrl;
-  return `${API_BASE}${imageUrl}`;
+  return resolveAssetUrl(imageUrl);
 }
 
 export function MaterialTypesPage() {
