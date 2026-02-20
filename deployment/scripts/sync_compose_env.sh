@@ -47,6 +47,8 @@ org_frontend_user_path="$(read_key "$ORG_ENV" "FRONTEND_USER_PATH" "/app/fronten
 org_frontend_admin_path="$(read_key "$ORG_ENV" "FRONTEND_ADMIN_PATH" "/app/frontend/orgadmin/dist")"
 dist_frontend_distribution_path="$(read_key "$DIST_ENV" "FRONTEND_DISTRIBUTION_PATH" "/app/frontend/distribution/dist")"
 dist_frontend_admin_path="$(read_key "$DIST_ENV" "FRONTEND_ADMIN_PATH" "/app/frontend/distadmin/dist")"
+org_upload_path="$(read_key "$ORG_ENV" "UPLOAD_PATH" "/app/uploads")"
+dist_upload_path="$(read_key "$DIST_ENV" "UPLOAD_PATH" "/app/uploads")"
 
 org_postgres_user="$(read_key "$ORG_ENV" "POSTGRES_USER" "postgres")"
 org_postgres_password="$(read_key "$ORG_ENV" "POSTGRES_PASSWORD" "postgres")"
@@ -81,6 +83,8 @@ ORG_FRONTEND_USER_PATH=${org_frontend_user_path}
 ORG_FRONTEND_ADMIN_PATH=${org_frontend_admin_path}
 DIST_FRONTEND_DISTRIBUTION_PATH=${dist_frontend_distribution_path}
 DIST_FRONTEND_ADMIN_PATH=${dist_frontend_admin_path}
+ORG_UPLOAD_PATH=${org_upload_path}
+DIST_UPLOAD_PATH=${dist_upload_path}
 
 ORG_POSTGRES_USER=${org_postgres_user}
 ORG_POSTGRES_PASSWORD=${org_postgres_password}
