@@ -1,4 +1,5 @@
 import { ComponentChildren } from 'preact';
+import { route } from 'preact-router';
 import { useAuth } from '@/context/AuthContext';
 
 interface ProtectedRouteProps {
@@ -21,7 +22,7 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
   }
 
   if (!isAuthenticated) {
-    window.location.href = '/login';
+    route('/login', true);
     return null;
   }
 

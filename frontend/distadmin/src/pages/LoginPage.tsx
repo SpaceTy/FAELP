@@ -1,4 +1,5 @@
 import { useState } from 'preact/hooks';
+import { route } from 'preact-router';
 import { useAuth } from '@/context/AuthContext';
 
 export function LoginPage() {
@@ -15,7 +16,7 @@ export function LoginPage() {
 
     try {
       await login(username, password);
-      window.location.href = '/';
+      route('/', true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login fehlgeschlagen');
     } finally {
