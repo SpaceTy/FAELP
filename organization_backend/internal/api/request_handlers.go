@@ -110,7 +110,8 @@ func (h *RequestHandler) CreateRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	deliveryDate, err := time.Parse("2006-01-02", req.DeliveryDate)
+	now := time.Now()
+	deliveryDate, err := time.ParseInLocation("2006-01-02", req.DeliveryDate, now.Location())
 	if err != nil {
 		slog.Info("create_request_validation_failed",
 			"field", "delivery_date",
@@ -121,7 +122,7 @@ func (h *RequestHandler) CreateRequest(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "validation_error", "Invalid delivery date format (use YYYY-MM-DD)")
 		return
 	}
-	plannedReturnDate, err := time.Parse("2006-01-02", req.PlannedReturnDate)
+	plannedReturnDate, err := time.ParseInLocation("2006-01-02", req.PlannedReturnDate, now.Location())
 	if err != nil {
 		slog.Info("create_request_validation_failed",
 			"field", "planned_return_date",
@@ -133,15 +134,14 @@ func (h *RequestHandler) CreateRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	now := time.Now()
-	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-	if deliveryDate.Before(today) {
+	minDeliveryDate := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()).AddDate(0, 0, 3)
+	if deliveryDate.Before(minDeliveryDate) {
 		slog.Info("create_request_validation_failed",
 			"field", "delivery_date",
-			"reason", "past_date",
+			"reason", "lead_time_too_short",
 			"value", req.DeliveryDate,
 		)
-		writeError(w, http.StatusBadRequest, "validation_error", "Delivery date must be in the future")
+		writeError(w, http.StatusBadRequest, "validation_error", "Delivery date must be at least 3 days in the future")
 		return
 	}
 	if plannedReturnDate.Before(deliveryDate) {
