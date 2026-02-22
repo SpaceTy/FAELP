@@ -325,6 +325,8 @@ func (s *Store) UpdateMaterialAvailability(ctx context.Context, distributionCent
 		_, err = tx.ExecContext(ctx, `
 			INSERT INTO material_available (material_type_id, distribution_center_id, amount)
 			VALUES ($1, $2, $3)
+			ON CONFLICT (material_type_id, distribution_center_id)
+			DO UPDATE SET amount = EXCLUDED.amount
 		`, materialTypeID, distributionCenterID, amount)
 		if err != nil {
 			return err
