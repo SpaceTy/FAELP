@@ -1,13 +1,8 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
-	"os"
-	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
 
@@ -119,7 +114,7 @@ func (h *RequestsHandler) ListIncomingRequests(w http.ResponseWriter, r *http.Re
 	typeNameByID := map[string]string{}
 	typeImageURLByID := map[string]string{}
 	if materialTypes, err := h.orgClient.GetMaterialTypes(r.Context()); err == nil {
-		typeImageURLByID = h.syncMaterialTypeImages(r.Context(), materialTypes)
+		typeImageURLByID = syncMaterialTypeImages(r.Context(), h.orgClient, h.uploadPath, materialTypes)
 		for _, mt := range materialTypes {
 			typeNameByID[mt.ID] = mt.Name
 		}
@@ -359,92 +354,9 @@ func (h *RequestsHandler) UnarchiveIncomingRequest(w http.ResponseWriter, r *htt
 	_ = json.NewEncoder(w).Encode(updated)
 }
 
-var materialTypeIDSanitizer = regexp.MustCompile(`[^a-zA-Z0-9_-]+`)
-
-func sanitizeMaterialTypeID(input string) string {
-	s := materialTypeIDSanitizer.ReplaceAllString(strings.TrimSpace(input), "_")
-	if s == "" {
-		return "unknown"
-	}
-	return s
-}
-
-func imageExtensionFromURL(raw string) string {
-	base := raw
-	if idx := strings.Index(base, "?"); idx >= 0 {
-		base = base[:idx]
-	}
-	ext := strings.ToLower(filepath.Ext(base))
-	switch ext {
-	case ".jpg", ".jpeg", ".png", ".webp", ".gif":
-		return ext
-	default:
-		return ".webp"
-	}
-}
-
 func derefString(input *string) string {
 	if input == nil {
 		return ""
 	}
 	return *input
-}
-
-func (h *RequestsHandler) syncMaterialTypeImages(ctx context.Context, materialTypes []client.MaterialType) map[string]string {
-	result := map[string]string{}
-
-	baseDir := filepath.Join(h.uploadPath, "material-types")
-	_ = os.MkdirAll(baseDir, 0755)
-
-	for _, mt := range materialTypes {
-		if strings.TrimSpace(mt.ImageURL) == "" {
-			continue
-		}
-
-		localName := sanitizeMaterialTypeID(mt.ID) + imageExtensionFromURL(mt.ImageURL)
-		localPath := filepath.Join(baseDir, localName)
-		sourcePath := localPath + ".source"
-		localURL := fmt.Sprintf("/uploads/material-types/%s", localName)
-
-		sourceURLBytes, readErr := os.ReadFile(sourcePath)
-		sourceURL := strings.TrimSpace(string(sourceURLBytes))
-		localExists := fileExists(localPath)
-
-		if localExists && readErr == nil && sourceURL == mt.ImageURL {
-			result[mt.ID] = localURL
-			continue
-		}
-
-		imageData, err := h.orgClient.GetAsset(ctx, mt.ImageURL)
-		if err != nil {
-			if localExists {
-				result[mt.ID] = localURL
-			} else {
-				result[mt.ID] = mt.ImageURL
-			}
-			continue
-		}
-
-		if err := os.WriteFile(localPath, imageData, 0644); err != nil {
-			if localExists {
-				result[mt.ID] = localURL
-			} else {
-				result[mt.ID] = mt.ImageURL
-			}
-			continue
-		}
-
-		_ = os.WriteFile(sourcePath, []byte(mt.ImageURL), 0644)
-		result[mt.ID] = localURL
-	}
-
-	return result
-}
-
-func fileExists(path string) bool {
-	info, err := os.Stat(path)
-	if err != nil {
-		return false
-	}
-	return !info.IsDir()
 }

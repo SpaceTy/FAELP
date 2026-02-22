@@ -2,6 +2,8 @@ package api
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"image"
@@ -93,8 +95,9 @@ func (h *UploadHandler) UploadMaterialTypeImage(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	// Generate filename with webp extension
-	filename := fmt.Sprintf("%s.webp", id)
+	// Generate a versioned filename so changed images get a new URL and bypass stale caches.
+	imageHash := sha256.Sum256(fileBytes)
+	filename := fmt.Sprintf("%s-%s.webp", id, hex.EncodeToString(imageHash[:])[:12])
 	outputPath := filepath.Join(uploadDir, filename)
 
 	// Create the output file

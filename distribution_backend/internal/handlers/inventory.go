@@ -21,13 +21,17 @@ import (
 
 // InventoryHandler handles inventory endpoints.
 type InventoryHandler struct {
-	store     *db.Store
-	orgClient *client.OrgClient
+	store      *db.Store
+	orgClient  *client.OrgClient
+	uploadPath string
 }
 
 // NewInventoryHandler creates a new inventory handler.
-func NewInventoryHandler(store *db.Store, orgClient *client.OrgClient) *InventoryHandler {
-	return &InventoryHandler{store: store, orgClient: orgClient}
+func NewInventoryHandler(store *db.Store, orgClient *client.OrgClient, uploadPath string) *InventoryHandler {
+	if strings.TrimSpace(uploadPath) == "" {
+		uploadPath = "uploads"
+	}
+	return &InventoryHandler{store: store, orgClient: orgClient, uploadPath: uploadPath}
 }
 
 // GetMaterialTypes returns all material types from the organization backend.
@@ -41,6 +45,12 @@ func (h *InventoryHandler) GetMaterialTypes(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		http.Error(w, `{"error":"failed to fetch material types from organization backend"}`, http.StatusInternalServerError)
 		return
+	}
+	imageURLByID := syncMaterialTypeImages(r.Context(), h.orgClient, h.uploadPath, materialTypes)
+	for i := range materialTypes {
+		if localURL, ok := imageURLByID[materialTypes[i].ID]; ok {
+			materialTypes[i].ImageURL = localURL
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")

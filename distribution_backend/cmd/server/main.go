@@ -70,7 +70,7 @@ func main() {
 	}
 
 	uploadsPath := cfg.UploadPath
-	inventoryHandler := handlers.NewInventoryHandler(store, orgClient)
+	inventoryHandler := handlers.NewInventoryHandler(store, orgClient, uploadsPath)
 	requestsHandler := handlers.NewRequestsHandler(store, orgClient, distributionCenterID, uploadsPath)
 
 	// Create cancellable context for background services
