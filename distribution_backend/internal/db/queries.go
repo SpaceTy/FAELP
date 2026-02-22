@@ -1,8 +1,8 @@
 package db
 
 import (
-	"crypto/rand"
 	"context"
+	"crypto/rand"
 	"database/sql"
 	"fmt"
 	"strings"

@@ -489,7 +489,7 @@ export function InventoryPage() {
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={handleDelete}
         title="Material-Instanz löschen"
-        message={`Möchten Sie die Material-Instanz "${deletingInstance?.id.slice(0, 16)}..." wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`}
+        message={`Möchten Sie die Material-Instanz mit Code "${deletingInstance?.humanCode || '-'}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`}
         confirmText="Löschen"
         variant="danger"
       />
@@ -594,8 +594,8 @@ export function InventoryPage() {
           </p>
           {assigningInstance && (
             <div className="p-3 bg-gray-50 rounded text-sm">
-              <span className="text-gray-600">Material-Instanz:</span>{' '}
-              <span className="font-mono">{assigningInstance.id.slice(0, 16)}...</span>
+              <span className="text-gray-600">Material-Code:</span>{' '}
+              <span className="font-mono">{assigningInstance.humanCode}</span>
             </div>
           )}
           <div>

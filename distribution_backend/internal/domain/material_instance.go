@@ -34,6 +34,6 @@ type CreateMaterialInstanceInput struct {
 
 // UpdateMaterialInstanceInput contains fields for updating a material instance
 type UpdateMaterialInstanceInput struct {
-	Status   string  `json:"status"`
-	Location string  `json:"location"`
+	Status   string `json:"status"`
+	Location string `json:"location"`
 }
