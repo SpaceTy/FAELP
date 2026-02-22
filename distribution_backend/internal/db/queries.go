@@ -28,6 +28,17 @@ type ListMaterialInstancesParams struct {
 	Offset    int
 }
 
+// UpsertMaterialInstanceInput contains fields for CSV inventory import.
+type UpsertMaterialInstanceInput struct {
+	HumanCode        string
+	TypeID           string
+	Description      string
+	Status           string
+	UseCount         int
+	Location         string
+	CurrentRequestID *string
+}
+
 // InventorySummary represents count of instances by type and status
 type InventorySummary struct {
 	TypeID string `json:"typeId"`
@@ -130,6 +141,116 @@ func (s *Store) ListMaterialInstances(ctx context.Context, params ListMaterialIn
 		result = []domain.MaterialInstance{}
 	}
 	return result, rows.Err()
+}
+
+// ListMaterialInstancesForExport returns all material instances matching optional filters.
+func (s *Store) ListMaterialInstancesForExport(ctx context.Context, params ListMaterialInstancesParams) ([]domain.MaterialInstance, error) {
+	args := []any{}
+	where := []string{"1=1"}
+
+	if params.TypeID != "" {
+		args = append(args, params.TypeID)
+		where = append(where, fmt.Sprintf("type_id = $%d", len(args)))
+	}
+	if params.Status != "" {
+		args = append(args, params.Status)
+		where = append(where, fmt.Sprintf("status = $%d", len(args)))
+	}
+	if params.Location != "" {
+		args = append(args, params.Location)
+		where = append(where, fmt.Sprintf("location = $%d", len(args)))
+	}
+	if params.HumanCode != "" {
+		args = append(args, params.HumanCode)
+		where = append(where, fmt.Sprintf("human_code = $%d", len(args)))
+	}
+
+	query := fmt.Sprintf(`
+		SELECT id, human_code, type_id, description, status, use_count, location, current_request_id, created_at, updated_at
+		FROM material_instances
+		WHERE %s
+		ORDER BY updated_at DESC
+	`, strings.Join(where, " AND "))
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var result []domain.MaterialInstance
+	for rows.Next() {
+		var row materialInstanceRow
+		if err := rows.Scan(
+			&row.ID, &row.HumanCode, &row.TypeID, &row.Description, &row.Status, &row.UseCount, &row.Location,
+			&row.CurrentRequestID, &row.CreatedAt, &row.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		result = append(result, mapMaterialInstance(row))
+	}
+	if result == nil {
+		result = []domain.MaterialInstance{}
+	}
+	return result, rows.Err()
+}
+
+// UpsertMaterialInstances inserts or updates material instances by human_code.
+func (s *Store) UpsertMaterialInstances(ctx context.Context, inputs []UpsertMaterialInstanceInput) (createdCount int, updatedCount int, err error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, 0, err
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	stmt, err := tx.PrepareContext(ctx, `
+		INSERT INTO material_instances (id, human_code, type_id, description, status, use_count, location, current_request_id)
+		VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, $7)
+		ON CONFLICT (human_code) DO UPDATE SET
+			type_id = EXCLUDED.type_id,
+			description = EXCLUDED.description,
+			status = EXCLUDED.status,
+			use_count = EXCLUDED.use_count,
+			location = EXCLUDED.location,
+			current_request_id = EXCLUDED.current_request_id,
+			updated_at = NOW()
+		RETURNING (xmax = 0) AS inserted
+	`)
+	if err != nil {
+		return 0, 0, err
+	}
+	defer stmt.Close()
+
+	for _, input := range inputs {
+		var inserted bool
+		if err = stmt.QueryRowContext(
+			ctx,
+			input.HumanCode,
+			input.TypeID,
+			input.Description,
+			input.Status,
+			input.UseCount,
+			input.Location,
+			input.CurrentRequestID,
+		).Scan(&inserted); err != nil {
+			return 0, 0, err
+		}
+		if inserted {
+			createdCount++
+		} else {
+			updatedCount++
+		}
+	}
+
+	if err = tx.Commit(); err != nil {
+		return 0, 0, err
+	}
+
+	return createdCount, updatedCount, nil
 }
 
 // UpdateMaterialInstance updates a material instance

@@ -3,6 +3,7 @@ import type { LoginRequest, LoginResponse, User } from '@/types/auth';
 import type {
   AssignMaterialInput,
   CreateMaterialInput,
+  ImportInventoryResponse,
   InventorySummaryItem,
   ListMaterialInstancesParams,
   MaterialInstance,
@@ -187,6 +188,45 @@ class ApiService {
     return response.json();
   }
 
+  async exportInventoryCSV(params: ListMaterialInstancesParams = {}): Promise<Blob> {
+    const query = new URLSearchParams();
+    if (params.typeId) query.set('typeId', params.typeId);
+    if (params.status) query.set('status', params.status);
+    if (params.location) query.set('location', params.location);
+    if (params.humanCode) query.set('humanCode', params.humanCode);
+
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+    const response = await fetch(`${API_BASE}/api/inventory/export${suffix}`, {
+      headers: this.getAuthHeaders({ jsonContentType: false }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(error.error || 'Failed to export inventory');
+    }
+
+    return response.blob();
+  }
+
+  async importInventoryCSV(file: File): Promise<ImportInventoryResponse> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${API_BASE}/api/inventory/import`, {
+      method: 'POST',
+      headers: this.getAuthHeaders({ jsonContentType: false }),
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      const details = Array.isArray(error.details) ? `: ${error.details.join('; ')}` : '';
+      throw new Error((error.error || 'Failed to import inventory') + details);
+    }
+
+    return response.json();
+  }
+
   async getInventorySummary(): Promise<InventorySummaryItem[]> {
     const response = await fetch(`${API_BASE}/api/inventory/summary`, {
       headers: this.getAuthHeaders(),
@@ -244,9 +284,13 @@ class ApiService {
     return response.json();
   }
 
-  private getAuthHeaders(): Record<string, string> {
+  private getAuthHeaders(options: { jsonContentType?: boolean } = {}): Record<string, string> {
+    const { jsonContentType = true } = options;
     const token = authSignal.value?.token;
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    const headers: Record<string, string> = {};
+    if (jsonContentType) {
+      headers['Content-Type'] = 'application/json';
+    }
     if (token) {
       headers.Authorization = `Bearer ${token}`;
     }

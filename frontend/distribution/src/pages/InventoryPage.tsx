@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'preact/hooks';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { api } from '@/services/api';
 import { materialTypesService } from '@/services/materialTypes';
 import type { MaterialInstance, MaterialStatus, MaterialType } from '@/types/inventory';
@@ -51,7 +51,11 @@ export function InventoryPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingTypes, setIsLoadingTypes] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [importResultMessage, setImportResultMessage] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   const [typeFilterDropdownOpen, setTypeFilterDropdownOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadData = async (filters?: { typeId: string; status: MaterialStatus | ''; location: string; humanCodeFilter: string }) => {
     const nextTypeId = filters?.typeId ?? typeId;
@@ -131,6 +135,58 @@ export function InventoryPage() {
     setHumanCodeFilter('');
     setSearchQuery('');
     await loadData({ typeId: '', status: '', location: '', humanCodeFilter: '' });
+  };
+
+  const handleExportCSV = async () => {
+    setIsExporting(true);
+    setError(null);
+    try {
+      const blob = await api.exportInventoryCSV({
+        typeId: typeId.trim() || undefined,
+        status: status || undefined,
+        location: location.trim() || undefined,
+        humanCode: humanCodeFilter.trim() || undefined,
+      });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `inventory-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'CSV export failed.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleImportClick = () => {
+    if (isImporting) return;
+    fileInputRef.current?.click();
+  };
+
+  const handleImportFile = async (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    setError(null);
+    setImportResultMessage(null);
+    try {
+      const result = await api.importInventoryCSV(file);
+      setImportResultMessage(
+        `Import complete: ${result.importedCount} rows (${result.createdCount} created, ${result.updatedCount} updated).`
+      );
+      await loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'CSV import failed.');
+    } finally {
+      setIsImporting(false);
+      input.value = '';
+    }
   };
 
   return (
@@ -266,6 +322,13 @@ export function InventoryPage() {
         <button className="btn-primary btn-full-width" onClick={() => (window.location.href = '/enter')}>
           + Add New Item
         </button>
+        <button className="btn-secondary btn-secondary-light btn-full-width mt-2" onClick={handleExportCSV} disabled={isExporting || isLoading}>
+          {isExporting ? 'Exporting CSV...' : 'Export CSV'}
+        </button>
+        <button className="btn-secondary btn-secondary-light btn-full-width mt-2" onClick={handleImportClick} disabled={isImporting}>
+          {isImporting ? 'Importing CSV...' : 'Import CSV'}
+        </button>
+        <input ref={fileInputRef} type="file" accept=".csv,text/csv" onChange={handleImportFile} className="hidden" />
       </aside>
 
       {/* Inventory Section */}
@@ -295,6 +358,9 @@ export function InventoryPage() {
 
         {error && (
           <div className="mt-4 p-3 rounded border border-red-300 bg-red-50 text-red-700 text-sm">{error}</div>
+        )}
+        {importResultMessage && (
+          <div className="mt-4 p-3 rounded border border-green-300 bg-green-50 text-green-700 text-sm">{importResultMessage}</div>
         )}
 
         <div className="inventory-table-container">

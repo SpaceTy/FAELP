@@ -2,12 +2,16 @@ package handlers
 
 import (
 	"database/sql"
+	"encoding/csv"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"distribution_backend/internal/client"
 	"distribution_backend/internal/db"
@@ -49,6 +53,12 @@ type assignRequestBody struct {
 
 type generatedCodeResponse struct {
 	HumanCode string `json:"humanCode"`
+}
+
+type importInventoryResponse struct {
+	ImportedCount int `json:"importedCount"`
+	CreatedCount  int `json:"createdCount"`
+	UpdatedCount  int `json:"updatedCount"`
 }
 
 var humanCodePattern = regexp.MustCompile(`^[A-Z]{5}$`)
@@ -169,6 +179,242 @@ func (h *InventoryHandler) ListMaterialInstances(w http.ResponseWriter, r *http.
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(instances)
+}
+
+// ExportInventoryCSV exports inventory as CSV with optional filters.
+func (h *InventoryHandler) ExportInventoryCSV(w http.ResponseWriter, r *http.Request) {
+	params := db.ListMaterialInstancesParams{
+		TypeID:    r.URL.Query().Get("typeId"),
+		Status:    r.URL.Query().Get("status"),
+		Location:  r.URL.Query().Get("location"),
+		HumanCode: strings.ToUpper(strings.TrimSpace(r.URL.Query().Get("humanCode"))),
+	}
+
+	if params.Status != "" && !isValidMaterialStatus(params.Status) {
+		http.Error(w, `{"error":"invalid status"}`, http.StatusBadRequest)
+		return
+	}
+	if params.HumanCode != "" && !humanCodePattern.MatchString(params.HumanCode) {
+		http.Error(w, `{"error":"humanCode must be exactly 5 uppercase letters"}`, http.StatusBadRequest)
+		return
+	}
+
+	instances, err := h.store.ListMaterialInstancesForExport(r.Context(), params)
+	if err != nil {
+		http.Error(w, `{"error":"failed to export inventory"}`, http.StatusInternalServerError)
+		return
+	}
+
+	filename := fmt.Sprintf("inventory_%s.csv", time.Now().Format("20060102_150405"))
+	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
+
+	csvWriter := csv.NewWriter(w)
+	if err := csvWriter.Write([]string{
+		"humanCode",
+		"typeId",
+		"description",
+		"status",
+		"useCount",
+		"location",
+		"currentRequestId",
+		"createdAt",
+		"updatedAt",
+	}); err != nil {
+		http.Error(w, `{"error":"failed to write csv header"}`, http.StatusInternalServerError)
+		return
+	}
+
+	for _, instance := range instances {
+		currentRequestID := ""
+		if instance.CurrentRequestID != nil {
+			currentRequestID = *instance.CurrentRequestID
+		}
+		if err := csvWriter.Write([]string{
+			instance.HumanCode,
+			instance.TypeID,
+			instance.Description,
+			instance.Status,
+			strconv.Itoa(instance.UseCount),
+			instance.Location,
+			currentRequestID,
+			instance.CreatedAt.Format(time.RFC3339),
+			instance.UpdatedAt.Format(time.RFC3339),
+		}); err != nil {
+			http.Error(w, `{"error":"failed to write csv row"}`, http.StatusInternalServerError)
+			return
+		}
+	}
+
+	csvWriter.Flush()
+	if err := csvWriter.Error(); err != nil {
+		http.Error(w, `{"error":"failed to finalize csv export"}`, http.StatusInternalServerError)
+	}
+}
+
+// ImportInventoryCSV imports inventory rows from CSV.
+func (h *InventoryHandler) ImportInventoryCSV(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
+		http.Error(w, `{"error":"invalid multipart form"}`, http.StatusBadRequest)
+		return
+	}
+
+	file, _, err := r.FormFile("file")
+	if err != nil {
+		http.Error(w, `{"error":"file is required (form field: file)"}`, http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	reader := csv.NewReader(file)
+	reader.TrimLeadingSpace = true
+	reader.FieldsPerRecord = -1
+
+	header, err := reader.Read()
+	if err != nil {
+		http.Error(w, `{"error":"failed to read csv header"}`, http.StatusBadRequest)
+		return
+	}
+
+	colIndex := map[string]int{}
+	for idx, rawName := range header {
+		colIndex[strings.ToLower(strings.TrimSpace(rawName))] = idx
+	}
+
+	requiredColumns := []string{"humancode", "typeid", "location"}
+	for _, col := range requiredColumns {
+		if _, ok := colIndex[col]; !ok {
+			http.Error(w, fmt.Sprintf(`{"error":"missing required csv column: %s"}`, col), http.StatusBadRequest)
+			return
+		}
+	}
+
+	getCol := func(record []string, key string) string {
+		idx, ok := colIndex[key]
+		if !ok || idx >= len(record) {
+			return ""
+		}
+		return strings.TrimSpace(record[idx])
+	}
+
+	var inputs []db.UpsertMaterialInstanceInput
+	var rowErrors []string
+	rowNumber := 1
+
+	for {
+		record, readErr := reader.Read()
+		if errors.Is(readErr, io.EOF) {
+			break
+		}
+		if readErr != nil && !errors.Is(readErr, csv.ErrFieldCount) {
+			http.Error(w, `{"error":"failed to parse csv"}`, http.StatusBadRequest)
+			return
+		}
+		rowNumber++
+
+		// Skip completely empty rows.
+		isEmpty := true
+		for _, value := range record {
+			if strings.TrimSpace(value) != "" {
+				isEmpty = false
+				break
+			}
+		}
+		if isEmpty {
+			continue
+		}
+
+		humanCode := strings.ToUpper(getCol(record, "humancode"))
+		typeID := getCol(record, "typeid")
+		location := getCol(record, "location")
+		description := getCol(record, "description")
+		status := strings.ToLower(getCol(record, "status"))
+		useCountRaw := getCol(record, "usecount")
+		currentRequestIDRaw := getCol(record, "currentrequestid")
+
+		if humanCode == "" || !humanCodePattern.MatchString(humanCode) {
+			rowErrors = append(rowErrors, fmt.Sprintf("row %d: invalid humanCode", rowNumber))
+			continue
+		}
+		if typeID == "" {
+			rowErrors = append(rowErrors, fmt.Sprintf("row %d: typeId is required", rowNumber))
+			continue
+		}
+		if location == "" {
+			rowErrors = append(rowErrors, fmt.Sprintf("row %d: location is required", rowNumber))
+			continue
+		}
+
+		if status == "" {
+			status = domain.StatusAvailable
+		}
+		if !isValidMaterialStatus(status) {
+			rowErrors = append(rowErrors, fmt.Sprintf("row %d: invalid status", rowNumber))
+			continue
+		}
+
+		useCount := 0
+		if useCountRaw != "" {
+			parsedUseCount, convErr := strconv.Atoi(useCountRaw)
+			if convErr != nil || parsedUseCount < 0 {
+				rowErrors = append(rowErrors, fmt.Sprintf("row %d: invalid useCount", rowNumber))
+				continue
+			}
+			useCount = parsedUseCount
+		}
+
+		var currentRequestID *string
+		if currentRequestIDRaw != "" {
+			currentRequestID = &currentRequestIDRaw
+		}
+		if status == domain.StatusRented && currentRequestID == nil {
+			rowErrors = append(rowErrors, fmt.Sprintf("row %d: currentRequestId required for rented status", rowNumber))
+			continue
+		}
+		if status != domain.StatusRented {
+			currentRequestID = nil
+		}
+
+		inputs = append(inputs, db.UpsertMaterialInstanceInput{
+			HumanCode:        humanCode,
+			TypeID:           typeID,
+			Description:      description,
+			Status:           status,
+			UseCount:         useCount,
+			Location:         location,
+			CurrentRequestID: currentRequestID,
+		})
+	}
+
+	if len(rowErrors) > 0 {
+		if len(rowErrors) > 20 {
+			rowErrors = rowErrors[:20]
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"error":   "invalid CSV rows",
+			"details": rowErrors,
+		})
+		return
+	}
+	if len(inputs) == 0 {
+		http.Error(w, `{"error":"csv contains no importable rows"}`, http.StatusBadRequest)
+		return
+	}
+
+	createdCount, updatedCount, err := h.store.UpsertMaterialInstances(r.Context(), inputs)
+	if err != nil {
+		http.Error(w, `{"error":"failed to import inventory"}`, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(importInventoryResponse{
+		ImportedCount: len(inputs),
+		CreatedCount:  createdCount,
+		UpdatedCount:  updatedCount,
+	})
 }
 
 // UpdateMaterialInstance updates status/location for an inventory item.

@@ -52,3 +52,9 @@ export interface UpdateMaterialInput {
   status: MaterialStatus;
   location: string;
 }
+
+export interface ImportInventoryResponse {
+  importedCount: number;
+  createdCount: number;
+  updatedCount: number;
+}
