@@ -8,6 +8,13 @@ interface RequestFormProps {
   onSuccess: () => void;
 }
 
+function formatDateForInput(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export function RequestForm({ items, onSuccess }: RequestFormProps) {
   const [deliveryDate, setDeliveryDate] = useState('');
   const [plannedReturnDate, setPlannedReturnDate] = useState('');
@@ -22,8 +29,8 @@ export function RequestForm({ items, onSuccess }: RequestFormProps) {
   const [error, setError] = useState('');
 
   const minDate = new Date();
-  minDate.setDate(minDate.getDate() + 1);
-  const minDateStr = minDate.toISOString().split('T')[0];
+  minDate.setDate(minDate.getDate() + 3);
+  const minDateStr = formatDateForInput(minDate);
 
   const handleSubmit = async (e: Event) => {
     e.preventDefault();
@@ -39,6 +46,11 @@ export function RequestForm({ items, onSuccess }: RequestFormProps) {
     }
     if (!Number.isFinite(parsedIntendedStudents) || parsedIntendedStudents <= 0) {
       setError('Bitte geben Sie eine gültige Anzahl geplanter Schüler:innen an.');
+      setIsSubmitting(false);
+      return;
+    }
+    if (deliveryDate && deliveryDate < minDateStr) {
+      setError('Das Lieferdatum muss mindestens 3 Tage in der Zukunft liegen.');
       setIsSubmitting(false);
       return;
     }
