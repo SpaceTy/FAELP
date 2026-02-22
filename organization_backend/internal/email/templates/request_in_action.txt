@@ -4,6 +4,6 @@ Good news! Your material request (#{{.RequestID}}) has been shipped and is now i
 
 Tracking Code: {{.TrackingCode}}
 
-You can use this tracking code to monitor the delivery status of your materials.
+Track your package: {{.TrackingURL}}
 
 Thank you for using FAELP.

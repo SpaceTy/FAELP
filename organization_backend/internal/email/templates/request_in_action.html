@@ -8,7 +8,7 @@
   <p>Dear {{.CustomerName}},</p>
   <p>Good news! Your material request (#{{.RequestID}}) has been shipped and is now in action.</p>
   <p><strong>Tracking Code:</strong> {{.TrackingCode}}</p>
-  <p>You can use this tracking code to monitor the delivery status of your materials.</p>
+  <p>Track your package: <a href="{{.TrackingURL}}">{{.TrackingURL}}</a></p>
   <p>Thank you for using FAELP.</p>
 </body>
 </html>

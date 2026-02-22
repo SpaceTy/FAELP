@@ -8,6 +8,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -116,7 +117,17 @@ type RequestStatusNotificationParams struct {
 	PreviousStatus     string
 	NewStatus          string
 	TrackingCode       string
+	TrackingURL        string
 	DistributionCenter string
+}
+
+func buildDHLTrackingURL(trackingCode string) string {
+	code := strings.TrimSpace(trackingCode)
+	if code == "" {
+		return ""
+	}
+
+	return "https://www.dhl.com/global-en/home/tracking.html?tracking-id=" + url.QueryEscape(code) + "&submit=1"
 }
 
 func (s *Service) SendRequestStatusNotification(ctx context.Context, params RequestStatusNotificationParams) error {
@@ -143,6 +154,10 @@ func (s *Service) SendRequestStatusNotification(ctx context.Context, params Requ
 
 	default:
 		return nil
+	}
+
+	if params.NewStatus == "inAction" {
+		params.TrackingURL = buildDHLTrackingURL(params.TrackingCode)
 	}
 
 	htmlBody, err := renderHTMLTemplate(htmlTemplate, params)
