@@ -7,6 +7,7 @@ import (
 
 type materialInstanceRow struct {
 	ID               string
+	HumanCode        string
 	TypeID           string
 	Description      string
 	Status           string

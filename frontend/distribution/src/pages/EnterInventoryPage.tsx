@@ -24,10 +24,13 @@ export function EnterInventoryPage() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const [isBusy, setIsBusy] = useState(false);
+  const [isGeneratingCode, setIsGeneratingCode] = useState(false);
   const [isLoadingTypes, setIsLoadingTypes] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [lastResult, setLastResult] = useState<MaterialInstance | null>(null);
+  const [generatedCode, setGeneratedCode] = useState('');
+  const [isCodeConfirmed, setIsCodeConfirmed] = useState(false);
 
   // Load material types on mount
   useEffect(() => {
@@ -56,6 +59,23 @@ export function EnterInventoryPage() {
     );
   }, [materialTypes, searchQuery]);
 
+  const loadGeneratedCode = async () => {
+    setIsGeneratingCode(true);
+    try {
+      const code = await api.generateMaterialCode();
+      setGeneratedCode(code);
+      setIsCodeConfirmed(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Code konnte nicht generiert werden.');
+    } finally {
+      setIsGeneratingCode(false);
+    }
+  };
+
+  useEffect(() => {
+    loadGeneratedCode();
+  }, []);
+
   const clearMessages = () => {
     setError(null);
     setSuccess(null);
@@ -69,14 +89,18 @@ export function EnterInventoryPage() {
     const finalTypeId = isCustomType ? customTypeId.trim() : typeId.trim();
 
     try {
+      if (!generatedCode || !isCodeConfirmed) {
+        throw new Error('Bitte schreiben Sie den Material-Code auf das physische Material und bestätigen Sie dies.');
+      }
       const created = await api.createMaterialInstance({
+        humanCode: generatedCode,
         typeId: finalTypeId,
         description: description.trim(),
         useCount,
         location: location.trim(),
       });
       setLastResult(created);
-      setSuccess(`Material ${created.id} wurde erfolgreich ins Inventar aufgenommen.`);
+      setSuccess(`Material mit Code ${created.humanCode} wurde erfolgreich ins Inventar aufgenommen.`);
       // Reset form
       setTypeId('');
       setCustomTypeId('');
@@ -85,6 +109,7 @@ export function EnterInventoryPage() {
       setUseCount(0);
       setLocation('');
       setSearchQuery('');
+      await loadGeneratedCode();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erfassung fehlgeschlagen.');
     } finally {
@@ -116,7 +141,7 @@ export function EnterInventoryPage() {
         <section className="bg-white rounded-lg shadow p-6">
           <h2 className="text-xl font-semibold text-text-primary">Material erfassen</h2>
           <p className="text-sm text-text-secondary mt-1">
-            Neues Material ins Inventar aufnehmen. Die ID wird automatisch generiert und der Status auf "available" gesetzt.
+            Neues Material ins Inventar aufnehmen. Vor dem Speichern schreiben Sie den 5-stelligen Material-Code auf das physische Material.
           </p>
 
           {error && (
@@ -308,9 +333,44 @@ export function EnterInventoryPage() {
               className="w-full px-3 py-2 border border-gray-300 rounded-md"
             />
           </div>
+          <div className="rounded-md border border-gray-200 bg-gray-50 p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-text-secondary">Material-Code (auf das Material schreiben)</p>
+                <p className="font-mono text-2xl tracking-widest text-text-primary">
+                  {isGeneratingCode ? '.....' : generatedCode || '-----'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={loadGeneratedCode}
+                disabled={isBusy || isGeneratingCode}
+                className="px-3 py-2 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50"
+              >
+                Neu generieren
+              </button>
+            </div>
+            <label className="flex items-start gap-2 text-sm text-text-primary">
+              <input
+                type="checkbox"
+                checked={isCodeConfirmed}
+                onChange={(e) => setIsCodeConfirmed((e.target as HTMLInputElement).checked)}
+                disabled={!generatedCode || isGeneratingCode}
+                className="mt-0.5"
+              />
+              Ich habe den Material-Code auf das physische Material geschrieben.
+            </label>
+          </div>
           <button
             type="submit"
-            disabled={isBusy || (!isCustomType && !typeId) || (isCustomType && !customTypeId.trim())}
+            disabled={
+              isBusy ||
+              isGeneratingCode ||
+              !generatedCode ||
+              !isCodeConfirmed ||
+              (!isCustomType && !typeId) ||
+              (isCustomType && !customTypeId.trim())
+            }
             className="px-4 py-2 bg-primary text-white rounded hover:bg-primary-hover disabled:opacity-50"
           >
             {isBusy ? 'Wird gespeichert...' : 'Material erfassen'}
@@ -322,6 +382,7 @@ export function EnterInventoryPage() {
             <h3 className="text-lg font-semibold text-text-primary">Zuletzt erfasst</h3>
             <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-text-primary">
               <p><strong>ID:</strong> {lastResult.id}</p>
+              <p><strong>Code:</strong> <span className="font-mono">{lastResult.humanCode}</span></p>
               <p><strong>Typ:</strong> {lastResult.typeId}</p>
               <p><strong>Beschreibung:</strong> {lastResult.description || '–'}</p>
               <p><strong>Status:</strong> {lastResult.status}</p>

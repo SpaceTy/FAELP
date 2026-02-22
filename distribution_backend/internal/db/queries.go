@@ -1,6 +1,7 @@
 package db
 
 import (
+	"crypto/rand"
 	"context"
 	"database/sql"
 	"fmt"
@@ -19,11 +20,12 @@ func NewStore(db *sql.DB) *Store {
 
 // ListMaterialInstancesParams contains filters for listing material instances
 type ListMaterialInstancesParams struct {
-	TypeID   string
-	Status   string
-	Location string
-	Limit    int
-	Offset   int
+	TypeID    string
+	Status    string
+	Location  string
+	HumanCode string
+	Limit     int
+	Offset    int
 }
 
 // InventorySummary represents count of instances by type and status
@@ -37,11 +39,11 @@ type InventorySummary struct {
 func (s *Store) CreateMaterialInstance(ctx context.Context, input domain.CreateMaterialInstanceInput) (domain.MaterialInstance, error) {
 	var row materialInstanceRow
 	err := s.db.QueryRowContext(ctx, `
-		INSERT INTO material_instances (id, type_id, description, status, use_count, location)
-		VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5)
-		RETURNING id, type_id, description, status, use_count, location, current_request_id, created_at, updated_at
-	`, input.TypeID, input.Description, domain.StatusAvailable, input.UseCount, input.Location).Scan(
-		&row.ID, &row.TypeID, &row.Description, &row.Status, &row.UseCount, &row.Location,
+		INSERT INTO material_instances (id, human_code, type_id, description, status, use_count, location)
+		VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6)
+		RETURNING id, human_code, type_id, description, status, use_count, location, current_request_id, created_at, updated_at
+	`, input.HumanCode, input.TypeID, input.Description, domain.StatusAvailable, input.UseCount, input.Location).Scan(
+		&row.ID, &row.HumanCode, &row.TypeID, &row.Description, &row.Status, &row.UseCount, &row.Location,
 		&row.CurrentRequestID, &row.CreatedAt, &row.UpdatedAt,
 	)
 	if err != nil {
@@ -54,11 +56,11 @@ func (s *Store) CreateMaterialInstance(ctx context.Context, input domain.CreateM
 func (s *Store) GetMaterialInstanceByID(ctx context.Context, id string) (domain.MaterialInstance, error) {
 	var row materialInstanceRow
 	err := s.db.QueryRowContext(ctx, `
-		SELECT id, type_id, description, status, use_count, location, current_request_id, created_at, updated_at
+		SELECT id, human_code, type_id, description, status, use_count, location, current_request_id, created_at, updated_at
 		FROM material_instances
 		WHERE id = $1
 	`, id).Scan(
-		&row.ID, &row.TypeID, &row.Description, &row.Status, &row.UseCount, &row.Location,
+		&row.ID, &row.HumanCode, &row.TypeID, &row.Description, &row.Status, &row.UseCount, &row.Location,
 		&row.CurrentRequestID, &row.CreatedAt, &row.UpdatedAt,
 	)
 	if err != nil {
@@ -84,6 +86,10 @@ func (s *Store) ListMaterialInstances(ctx context.Context, params ListMaterialIn
 		args = append(args, params.Location)
 		where = append(where, fmt.Sprintf("location = $%d", len(args)))
 	}
+	if params.HumanCode != "" {
+		args = append(args, params.HumanCode)
+		where = append(where, fmt.Sprintf("human_code = $%d", len(args)))
+	}
 
 	limit := params.Limit
 	if limit <= 0 || limit > 1000 {
@@ -96,7 +102,7 @@ func (s *Store) ListMaterialInstances(ctx context.Context, params ListMaterialIn
 
 	args = append(args, limit, offset)
 	query := fmt.Sprintf(`
-		SELECT id, type_id, description, status, use_count, location, current_request_id, created_at, updated_at
+		SELECT id, human_code, type_id, description, status, use_count, location, current_request_id, created_at, updated_at
 		FROM material_instances
 		WHERE %s
 		ORDER BY updated_at DESC
@@ -113,7 +119,7 @@ func (s *Store) ListMaterialInstances(ctx context.Context, params ListMaterialIn
 	for rows.Next() {
 		var row materialInstanceRow
 		if err := rows.Scan(
-			&row.ID, &row.TypeID, &row.Description, &row.Status, &row.UseCount, &row.Location,
+			&row.ID, &row.HumanCode, &row.TypeID, &row.Description, &row.Status, &row.UseCount, &row.Location,
 			&row.CurrentRequestID, &row.CreatedAt, &row.UpdatedAt,
 		); err != nil {
 			return nil, err
@@ -133,9 +139,9 @@ func (s *Store) UpdateMaterialInstance(ctx context.Context, id string, input dom
 		UPDATE material_instances
 		SET status = $2, location = $3
 		WHERE id = $1
-		RETURNING id, type_id, description, status, use_count, location, current_request_id, created_at, updated_at
+		RETURNING id, human_code, type_id, description, status, use_count, location, current_request_id, created_at, updated_at
 	`, id, input.Status, input.Location).Scan(
-		&row.ID, &row.TypeID, &row.Description, &row.Status, &row.UseCount, &row.Location,
+		&row.ID, &row.HumanCode, &row.TypeID, &row.Description, &row.Status, &row.UseCount, &row.Location,
 		&row.CurrentRequestID, &row.CreatedAt, &row.UpdatedAt,
 	)
 	if err != nil {
@@ -160,9 +166,9 @@ func (s *Store) AssignToRequest(ctx context.Context, instanceID string, requestI
 		UPDATE material_instances
 		SET status = $2, current_request_id = $3
 		WHERE id = $1 AND status = $4
-		RETURNING id, type_id, description, status, use_count, location, current_request_id, created_at, updated_at
+		RETURNING id, human_code, type_id, description, status, use_count, location, current_request_id, created_at, updated_at
 	`, instanceID, domain.StatusRented, requestID, domain.StatusAvailable).Scan(
-		&row.ID, &row.TypeID, &row.Description, &row.Status, &row.UseCount, &row.Location,
+		&row.ID, &row.HumanCode, &row.TypeID, &row.Description, &row.Status, &row.UseCount, &row.Location,
 		&row.CurrentRequestID, &row.CreatedAt, &row.UpdatedAt,
 	)
 	if err != nil {
@@ -178,9 +184,9 @@ func (s *Store) ReleaseFromRequest(ctx context.Context, instanceID string) (doma
 		UPDATE material_instances
 		SET status = $2, current_request_id = NULL, use_count = use_count + 1
 		WHERE id = $1 AND status = $3
-		RETURNING id, type_id, description, status, use_count, location, current_request_id, created_at, updated_at
+		RETURNING id, human_code, type_id, description, status, use_count, location, current_request_id, created_at, updated_at
 	`, instanceID, domain.StatusReturned, domain.StatusRented).Scan(
-		&row.ID, &row.TypeID, &row.Description, &row.Status, &row.UseCount, &row.Location,
+		&row.ID, &row.HumanCode, &row.TypeID, &row.Description, &row.Status, &row.UseCount, &row.Location,
 		&row.CurrentRequestID, &row.CreatedAt, &row.UpdatedAt,
 	)
 	if err != nil {
@@ -257,7 +263,7 @@ func (s *Store) GetAvailableByType(ctx context.Context, typeID string, limit int
 	}
 
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT id, type_id, description, status, use_count, location, current_request_id, created_at, updated_at
+		SELECT id, human_code, type_id, description, status, use_count, location, current_request_id, created_at, updated_at
 		FROM material_instances
 		WHERE type_id = $1 AND status = $2
 		ORDER BY use_count ASC, updated_at ASC
@@ -272,7 +278,7 @@ func (s *Store) GetAvailableByType(ctx context.Context, typeID string, limit int
 	for rows.Next() {
 		var row materialInstanceRow
 		if err := rows.Scan(
-			&row.ID, &row.TypeID, &row.Description, &row.Status, &row.UseCount, &row.Location,
+			&row.ID, &row.HumanCode, &row.TypeID, &row.Description, &row.Status, &row.UseCount, &row.Location,
 			&row.CurrentRequestID, &row.CreatedAt, &row.UpdatedAt,
 		); err != nil {
 			return nil, err
@@ -288,6 +294,7 @@ func (s *Store) GetAvailableByType(ctx context.Context, typeID string, limit int
 func mapMaterialInstance(row materialInstanceRow) domain.MaterialInstance {
 	instance := domain.MaterialInstance{
 		ID:          row.ID,
+		HumanCode:   row.HumanCode,
 		TypeID:      row.TypeID,
 		Description: row.Description,
 		Status:      row.Status,
@@ -300,6 +307,47 @@ func mapMaterialInstance(row materialInstanceRow) domain.MaterialInstance {
 		instance.CurrentRequestID = &row.CurrentRequestID.String
 	}
 	return instance
+}
+
+// GenerateMaterialHumanCode creates a unique 5-letter code for writing on physical inventory.
+func (s *Store) GenerateMaterialHumanCode(ctx context.Context) (string, error) {
+	const maxAttempts = 20
+	for range maxAttempts {
+		code, err := randomHumanCode()
+		if err != nil {
+			return "", err
+		}
+
+		var exists bool
+		if err := s.db.QueryRowContext(ctx, `
+			SELECT EXISTS (
+				SELECT 1 FROM material_instances WHERE human_code = $1
+			)
+		`, code).Scan(&exists); err != nil {
+			return "", err
+		}
+		if !exists {
+			return code, nil
+		}
+	}
+
+	return "", fmt.Errorf("failed to generate unique material code after %d attempts", maxAttempts)
+}
+
+func randomHumanCode() (string, error) {
+	const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ"
+	const codeLength = 5
+
+	buf := make([]byte, codeLength)
+	randomBytes := make([]byte, codeLength)
+	if _, err := rand.Read(randomBytes); err != nil {
+		return "", err
+	}
+
+	for i := range codeLength {
+		buf[i] = alphabet[int(randomBytes[i])%len(alphabet)]
+	}
+	return string(buf), nil
 }
 
 const distributionCenterIDConfigKey = "distribution_center_id"

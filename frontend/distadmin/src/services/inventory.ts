@@ -19,11 +19,26 @@ class InventoryService {
     return headers;
   }
 
+  async generateMaterialCode(): Promise<string> {
+    const response = await fetch(`${API_BASE}/api/inventory/code`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(error.error || 'Failed to generate inventory code');
+    }
+
+    const data: { humanCode: string } = await response.json();
+    return data.humanCode;
+  }
+
   // List material instances with optional filters
   async listMaterialInstances(filters?: {
     typeId?: string;
     status?: string;
     location?: string;
+    humanCode?: string;
     limit?: number;
     offset?: number;
   }): Promise<MaterialInstance[]> {
@@ -31,6 +46,7 @@ class InventoryService {
     if (filters?.typeId) params.append('typeId', filters.typeId);
     if (filters?.status) params.append('status', filters.status);
     if (filters?.location) params.append('location', filters.location);
+    if (filters?.humanCode) params.append('humanCode', filters.humanCode);
     if (filters?.limit) params.append('limit', filters.limit.toString());
     if (filters?.offset) params.append('offset', filters.offset.toString());
 

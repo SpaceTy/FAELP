@@ -46,16 +46,18 @@ export function InventoryPage() {
   const [typeId, setTypeId] = useState('');
   const [status, setStatus] = useState<MaterialStatus | ''>('');
   const [location, setLocation] = useState('');
+  const [humanCodeFilter, setHumanCodeFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingTypes, setIsLoadingTypes] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [typeFilterDropdownOpen, setTypeFilterDropdownOpen] = useState(false);
 
-  const loadData = async (filters?: { typeId: string; status: MaterialStatus | ''; location: string }) => {
+  const loadData = async (filters?: { typeId: string; status: MaterialStatus | ''; location: string; humanCodeFilter: string }) => {
     const nextTypeId = filters?.typeId ?? typeId;
     const nextStatus = filters?.status ?? status;
     const nextLocation = filters?.location ?? location;
+    const nextHumanCode = filters?.humanCodeFilter ?? humanCodeFilter;
 
     setIsLoading(true);
     setError(null);
@@ -64,6 +66,7 @@ export function InventoryPage() {
         typeId: nextTypeId.trim() || undefined,
         status: nextStatus || undefined,
         location: nextLocation.trim() || undefined,
+        humanCode: nextHumanCode.trim() || undefined,
         limit: 200,
         offset: 0,
       });
@@ -102,6 +105,7 @@ export function InventoryPage() {
     return safeItems.filter(
       (item) =>
         item.id.toLowerCase().includes(query) ||
+        item.humanCode.toLowerCase().includes(query) ||
         item.typeId.toLowerCase().includes(query) ||
         item.location.toLowerCase().includes(query)
     );
@@ -124,8 +128,9 @@ export function InventoryPage() {
     setTypeId('');
     setStatus('');
     setLocation('');
+    setHumanCodeFilter('');
     setSearchQuery('');
-    await loadData({ typeId: '', status: '', location: '' });
+    await loadData({ typeId: '', status: '', location: '', humanCodeFilter: '' });
   };
 
   return (
@@ -236,6 +241,13 @@ export function InventoryPage() {
               placeholder="Location"
               className="search-input"
             />
+            <input
+              type="text"
+              value={humanCodeFilter}
+              onInput={(e) => setHumanCodeFilter((e.target as HTMLInputElement).value.toUpperCase())}
+              placeholder="Code (e.g. ABCDE)"
+              className="search-input"
+            />
             <div className="flex gap-2 mt-2">
               <button
                 type="button"
@@ -297,6 +309,7 @@ export function InventoryPage() {
             <table className="data-table inventory-table">
               <thead>
                 <tr>
+                  <th>Code</th>
                   <th className="col-id">ID</th>
                   <th>Type</th>
                   <th>Description</th>
@@ -310,6 +323,9 @@ export function InventoryPage() {
               <tbody>
                 {filteredItems.map((item) => (
                   <tr key={item.id}>
+                    <td>
+                      <span className="font-mono text-sm">{item.humanCode}</span>
+                    </td>
                     <td className="col-id">
                       <button
                         onClick={() => copyToClipboard(item.id)}
@@ -352,7 +368,7 @@ export function InventoryPage() {
                 ))}
                 {filteredItems.length === 0 && !isLoading && (
                   <tr>
-                    <td colSpan={8} className="text-center py-8 text-text-secondary">
+                    <td colSpan={9} className="text-center py-8 text-text-secondary">
                       No inventory items found.
                     </td>
                   </tr>

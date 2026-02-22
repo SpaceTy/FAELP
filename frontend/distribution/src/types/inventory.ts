@@ -10,6 +10,7 @@ export interface MaterialType {
 
 export interface MaterialInstance {
   id: string;
+  humanCode: string;
   typeId: string;
   description: string;
   status: MaterialStatus;
@@ -30,11 +31,13 @@ export interface ListMaterialInstancesParams {
   typeId?: string;
   status?: MaterialStatus | '';
   location?: string;
+  humanCode?: string;
   limit?: number;
   offset?: number;
 }
 
 export interface CreateMaterialInput {
+  humanCode: string;
   typeId: string;
   description: string;
   useCount: number;

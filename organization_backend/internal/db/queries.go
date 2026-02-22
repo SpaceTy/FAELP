@@ -618,7 +618,7 @@ func (s *Store) ListRequestsByCustomerID(ctx context.Context, customerID string)
 	}
 	defer rows.Close()
 
-	var requests []domain.Request
+	requests := make([]domain.Request, 0)
 	for rows.Next() {
 		var req domain.Request
 		var approvedDistributionCenterID sql.NullString
@@ -732,7 +732,7 @@ func (s *Store) ListRequests(ctx context.Context, status, distributionCenterID s
 	}
 	defer rows.Close()
 
-	var requests []domain.Request
+	requests := make([]domain.Request, 0)
 	for rows.Next() {
 		var req domain.Request
 		var approvedDistributionCenterID sql.NullString

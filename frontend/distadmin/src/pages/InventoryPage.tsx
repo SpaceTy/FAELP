@@ -49,6 +49,7 @@ export function InventoryPage() {
   const [statusFilter, setStatusFilter] = useState<MaterialStatus | ''>('');
   const [locationFilter, setLocationFilter] = useState('');
   const [typeIdFilter, setTypeIdFilter] = useState('');
+  const [humanCodeFilter, setHumanCodeFilter] = useState('');
   const [typeFilterDropdownOpen, setTypeFilterDropdownOpen] = useState(false);
 
   // Modal state
@@ -80,6 +81,7 @@ export function InventoryPage() {
           status: statusFilter || undefined,
           location: locationFilter || undefined,
           typeId: typeIdFilter || undefined,
+          humanCode: humanCodeFilter || undefined,
         }),
         inventoryService.getInventorySummary(),
       ]);
@@ -90,7 +92,7 @@ export function InventoryPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [statusFilter, locationFilter, typeIdFilter]);
+  }, [statusFilter, locationFilter, typeIdFilter, humanCodeFilter]);
 
   // Load material types once on mount
   const loadMaterialTypes = useCallback(async () => {
@@ -127,6 +129,7 @@ export function InventoryPage() {
     } else {
       // Create case
       await inventoryService.createMaterialInstance({
+        humanCode: data.humanCode,
         typeId: data.typeId,
         description: data.description || undefined,
         location: data.location,
@@ -229,6 +232,17 @@ export function InventoryPage() {
             value={locationFilter}
             onInput={(e) => setLocationFilter((e.target as HTMLInputElement).value)}
             placeholder="Filter nach Standort..."
+            className="logistics-input text-sm"
+          />
+        </div>
+
+        <div className="filter-section">
+          <h3>Code</h3>
+          <input
+            type="text"
+            value={humanCodeFilter}
+            onInput={(e) => setHumanCodeFilter((e.target as HTMLInputElement).value.toUpperCase())}
+            placeholder="ABCDE"
             className="logistics-input text-sm"
           />
         </div>
@@ -387,7 +401,7 @@ export function InventoryPage() {
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
                         {getStatusBadge(instance.status)}
-                        <span className="text-sm text-gray-500 font-mono">{instance.id.slice(0, 8)}...</span>
+                        <span className="text-sm text-gray-500 font-mono">{instance.humanCode}</span>
                       </div>
                       <h3 className="font-medium text-gray-800 mb-1">
                         <span className="material-inline">
@@ -411,6 +425,7 @@ export function InventoryPage() {
                         </p>
                       )}
                       <div className="flex items-center gap-4 mt-3 text-xs text-gray-500">
+                        <span>Code: {instance.humanCode}</span>
                         <span>Nutzungszahl: {instance.useCount}</span>
                         <span>Aktualisiert: {formatDate(instance.updatedAt)}</span>
                       </div>
@@ -489,6 +504,10 @@ export function InventoryPage() {
         {detailInstance && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs text-gray-500 uppercase">Code</label>
+                <p className="font-mono text-sm">{detailInstance.humanCode}</p>
+              </div>
               <div>
                 <label className="text-xs text-gray-500 uppercase">ID</label>
                 <p className="font-mono text-sm">{detailInstance.id}</p>

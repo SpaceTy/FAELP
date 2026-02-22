@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'preact/hooks';
 import { Modal } from './Modal';
+import { inventoryService } from '@/services/inventory';
 import type { MaterialInstance, MaterialStatus, MaterialType } from '@/types/inventory';
 
 interface InventoryFormModalProps {
@@ -26,9 +27,12 @@ export function InventoryFormModal({ isOpen, onClose, onSubmit, instance, materi
   const [location, setLocation] = useState('');
   const [status, setStatus] = useState<MaterialStatus>('available');
   const [isLoading, setIsLoading] = useState(false);
+  const [isGeneratingCode, setIsGeneratingCode] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [generatedCode, setGeneratedCode] = useState('');
+  const [isCodeConfirmed, setIsCodeConfirmed] = useState(false);
 
   // Filter material types based on search query
   const filteredMaterialTypes = useMemo(() => {
@@ -42,6 +46,19 @@ export function InventoryFormModal({ isOpen, onClose, onSubmit, instance, materi
   }, [materialTypes, searchQuery]);
 
   useEffect(() => {
+    const loadGeneratedCode = async () => {
+      setIsGeneratingCode(true);
+      try {
+        const code = await inventoryService.generateMaterialCode();
+        setGeneratedCode(code);
+        setIsCodeConfirmed(false);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Code konnte nicht generiert werden');
+      } finally {
+        setIsGeneratingCode(false);
+      }
+    };
+
     if (isOpen) {
       if (instance) {
         setTypeId(instance.typeId);
@@ -57,6 +74,9 @@ export function InventoryFormModal({ isOpen, onClose, onSubmit, instance, materi
         setDescription('');
         setLocation('');
         setStatus('available');
+        setGeneratedCode('');
+        setIsCodeConfirmed(false);
+        loadGeneratedCode();
       }
       setSearchQuery('');
       setIsDropdownOpen(false);
@@ -75,7 +95,11 @@ export function InventoryFormModal({ isOpen, onClose, onSubmit, instance, materi
       if (isEditing && instance) {
         await onSubmit({ status, location: location.trim() });
       } else {
+        if (!generatedCode || !isCodeConfirmed) {
+          throw new Error('Bitte schreiben Sie den Material-Code auf das Material und bestätigen Sie dies.');
+        }
         await onSubmit({
+          humanCode: generatedCode,
           typeId: finalTypeId,
           description: description.trim() || '',
           location: location.trim(),
@@ -128,6 +152,7 @@ export function InventoryFormModal({ isOpen, onClose, onSubmit, instance, materi
             form="inventory-form"
             disabled={
               isLoading ||
+              (!isEditing && (isGeneratingCode || !generatedCode || !isCodeConfirmed)) ||
               !location.trim() ||
               (!isEditing && !(isCustomType ? customTypeId.trim() : typeId.trim()))
             }
@@ -334,6 +359,46 @@ export function InventoryFormModal({ isOpen, onClose, onSubmit, instance, materi
             placeholder="Optionale Beschreibung"
           />
         </div>
+
+        {!isEditing && (
+          <div className="rounded border border-gray-200 bg-gray-50 p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-600 uppercase">Material-Code</p>
+                <p className="font-mono text-2xl tracking-widest">{isGeneratingCode ? '.....' : generatedCode || '-----'}</p>
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  setIsGeneratingCode(true);
+                  try {
+                    const code = await inventoryService.generateMaterialCode();
+                    setGeneratedCode(code);
+                    setIsCodeConfirmed(false);
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : 'Code konnte nicht generiert werden');
+                  } finally {
+                    setIsGeneratingCode(false);
+                  }
+                }}
+                disabled={isGeneratingCode || isLoading}
+                className="btn-logistics btn-logistics-outline text-xs py-1.5 px-2"
+              >
+                Neu
+              </button>
+            </div>
+            <label className="flex items-start gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                checked={isCodeConfirmed}
+                onChange={(e) => setIsCodeConfirmed((e.target as HTMLInputElement).checked)}
+                disabled={!generatedCode || isGeneratingCode}
+                className="mt-0.5"
+              />
+              Ich habe den Code auf dem physischen Material notiert.
+            </label>
+          </div>
+        )}
 
         {/* Location */}
         <div>

@@ -5,11 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"regexp"
 	"strconv"
+	"strings"
 
 	"distribution_backend/internal/client"
 	"distribution_backend/internal/db"
 	"distribution_backend/internal/domain"
+	"github.com/lib/pq"
 )
 
 // InventoryHandler handles inventory endpoints.
@@ -44,6 +47,24 @@ type assignRequestBody struct {
 	RequestID string `json:"requestId"`
 }
 
+type generatedCodeResponse struct {
+	HumanCode string `json:"humanCode"`
+}
+
+var humanCodePattern = regexp.MustCompile(`^[A-Z]{5}$`)
+
+// GenerateMaterialCode returns a unique human-readable inventory code.
+func (h *InventoryHandler) GenerateMaterialCode(w http.ResponseWriter, r *http.Request) {
+	code, err := h.store.GenerateMaterialHumanCode(r.Context())
+	if err != nil {
+		http.Error(w, `{"error":"failed to generate material code"}`, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(generatedCodeResponse{HumanCode: code})
+}
+
 // CreateMaterialInstance creates a new inventory item.
 func (h *InventoryHandler) CreateMaterialInstance(w http.ResponseWriter, r *http.Request) {
 	var req domain.CreateMaterialInstanceInput
@@ -52,13 +73,23 @@ func (h *InventoryHandler) CreateMaterialInstance(w http.ResponseWriter, r *http
 		return
 	}
 
-	if req.TypeID == "" || req.Location == "" {
-		http.Error(w, `{"error":"typeId and location are required"}`, http.StatusBadRequest)
+	req.HumanCode = strings.ToUpper(strings.TrimSpace(req.HumanCode))
+	if req.HumanCode == "" || req.TypeID == "" || req.Location == "" {
+		http.Error(w, `{"error":"humanCode, typeId and location are required"}`, http.StatusBadRequest)
+		return
+	}
+	if !humanCodePattern.MatchString(req.HumanCode) {
+		http.Error(w, `{"error":"humanCode must be exactly 5 uppercase letters"}`, http.StatusBadRequest)
 		return
 	}
 
 	instance, err := h.store.CreateMaterialInstance(r.Context(), req)
 	if err != nil {
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) && pqErr.Code == "23505" && pqErr.Constraint == "material_instances_human_code_key" {
+			http.Error(w, `{"error":"humanCode already exists"}`, http.StatusConflict)
+			return
+		}
 		http.Error(w, `{"error":"failed to create material instance"}`, http.StatusInternalServerError)
 		return
 	}
@@ -113,15 +144,20 @@ func (h *InventoryHandler) ListMaterialInstances(w http.ResponseWriter, r *http.
 	}
 
 	params := db.ListMaterialInstancesParams{
-		TypeID:   r.URL.Query().Get("typeId"),
-		Status:   r.URL.Query().Get("status"),
-		Location: r.URL.Query().Get("location"),
-		Limit:    limit,
-		Offset:   offset,
+		TypeID:    r.URL.Query().Get("typeId"),
+		Status:    r.URL.Query().Get("status"),
+		Location:  r.URL.Query().Get("location"),
+		HumanCode: strings.ToUpper(strings.TrimSpace(r.URL.Query().Get("humanCode"))),
+		Limit:     limit,
+		Offset:    offset,
 	}
 
 	if params.Status != "" && !isValidMaterialStatus(params.Status) {
 		http.Error(w, `{"error":"invalid status"}`, http.StatusBadRequest)
+		return
+	}
+	if params.HumanCode != "" && !humanCodePattern.MatchString(params.HumanCode) {
+		http.Error(w, `{"error":"humanCode must be exactly 5 uppercase letters"}`, http.StatusBadRequest)
 		return
 	}
 

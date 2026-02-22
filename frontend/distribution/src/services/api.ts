@@ -14,6 +14,20 @@ import { resolveAssetUrl } from '@/utils/url';
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
 class ApiService {
+  async generateMaterialCode(): Promise<string> {
+    const response = await fetch(`${API_BASE}/api/inventory/code`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(error.error || 'Failed to generate material code');
+    }
+
+    const data: { humanCode: string } = await response.json();
+    return data.humanCode;
+  }
+
   async listIncomingRequests(status: RequestStatus | '' = 'pending', archived = false): Promise<IncomingRequest[]> {
     const query = new URLSearchParams();
     if (status) query.set('status', status);
@@ -156,6 +170,7 @@ class ApiService {
     if (params.typeId) query.set('typeId', params.typeId);
     if (params.status) query.set('status', params.status);
     if (params.location) query.set('location', params.location);
+    if (params.humanCode) query.set('humanCode', params.humanCode);
     if (typeof params.limit === 'number') query.set('limit', String(params.limit));
     if (typeof params.offset === 'number') query.set('offset', String(params.offset));
 

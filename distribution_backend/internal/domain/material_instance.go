@@ -5,6 +5,7 @@ import "time"
 // MaterialInstance represents a physical inventory item at a distribution center
 type MaterialInstance struct {
 	ID               string    `json:"id"`
+	HumanCode        string    `json:"humanCode"`
 	TypeID           string    `json:"typeId"`
 	Description      string    `json:"description"`
 	Status           string    `json:"status"`
@@ -24,6 +25,7 @@ const (
 
 // CreateMaterialInstanceInput contains fields for creating a new material instance
 type CreateMaterialInstanceInput struct {
+	HumanCode   string `json:"humanCode"`
 	TypeID      string `json:"typeId"`
 	Description string `json:"description"`
 	UseCount    int    `json:"useCount"`

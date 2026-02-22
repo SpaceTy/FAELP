@@ -10,6 +10,7 @@ export interface MaterialType {
 
 export interface MaterialInstance {
   id: string;
+  humanCode: string;
   typeId: string;
   description: string;
   status: MaterialStatus;
@@ -21,6 +22,7 @@ export interface MaterialInstance {
 }
 
 export interface CreateMaterialInstanceInput {
+  humanCode: string;
   typeId: string;
   description?: string;
   location: string;
@@ -45,4 +47,5 @@ export interface InventoryFilters {
   typeId?: string;
   status?: MaterialStatus;
   location?: string;
+  humanCode?: string;
 }
