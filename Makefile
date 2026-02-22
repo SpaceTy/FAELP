@@ -16,6 +16,7 @@ DEPLOY_DIST_ENV_DEV=deployment/distbackend/.env.dev
 DEPLOY_ORG_ENV_DEV_TEMPLATE=$(DEPLOY_ORG_TEMPLATE_DIR)/.env.dev
 DEPLOY_DIST_ENV_DEV_TEMPLATE=$(DEPLOY_DIST_TEMPLATE_DIR)/.env.dev
 DEPLOY_SYNC_ENV_SCRIPT=deployment/scripts/sync_compose_env.sh
+DEPLOY_IMAGE_RELEASE_SCRIPT=deployment/scripts/release_backend_images_sftp.sh
 DEPLOY_RELEASES_DIR=deployment/releases
 
 .PHONY: dev dev-org dev-dist dev-all dev-backends \
@@ -29,6 +30,7 @@ DEPLOY_RELEASES_DIR=deployment/releases
 	package-release package-release-org package-release-dist \
 	tarball-org tarball-dist tarball-release tarball-org-full tarball-dist-full \
 	release-org release-dist \
+	release-images release-images-org release-images-dist \
 	setup setup-db help
 
 define create_release_tarball
@@ -296,6 +298,18 @@ release-org: package-release-org
 
 release-dist: package-release-dist
 
+release-images: deploy-org deploy-dist
+	@chmod +x $(DEPLOY_IMAGE_RELEASE_SCRIPT)
+	@$(DEPLOY_IMAGE_RELEASE_SCRIPT)
+
+release-images-org: deploy-org
+	@chmod +x $(DEPLOY_IMAGE_RELEASE_SCRIPT)
+	@$(DEPLOY_IMAGE_RELEASE_SCRIPT) --component org
+
+release-images-dist: deploy-dist
+	@chmod +x $(DEPLOY_IMAGE_RELEASE_SCRIPT)
+	@$(DEPLOY_IMAGE_RELEASE_SCRIPT) --component dist
+
 # =============================================================================
 # Testing
 # =============================================================================
@@ -368,7 +382,7 @@ setup: install setup-db
 # Help
 # =============================================================================
 
-	help:
+help:
 	@echo "FAELP Global Makefile"
 	@echo "====================="
 	@echo ""
@@ -404,6 +418,9 @@ setup: install setup-db
 	@echo "  make tarball-dist-full - Tar full dist deployment bundle (no build/package)"
 	@echo "  make release-org   - Alias for package-release-org"
 	@echo "  make release-dist  - Alias for package-release-dist"
+	@echo "  make release-images - Build/save both backend images and upload tar files via SFTP"
+	@echo "  make release-images-org - Build/save/upload orgbackend image tar via SFTP"
+	@echo "  make release-images-dist - Build/save/upload distbackend image tar via SFTP"
 	@echo ""
 	@echo "TESTING:"
 	@echo "  make test          - Run all Go tests"

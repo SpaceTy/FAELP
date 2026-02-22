@@ -38,9 +38,7 @@ services:
       - dist-postgres-data:/var/lib/postgresql/data
 
   org-backend:
-    build:
-      context: ./orgbackend/container
-      dockerfile: Dockerfile
+    image: localhost/faelp-orgbackend:latest
     container_name: faelp-org-backend
     restart: unless-stopped
     depends_on:
@@ -70,9 +68,7 @@ services:
       - ./orgbackend/container/.env:/app/.env
 
   dist-backend:
-    build:
-      context: ./distbackend/container
-      dockerfile: Dockerfile
+    image: localhost/faelp-distbackend:latest
     container_name: faelp-dist-backend
     restart: unless-stopped
     depends_on:

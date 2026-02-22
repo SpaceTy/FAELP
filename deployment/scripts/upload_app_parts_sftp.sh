@@ -9,6 +9,8 @@ set -euo pipefail
 #   Remote base: /home/st/fae
 #
 # Default result on server:
+#   <remote-base>/docker-compose.production.yml
+#   <remote-base>/.env
 #   <remote-base>/orgbackend/container/app
 #   <remote-base>/distbackend/container/app
 #
@@ -87,6 +89,8 @@ fi
 ORG_APP_LOCAL="${REPO_ROOT}/deployment/orgbackend/container/app"
 DIST_APP_LOCAL="${REPO_ROOT}/deployment/distbackend/container/app"
 FULL_DEPLOYMENT_LOCAL="${REPO_ROOT}/deployment"
+COMPOSE_LOCAL="${REPO_ROOT}/deployment/docker-compose.production.yml"
+DEPLOY_ENV_LOCAL="${REPO_ROOT}/deployment/.env"
 
 if [ "${UPLOAD_FULL_DEPLOYMENT}" = "true" ]; then
   if [ ! -d "${FULL_DEPLOYMENT_LOCAL}" ]; then
@@ -94,6 +98,16 @@ if [ "${UPLOAD_FULL_DEPLOYMENT}" = "true" ]; then
     exit 1
   fi
 else
+  if [ ! -f "${COMPOSE_LOCAL}" ]; then
+    echo "Missing local file: ${COMPOSE_LOCAL}"
+    exit 1
+  fi
+
+  if [ ! -f "${DEPLOY_ENV_LOCAL}" ]; then
+    echo "Missing local file: ${DEPLOY_ENV_LOCAL}"
+    exit 1
+  fi
+
   if [ ! -d "${ORG_APP_LOCAL}" ]; then
     echo "Missing local directory: ${ORG_APP_LOCAL}"
     echo "Run 'make deploy-org' first."
@@ -180,12 +194,14 @@ else
   cat > "${tmp_batch}" <<EOF
 -mkdir ${REMOTE_BASE}
 -mkdir ${REMOTE_TMP_DIR}
+put ${COMPOSE_LOCAL} ${REMOTE_BASE}/docker-compose.production.yml
+put ${DEPLOY_ENV_LOCAL} ${REMOTE_BASE}/.env
 put ${ORG_TAR_LOCAL} ${REMOTE_ORG_TAR}
 put ${DIST_TAR_LOCAL} ${REMOTE_DIST_TAR}
 bye
 EOF
 
-  echo "Uploading archives to ${SFTP_TARGET}:${REMOTE_TMP_DIR}"
+  echo "Uploading compose/.env and app archives to ${SFTP_TARGET}:${REMOTE_BASE}"
   sftp -o BatchMode=no -b "${tmp_batch}" "${SFTP_TARGET}"
   echo "Upload complete. Replacing remote app directories..."
 

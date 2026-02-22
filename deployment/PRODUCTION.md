@@ -46,7 +46,7 @@ Minimum production requirements:
 From `deployment/`:
 
 ```bash
-docker compose -f docker-compose.production.yml up -d --build
+docker compose -f docker-compose.production.yml up -d
 ```
 
 ## 5) Verify health
@@ -79,6 +79,34 @@ This creates `deployment/releases/faelp_deployment_<timestamp>.tar.gz` containin
 - `deployment/distbackend/container`
 - `deployment/docker-compose.production.yml`
 - `deployment/PRODUCTION.md`
+
+## Optional: Release backend container images via SFTP
+
+Build the backend container contexts, create Podman image tar files, and upload them:
+
+```bash
+make release-images
+```
+
+This runs:
+
+- `make deploy-org deploy-dist`
+- `podman build` for orgbackend and distbackend images
+- `podman save` tar exports into `deployment/releases/`
+- SFTP upload to `apply.tysmp.com:/home/st/fae/releases/images`
+
+Org-only or dist-only flows:
+
+```bash
+make release-images-org
+make release-images-dist
+```
+
+For custom host/user/remote path, run the script directly:
+
+```bash
+deployment/scripts/release_backend_images_sftp.sh --host <host> --user <user> --remote-dir <path>
+```
 
 ## Notes
 
