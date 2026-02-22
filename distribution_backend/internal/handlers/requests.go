@@ -195,7 +195,7 @@ func formatOptionalDate(value *time.Time) string {
 
 func isValidRequestStatus(status string) bool {
 	switch status {
-	case "pending", "approved", "inAction", "returned":
+	case "pending", "approved", "inAction", "returned", "cancelled":
 		return true
 	default:
 		return false

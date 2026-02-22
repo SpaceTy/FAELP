@@ -6,7 +6,7 @@ import type {
   RequestStatus,
 } from '@/types/requests';
 
-const STATUS_OPTIONS: Array<RequestStatus | ''> = ['', 'pending', 'approved', 'inAction', 'returned'];
+const STATUS_OPTIONS: Array<RequestStatus | ''> = ['', 'pending', 'approved', 'inAction', 'returned', 'cancelled'];
 
 function statusClass(status: RequestStatus): string {
   switch (status) {
@@ -16,6 +16,8 @@ function statusClass(status: RequestStatus): string {
       return 'status-badge status-in-progress';
     case 'returned':
       return 'status-badge status-returned';
+    case 'cancelled':
+      return 'status-badge status-cancelled';
     case 'pending':
       return 'status-badge status-pending';
     default:
@@ -31,6 +33,8 @@ function statusLabel(status: RequestStatus): string {
       return 'In Action';
     case 'returned':
       return 'Returned';
+    case 'cancelled':
+      return 'Cancelled';
     case 'pending':
       return 'Pending';
     default:
@@ -93,7 +97,7 @@ function mapIncomingRequest(input: IncomingRequest): BorrowRequest {
 
 export function RequestsPage() {
   const [requests, setRequests] = useState<BorrowRequest[]>([]);
-  const [stats, setStats] = useState<RequestStats>({ pending: 0, approved: 0, inAction: 0, returned: 0, archived: 0, total: 0 });
+  const [stats, setStats] = useState<RequestStats>({ pending: 0, approved: 0, inAction: 0, returned: 0, cancelled: 0, archived: 0, total: 0 });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedRequest, setSelectedRequest] = useState<BorrowRequest | null>(null);
@@ -109,24 +113,27 @@ export function RequestsPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const [pendingRaw, approvedRaw, inActionRaw, returnedRaw] = await Promise.all([
+      const [pendingRaw, approvedRaw, inActionRaw, returnedRaw, cancelledRaw] = await Promise.all([
         api.listIncomingRequests('pending', showArchived),
         api.listIncomingRequests('approved', showArchived),
         api.listIncomingRequests('inAction', showArchived),
         api.listIncomingRequests('returned', showArchived),
+        api.listIncomingRequests('cancelled', showArchived),
       ]);
 
       const pending = pendingRaw.map(mapIncomingRequest);
       const approved = approvedRaw.map(mapIncomingRequest);
       const inAction = inActionRaw.map(mapIncomingRequest);
       const returned = returnedRaw.map(mapIncomingRequest);
-      const all = [...pending, ...approved, ...inAction, ...returned];
+      const cancelled = cancelledRaw.map(mapIncomingRequest);
+      const all = [...pending, ...approved, ...inAction, ...returned, ...cancelled];
 
       setStats({
         pending: pending.length,
         approved: approved.length,
         inAction: inAction.length,
         returned: returned.length,
+        cancelled: cancelled.length,
         archived: all.filter((request) => request.archived).length,
         total: all.length,
       });
@@ -244,6 +251,10 @@ export function RequestsPage() {
           <div className="stat-row">
             <span>In Action:</span>
             <span className="stat-value pending">{stats.inAction}</span>
+          </div>
+          <div className="stat-row">
+            <span>Cancelled:</span>
+            <span className="stat-value cancelled">{stats.cancelled}</span>
           </div>
           <div className="stat-row">
             <span>Archived:</span>

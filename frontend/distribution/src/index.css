@@ -460,6 +460,10 @@ body {
   color: #e53e3e;
 }
 
+.stat-value.cancelled {
+  color: #e53e3e;
+}
+
 .stat-value.in-progress {
   color: #4299e1;
 }
@@ -842,6 +846,11 @@ body {
 .status-returned {
   background-color: #e0e7ff;
   color: #3730a3;
+}
+
+.status-cancelled {
+  background-color: #fee2e2;
+  color: #991b1b;
 }
 
 .status-awaiting {

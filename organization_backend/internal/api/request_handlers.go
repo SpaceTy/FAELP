@@ -261,12 +261,42 @@ func (h *RequestHandler) ListMyRequests(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusOK, requests)
 }
 
+// CancelMyRequest allows a customer to cancel their own request when it's pending or approved.
+func (h *RequestHandler) CancelMyRequest(w http.ResponseWriter, r *http.Request) {
+	claims := GetClaimsFromContext(r.Context())
+	if claims == nil {
+		writeError(w, http.StatusUnauthorized, "unauthorized", "Authentication required")
+		return
+	}
+
+	requestID := strings.TrimSpace(chi.URLParam(r, "id"))
+	if requestID == "" {
+		writeError(w, http.StatusBadRequest, "validation_error", "Request ID is required")
+		return
+	}
+
+	updated, err := h.Store.CancelRequestByCustomer(r.Context(), requestID, claims.CustomerID)
+	if err != nil {
+		switch {
+		case errors.Is(err, db.ErrRequestNotFound):
+			writeError(w, http.StatusNotFound, "not_found", "Request not found")
+		case errors.Is(err, db.ErrInvalidRequestStatus):
+			writeError(w, http.StatusConflict, "invalid_status", "Only pending or approved requests can be cancelled")
+		default:
+			writeError(w, http.StatusInternalServerError, "update_failed", "Failed to cancel request")
+		}
+		return
+	}
+
+	writeJSON(w, http.StatusOK, updated)
+}
+
 // ListRequestsForDistribution returns requests for distribution backend usage.
 // Supports optional status query filtering and is intended for internal/service calls.
 func (h *RequestHandler) ListRequestsForDistribution(w http.ResponseWriter, r *http.Request) {
 	status := strings.TrimSpace(r.URL.Query().Get("status"))
 	if status != "" && !isValidRequestStatus(status) {
-		writeError(w, http.StatusBadRequest, "invalid_status", "Status must be one of: pending, approved, inAction, returned")
+		writeError(w, http.StatusBadRequest, "invalid_status", "Status must be one of: pending, approved, inAction, returned, cancelled")
 		return
 	}
 
@@ -518,7 +548,7 @@ func (h *RequestHandler) UnarchiveRequestForDistribution(w http.ResponseWriter, 
 
 func isValidRequestStatus(status string) bool {
 	switch status {
-	case "pending", "approved", "inAction", "returned":
+	case "pending", "approved", "inAction", "returned", "cancelled":
 		return true
 	default:
 		return false

@@ -1,4 +1,4 @@
-export type RequestStatus = 'pending' | 'approved' | 'inAction' | 'returned';
+export type RequestStatus = 'pending' | 'approved' | 'inAction' | 'returned' | 'cancelled';
 export type RequestPriority = 'high' | 'normal' | 'low';
 
 export interface RequestItem {
@@ -34,6 +34,7 @@ export interface RequestStats {
   approved: number;
   inAction: number;
   returned: number;
+  cancelled: number;
   archived: number;
   total: number;
 }

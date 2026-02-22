@@ -206,6 +206,7 @@ class MockRequestsService {
       approved: mockRequests.filter((r) => r.status === 'approved').length,
       inAction: mockRequests.filter((r) => r.status === 'inAction').length,
       returned: mockRequests.filter((r) => r.status === 'returned').length,
+      cancelled: mockRequests.filter((r) => r.status === 'cancelled').length,
       archived: mockRequests.filter((r) => r.archived).length,
       total: mockRequests.length,
     };

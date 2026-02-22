@@ -115,6 +115,8 @@ export function MyRequestsPage() {
   const [requests, setRequests] = useState<Request[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  const [cancellingRequestIds, setCancellingRequestIds] = useState<Set<string>>(new Set());
   const { materialsById } = useMaterialTypes();
 
   useEffect(() => {
@@ -177,6 +179,12 @@ export function MyRequestsPage() {
           className: 'bg-emerald-50 text-emerald-700 border-emerald-200',
           dotClassName: 'bg-emerald-500'
         };
+      case 'cancelled':
+        return {
+          label: 'Storniert',
+          className: 'bg-rose-50 text-rose-700 border-rose-200',
+          dotClassName: 'bg-rose-500'
+        };
       default:
         return {
           label: status,
@@ -193,6 +201,36 @@ export function MyRequestsPage() {
       month: 'long',
       year: 'numeric'
     });
+  };
+
+  const canCancelRequest = (status: Request['status']) => status === 'pending' || status === 'approved';
+
+  const handleCancelRequest = async (requestId: string) => {
+    const token = authSignal.value?.token;
+    if (!token) {
+      return;
+    }
+
+    const confirmed = window.confirm('Möchten Sie diese Anfrage wirklich stornieren?');
+    if (!confirmed) {
+      return;
+    }
+
+    setCancelError(null);
+    setCancellingRequestIds(prev => new Set(prev).add(requestId));
+
+    try {
+      const updated = await api.cancelMyRequest(requestId, token);
+      setRequests(prev => prev.map(request => request.id === requestId ? updated : request));
+    } catch (err) {
+      setCancelError(err instanceof Error ? err.message : 'Anfrage konnte nicht storniert werden');
+    } finally {
+      setCancellingRequestIds(prev => {
+        const next = new Set(prev);
+        next.delete(requestId);
+        return next;
+      });
+    }
   };
 
   if (loading) {
@@ -223,6 +261,11 @@ export function MyRequestsPage() {
           <p className="text-slate-500 text-sm">
             Übersicht über alle Ihre Materialanfragen und deren Status
           </p>
+          {cancelError && (
+            <div className="mt-3 bg-red-50 border border-red-200 rounded-lg p-3">
+              <p className="text-red-800 text-sm">{cancelError}</p>
+            </div>
+          )}
         </div>
 
         {requests.length === 0 ? (
@@ -265,6 +308,16 @@ export function MyRequestsPage() {
                       <div className="text-right">
                         <p className="text-xs text-slate-500 mb-0.5">Eingegangen</p>
                         <p className="text-sm font-medium text-slate-900">{formatDate(request.createdAt)}</p>
+                        {canCancelRequest(request.status) && (
+                          <button
+                            type="button"
+                            onClick={() => handleCancelRequest(request.id)}
+                            disabled={cancellingRequestIds.has(request.id)}
+                            className="mt-2 inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium border border-rose-200 text-rose-700 bg-rose-50 hover:bg-rose-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {cancellingRequestIds.has(request.id) ? 'Storniere...' : 'Anfrage stornieren'}
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>

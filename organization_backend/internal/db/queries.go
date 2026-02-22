@@ -694,6 +694,80 @@ func (s *Store) ListRequestsByCustomerID(ctx context.Context, customerID string)
 	return requests, nil
 }
 
+// CancelRequestByCustomer marks a customer's own pending/approved request as cancelled.
+func (s *Store) CancelRequestByCustomer(ctx context.Context, requestID, customerID string) (domain.Request, error) {
+	var req domain.Request
+	var approvedDistributionCenterID sql.NullString
+	var outgoingTrackingCode sql.NullString
+	var plannedReturnDate sql.NullTime
+	var metadataBytes []byte
+
+	err := s.db.QueryRowContext(ctx, `
+		UPDATE requests
+		SET status = 'cancelled', approved_distribution_center_id = NULL, "outgoingTrackingCode" = NULL
+		WHERE id = $1 AND customer_id = $2 AND status IN ('pending', 'approved') AND archived = FALSE
+		RETURNING id, customer_id, delivery_date, planned_return_date, intended_students, status, archived, approved_distribution_center_id, "outgoingTrackingCode", shipping_customer_name,
+		          shipping_address_line1, shipping_address_line2, shipping_city, shipping_zip_code, metadata, created_at, updated_at
+	`, requestID, customerID).Scan(
+		&req.ID, &req.CustomerID, &req.DeliveryDate, &plannedReturnDate, &req.IntendedStudents, &req.Status, &req.Archived, &approvedDistributionCenterID, &outgoingTrackingCode, &req.ShippingCustomerName,
+		&req.ShippingAddressLine1, &req.ShippingAddressLine2, &req.ShippingCity, &req.ShippingZipCode,
+		&metadataBytes, &req.CreatedAt, &req.UpdatedAt,
+	)
+	if err == nil {
+		if plannedReturnDate.Valid {
+			req.PlannedReturnDate = &plannedReturnDate.Time
+		}
+		if len(metadataBytes) > 0 {
+			req.Metadata = make(map[string]any)
+			if unmarshalErr := json.Unmarshal(metadataBytes, &req.Metadata); unmarshalErr != nil {
+				req.Metadata = nil
+			}
+		}
+	} else if !errors.Is(err, sql.ErrNoRows) {
+		return domain.Request{}, err
+	}
+
+	if errors.Is(err, sql.ErrNoRows) {
+		var existingStatus string
+		var existingArchived bool
+		err = s.db.QueryRowContext(ctx, `
+			SELECT status, archived
+			FROM requests
+			WHERE id = $1 AND customer_id = $2
+		`, requestID, customerID).Scan(&existingStatus, &existingArchived)
+		if errors.Is(err, sql.ErrNoRows) {
+			return domain.Request{}, ErrRequestNotFound
+		}
+		if err != nil {
+			return domain.Request{}, err
+		}
+		return domain.Request{}, ErrInvalidRequestStatus
+	}
+
+	itemRows, err := s.db.QueryContext(ctx, `
+		SELECT material_type_id, quantity
+		FROM request_items
+		WHERE request_id = $1
+	`, req.ID)
+	if err != nil {
+		return domain.Request{}, err
+	}
+	defer itemRows.Close()
+
+	for itemRows.Next() {
+		var item domain.RequestItem
+		if err := itemRows.Scan(&item.MaterialTypeID, &item.Quantity); err != nil {
+			return domain.Request{}, err
+		}
+		req.Items = append(req.Items, item)
+	}
+	if err := itemRows.Err(); err != nil {
+		return domain.Request{}, err
+	}
+
+	return req, nil
+}
+
 // ListRequests returns all requests, optionally filtered by status and archive state.
 func (s *Store) ListRequests(ctx context.Context, status, distributionCenterID string, archived *bool) ([]domain.Request, error) {
 	slog.Info("store_list_all_requests_started", "status", status, "distribution_center_id", distributionCenterID, "archived", archived)

@@ -60,6 +60,16 @@ class ApiService {
     });
     return handleResponse<Request[]>(response);
   }
+
+  async cancelMyRequest(requestId: string, token: string): Promise<Request> {
+    const response = await fetch(`${API_BASE}/requests/${requestId}/cancel`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    return handleResponse<Request>(response);
+  }
 }
 
 export const api = new ApiService();
