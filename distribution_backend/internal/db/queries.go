@@ -280,6 +280,42 @@ func (s *Store) DeleteMaterialInstance(ctx context.Context, id string) error {
 	return err
 }
 
+// ArchiveMaterialInstance marks a material instance as archived.
+func (s *Store) ArchiveMaterialInstance(ctx context.Context, id string) (domain.MaterialInstance, error) {
+	var row materialInstanceRow
+	err := s.db.QueryRowContext(ctx, `
+		UPDATE material_instances
+		SET status = $2, current_request_id = NULL
+		WHERE id = $1
+		RETURNING id, human_code, type_id, description, status, use_count, location, current_request_id, created_at, updated_at
+	`, id, domain.StatusArchived).Scan(
+		&row.ID, &row.HumanCode, &row.TypeID, &row.Description, &row.Status, &row.UseCount, &row.Location,
+		&row.CurrentRequestID, &row.CreatedAt, &row.UpdatedAt,
+	)
+	if err != nil {
+		return domain.MaterialInstance{}, err
+	}
+	return mapMaterialInstance(row), nil
+}
+
+// UnarchiveMaterialInstance marks a material instance as available again.
+func (s *Store) UnarchiveMaterialInstance(ctx context.Context, id string) (domain.MaterialInstance, error) {
+	var row materialInstanceRow
+	err := s.db.QueryRowContext(ctx, `
+		UPDATE material_instances
+		SET status = $2
+		WHERE id = $1 AND status = $3
+		RETURNING id, human_code, type_id, description, status, use_count, location, current_request_id, created_at, updated_at
+	`, id, domain.StatusAvailable, domain.StatusArchived).Scan(
+		&row.ID, &row.HumanCode, &row.TypeID, &row.Description, &row.Status, &row.UseCount, &row.Location,
+		&row.CurrentRequestID, &row.CreatedAt, &row.UpdatedAt,
+	)
+	if err != nil {
+		return domain.MaterialInstance{}, err
+	}
+	return mapMaterialInstance(row), nil
+}
+
 // AssignToRequest assigns a material instance to a request (renting)
 func (s *Store) AssignToRequest(ctx context.Context, instanceID string, requestID string) (domain.MaterialInstance, error) {
 	var row materialInstanceRow

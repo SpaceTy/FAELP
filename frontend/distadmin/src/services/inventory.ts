@@ -126,6 +126,36 @@ class InventoryService {
     return response.json();
   }
 
+  // Archive a material instance
+  async archiveMaterialInstance(id: string): Promise<MaterialInstance> {
+    const response = await fetch(`${API_BASE}/api/inventory/${id}/archive`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(error.error || 'Failed to archive inventory item');
+    }
+
+    return response.json();
+  }
+
+  // Unarchive a material instance
+  async unarchiveMaterialInstance(id: string): Promise<MaterialInstance> {
+    const response = await fetch(`${API_BASE}/api/inventory/${id}/unarchive`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(error.error || 'Failed to unarchive inventory item');
+    }
+
+    return response.json();
+  }
+
   // Assign a material instance to a request
   async assignMaterialInstance(id: string, input: AssignMaterialInstanceInput): Promise<MaterialInstance> {
     const response = await fetch(`${API_BASE}/api/inventory/${id}/assign`, {

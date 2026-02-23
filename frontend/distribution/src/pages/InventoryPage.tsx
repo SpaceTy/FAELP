@@ -3,12 +3,13 @@ import { api } from '@/services/api';
 import { materialTypesService } from '@/services/materialTypes';
 import type { MaterialInstance, MaterialStatus, MaterialType } from '@/types/inventory';
 
-const STATUS_OPTIONS: Array<MaterialStatus | ''> = ['', 'available', 'rented', 'returned'];
+const STATUS_OPTIONS: Array<MaterialStatus | ''> = ['', 'available', 'rented', 'returned', 'archived'];
 const STATUS_LABELS: Record<string, string> = {
   '': 'All Status',
   'available': 'In Stock',
   'rented': 'On Loan',
   'returned': 'Returned',
+  'archived': 'Archived',
 };
 
 function formatDate(input: string): string {
@@ -27,6 +28,8 @@ function statusBadgeClass(status: MaterialStatus): string {
       return 'status-badge status-rented';
     case 'returned':
       return 'status-badge status-returned';
+    case 'archived':
+      return 'status-badge status-archived';
     default:
       return 'status-badge';
   }
@@ -39,6 +42,11 @@ async function copyToClipboard(text: string): Promise<void> {
     console.error('Failed to copy:', err);
   }
 }
+
+type PendingAction = {
+  kind: 'archive' | 'unarchive' | 'delete';
+  item: MaterialInstance;
+};
 
 export function InventoryPage() {
   const [items, setItems] = useState<MaterialInstance[]>([]);
@@ -54,6 +62,8 @@ export function InventoryPage() {
   const [importResultMessage, setImportResultMessage] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [isMutating, setIsMutating] = useState(false);
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const [typeFilterDropdownOpen, setTypeFilterDropdownOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -186,6 +196,49 @@ export function InventoryPage() {
     } finally {
       setIsImporting(false);
       input.value = '';
+    }
+  };
+
+  const handleArchive = async (item: MaterialInstance) => {
+    if (item.status === 'rented') {
+      setError('Rented items cannot be archived.');
+      return;
+    }
+    setPendingAction({ kind: 'archive', item });
+  };
+
+  const handleDelete = async (item: MaterialInstance) => {
+    setPendingAction({ kind: 'delete', item });
+  };
+
+  const handleUnarchive = async (item: MaterialInstance) => {
+    setPendingAction({ kind: 'unarchive', item });
+  };
+
+  const confirmPendingAction = async () => {
+    if (!pendingAction) return;
+    setIsMutating(true);
+    setError(null);
+    try {
+      if (pendingAction.kind === 'archive') {
+        await api.archiveMaterialInstance(pendingAction.item.id);
+      } else if (pendingAction.kind === 'unarchive') {
+        await api.unarchiveMaterialInstance(pendingAction.item.id);
+      } else {
+        await api.deleteMaterialInstance(pendingAction.item.id);
+      }
+      await loadData();
+    } catch (err) {
+      if (pendingAction.kind === 'archive') {
+        setError(err instanceof Error ? err.message : 'Archiving failed.');
+      } else if (pendingAction.kind === 'unarchive') {
+        setError(err instanceof Error ? err.message : 'Unarchive failed.');
+      } else {
+        setError(err instanceof Error ? err.message : 'Delete failed.');
+      }
+    } finally {
+      setIsMutating(false);
+      setPendingAction(null);
     }
   };
 
@@ -384,6 +437,7 @@ export function InventoryPage() {
                   <th>Use Count</th>
                   <th>Request ID</th>
                   <th>Updated</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -430,11 +484,31 @@ export function InventoryPage() {
                       )}
                     </td>
                     <td>{formatDate(item.updatedAt)}</td>
+                    <td>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          className="btn-secondary btn-secondary-light text-xs px-2 py-1"
+                          disabled={isMutating || item.status === 'rented'}
+                          onClick={() => (item.status === 'archived' ? handleUnarchive(item) : handleArchive(item))}
+                        >
+                          {item.status === 'archived' ? 'Unarchive' : 'Archive'}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-secondary btn-secondary-light text-xs px-2 py-1"
+                          disabled={isMutating}
+                          onClick={() => handleDelete(item)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
                 {filteredItems.length === 0 && !isLoading && (
                   <tr>
-                    <td colSpan={9} className="text-center py-8 text-text-secondary">
+                    <td colSpan={10} className="text-center py-8 text-text-secondary">
                       No inventory items found.
                     </td>
                   </tr>
@@ -444,6 +518,53 @@ export function InventoryPage() {
           )}
         </div>
       </section>
+
+      {pendingAction && (
+        <div className="modal-overlay" onClick={() => !isMutating && setPendingAction(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>
+                {pendingAction.kind === 'delete'
+                  ? 'Delete Inventory Item'
+                  : pendingAction.kind === 'archive'
+                    ? 'Archive Inventory Item'
+                    : 'Unarchive Inventory Item'}
+              </h3>
+              <button className="modal-close" onClick={() => setPendingAction(null)} disabled={isMutating}>
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              <p className="text-sm text-text-secondary">
+                {pendingAction.kind === 'delete'
+                  ? `Delete item ${pendingAction.item.humanCode}? This cannot be undone.`
+                  : pendingAction.kind === 'archive'
+                    ? `Archive item ${pendingAction.item.humanCode}?`
+                    : `Unarchive item ${pendingAction.item.humanCode}?`}
+              </p>
+              <div className="mt-4 flex justify-end gap-2">
+                <button
+                  type="button"
+                  className="btn-secondary btn-secondary-light"
+                  onClick={() => setPendingAction(null)}
+                  disabled={isMutating}
+                >
+                  Cancel
+                </button>
+                <button type="button" className="btn-primary" onClick={confirmPendingAction} disabled={isMutating}>
+                  {isMutating
+                    ? 'Processing...'
+                    : pendingAction.kind === 'delete'
+                      ? 'Delete'
+                      : pendingAction.kind === 'archive'
+                        ? 'Archive'
+                        : 'Unarchive'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

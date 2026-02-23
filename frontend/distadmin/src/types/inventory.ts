@@ -1,4 +1,4 @@
-export type MaterialStatus = 'available' | 'rented' | 'returned';
+export type MaterialStatus = 'available' | 'rented' | 'returned' | 'archived';
 
 export interface MaterialType {
   id: string;

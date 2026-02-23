@@ -491,6 +491,78 @@ func (h *InventoryHandler) DeleteMaterialInstance(w http.ResponseWriter, r *http
 	_ = json.NewEncoder(w).Encode(map[string]string{"message": "material instance deleted"})
 }
 
+// ArchiveMaterialInstance marks an inventory item as archived.
+func (h *InventoryHandler) ArchiveMaterialInstance(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, `{"error":"instance id required"}`, http.StatusBadRequest)
+		return
+	}
+
+	existing, err := h.store.GetMaterialInstanceByID(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			http.Error(w, `{"error":"material instance not found"}`, http.StatusNotFound)
+			return
+		}
+		http.Error(w, `{"error":"failed to fetch material instance"}`, http.StatusInternalServerError)
+		return
+	}
+	if existing.Status == domain.StatusRented {
+		http.Error(w, `{"error":"cannot archive rented material instance"}`, http.StatusConflict)
+		return
+	}
+
+	instance, err := h.store.ArchiveMaterialInstance(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			http.Error(w, `{"error":"material instance not found"}`, http.StatusNotFound)
+			return
+		}
+		http.Error(w, `{"error":"failed to archive material instance"}`, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(instance)
+}
+
+// UnarchiveMaterialInstance marks an archived inventory item as available.
+func (h *InventoryHandler) UnarchiveMaterialInstance(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, `{"error":"instance id required"}`, http.StatusBadRequest)
+		return
+	}
+
+	existing, err := h.store.GetMaterialInstanceByID(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			http.Error(w, `{"error":"material instance not found"}`, http.StatusNotFound)
+			return
+		}
+		http.Error(w, `{"error":"failed to fetch material instance"}`, http.StatusInternalServerError)
+		return
+	}
+	if existing.Status != domain.StatusArchived {
+		http.Error(w, `{"error":"material instance is not archived"}`, http.StatusConflict)
+		return
+	}
+
+	instance, err := h.store.UnarchiveMaterialInstance(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			http.Error(w, `{"error":"material instance not found or not archived"}`, http.StatusConflict)
+			return
+		}
+		http.Error(w, `{"error":"failed to unarchive material instance"}`, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(instance)
+}
+
 // AssignToRequest marks an available inventory item as rented for a request.
 func (h *InventoryHandler) AssignToRequest(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
@@ -599,7 +671,7 @@ func (h *InventoryHandler) GetAvailableMaterialCounts(w http.ResponseWriter, r *
 
 func isValidMaterialStatus(status string) bool {
 	switch status {
-	case domain.StatusAvailable, domain.StatusRented, domain.StatusReturned:
+	case domain.StatusAvailable, domain.StatusRented, domain.StatusReturned, domain.StatusArchived:
 		return true
 	default:
 		return false

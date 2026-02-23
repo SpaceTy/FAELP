@@ -187,6 +187,11 @@ body {
   color: #2d3748;
 }
 
+.status-archived {
+  background-color: #e2e8f0;
+  color: #4a5568;
+}
+
 /* Filter Section */
 .filter-section {
   margin-bottom: 1.5rem;

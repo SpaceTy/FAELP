@@ -284,6 +284,48 @@ class ApiService {
     return response.json();
   }
 
+  async archiveMaterialInstance(id: string): Promise<MaterialInstance> {
+    const response = await fetch(`${API_BASE}/api/inventory/${id}/archive`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(error.error || 'Failed to archive material instance');
+    }
+
+    return response.json();
+  }
+
+  async unarchiveMaterialInstance(id: string): Promise<MaterialInstance> {
+    const response = await fetch(`${API_BASE}/api/inventory/${id}/unarchive`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(error.error || 'Failed to unarchive material instance');
+    }
+
+    return response.json();
+  }
+
+  async deleteMaterialInstance(id: string): Promise<{ message: string }> {
+    const response = await fetch(`${API_BASE}/api/inventory/${id}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(error.error || 'Failed to delete material instance');
+    }
+
+    return response.json();
+  }
+
   private getAuthHeaders(options: { jsonContentType?: boolean } = {}): Record<string, string> {
     const { jsonContentType = true } = options;
     const token = authSignal.value?.token;

@@ -15,6 +15,7 @@ const STATUS_OPTIONS: { value: MaterialStatus; label: string; color: string }[] 
   { value: 'available', label: 'Verfügbar', color: 'text-green-700' },
   { value: 'rented', label: 'Verliehen', color: 'text-yellow-700' },
   { value: 'returned', label: 'Zurückgegeben', color: 'text-gray-700' },
+  { value: 'archived', label: 'Archiviert', color: 'text-gray-700' },
 ];
 
 export function InventoryFormModal({ isOpen, onClose, onSubmit, instance, materialTypes = [] }: InventoryFormModalProps) {

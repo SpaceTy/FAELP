@@ -122,6 +122,8 @@ func main() {
 	mux.HandleFunc("GET /api/inventory/{id}", authMiddleware.RequireAuth(inventoryHandler.GetMaterialInstance))
 	mux.HandleFunc("PUT /api/inventory/{id}", authMiddleware.RequireAuth(inventoryHandler.UpdateMaterialInstance))
 	mux.HandleFunc("DELETE /api/inventory/{id}", authMiddleware.RequireAuth(inventoryHandler.DeleteMaterialInstance))
+	mux.HandleFunc("POST /api/inventory/{id}/archive", authMiddleware.RequireAuth(inventoryHandler.ArchiveMaterialInstance))
+	mux.HandleFunc("POST /api/inventory/{id}/unarchive", authMiddleware.RequireAuth(inventoryHandler.UnarchiveMaterialInstance))
 	mux.HandleFunc("POST /api/inventory/{id}/assign", authMiddleware.RequireAuth(inventoryHandler.AssignToRequest))
 	mux.HandleFunc("POST /api/inventory/{id}/release", authMiddleware.RequireAuth(inventoryHandler.ReleaseFromRequest))
 	mux.HandleFunc("GET /api/inventory/summary", authMiddleware.RequireAuth(inventoryHandler.CountByTypeAndStatus))

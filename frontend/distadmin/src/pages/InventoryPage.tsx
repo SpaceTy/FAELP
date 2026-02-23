@@ -11,6 +11,7 @@ const STATUS_OPTIONS: { value: MaterialStatus | ''; label: string; color: string
   { value: 'available', label: 'Verfügbar', color: 'text-green-700', bgColor: 'bg-green-100' },
   { value: 'rented', label: 'Verliehen', color: 'text-yellow-700', bgColor: 'bg-yellow-100' },
   { value: 'returned', label: 'Zurückgegeben', color: 'text-gray-700', bgColor: 'bg-gray-200' },
+  { value: 'archived', label: 'Archiviert', color: 'text-gray-700', bgColor: 'bg-gray-300' },
 ];
 
 function formatDate(dateString: string): string {
@@ -32,6 +33,8 @@ function getStatusBadge(status: MaterialStatus) {
       return <span className="status-badge status-rented">Verliehen</span>;
     case 'returned':
       return <span className="status-badge status-returned">Zurückgegeben</span>;
+    case 'archived':
+      return <span className="status-badge status-archived">Archiviert</span>;
     default:
       return <span className="status-badge status-returned">{status}</span>;
   }
@@ -57,6 +60,10 @@ export function InventoryPage() {
   const [editingInstance, setEditingInstance] = useState<MaterialInstance | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deletingInstance, setDeletingInstance] = useState<MaterialInstance | null>(null);
+  const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
+  const [archivingInstance, setArchivingInstance] = useState<MaterialInstance | null>(null);
+  const [isUnarchiveModalOpen, setIsUnarchiveModalOpen] = useState(false);
+  const [unarchivingInstance, setUnarchivingInstance] = useState<MaterialInstance | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [detailInstance, setDetailInstance] = useState<MaterialInstance | null>(null);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
@@ -111,7 +118,7 @@ export function InventoryPage() {
 
   // Summary calculations
   const summaryByStatus = useMemo(() => {
-    const result: Record<string, number> = { available: 0, rented: 0, returned: 0 };
+    const result: Record<string, number> = { available: 0, rented: 0, returned: 0, archived: 0 };
     summary.forEach((item) => {
       result[item.status] = (result[item.status] || 0) + item.count;
     });
@@ -162,6 +169,22 @@ export function InventoryPage() {
     await loadData();
   };
 
+  const handleArchive = async () => {
+    if (!archivingInstance) return;
+    await inventoryService.archiveMaterialInstance(archivingInstance.id);
+    setIsArchiveModalOpen(false);
+    setArchivingInstance(null);
+    await loadData();
+  };
+
+  const handleUnarchive = async () => {
+    if (!unarchivingInstance) return;
+    await inventoryService.unarchiveMaterialInstance(unarchivingInstance.id);
+    setIsUnarchiveModalOpen(false);
+    setUnarchivingInstance(null);
+    await loadData();
+  };
+
   // Open modals
   const openCreateModal = () => {
     setEditingInstance(null);
@@ -181,6 +204,16 @@ export function InventoryPage() {
   const openDetailModal = (instance: MaterialInstance) => {
     setDetailInstance(instance);
     setIsDetailModalOpen(true);
+  };
+
+  const openArchiveModal = (instance: MaterialInstance) => {
+    setArchivingInstance(instance);
+    setIsArchiveModalOpen(true);
+  };
+
+  const openUnarchiveModal = (instance: MaterialInstance) => {
+    setUnarchivingInstance(instance);
+    setIsUnarchiveModalOpen(true);
   };
 
   const openAssignModal = (instance: MaterialInstance) => {
@@ -341,6 +374,10 @@ export function InventoryPage() {
             <span>Zurückgegeben</span>
             <span className="stat-value text-gray-600">{summaryByStatus.returned}</span>
           </div>
+          <div className="stat-row">
+            <span>Archiviert</span>
+            <span className="stat-value text-gray-600">{summaryByStatus.archived}</span>
+          </div>
           <div className="stat-row border-t border-gray-300 mt-2 pt-2">
             <span className="font-medium">Gesamt</span>
             <span className="stat-value">{instances.length}</span>
@@ -459,6 +496,22 @@ export function InventoryPage() {
                           Freigeben
                         </button>
                       )}
+                      {instance.status !== 'rented' && instance.status !== 'archived' && (
+                        <button
+                          onClick={() => openArchiveModal(instance)}
+                          className="btn-logistics btn-logistics-warning text-xs py-1.5 px-3"
+                        >
+                          Archivieren
+                        </button>
+                      )}
+                      {instance.status === 'archived' && (
+                        <button
+                          onClick={() => openUnarchiveModal(instance)}
+                          className="btn-logistics btn-logistics-primary text-xs py-1.5 px-3"
+                        >
+                          Reaktivieren
+                        </button>
+                      )}
                       <button
                         onClick={() => openDeleteModal(instance)}
                         className="btn-logistics btn-logistics-danger text-xs py-1.5 px-3"
@@ -492,6 +545,26 @@ export function InventoryPage() {
         message={`Möchten Sie die Material-Instanz mit Code "${deletingInstance?.humanCode || '-'}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`}
         confirmText="Löschen"
         variant="danger"
+      />
+
+      <ConfirmModal
+        isOpen={isArchiveModalOpen}
+        onClose={() => setIsArchiveModalOpen(false)}
+        onConfirm={handleArchive}
+        title="Material-Instanz archivieren"
+        message={`Möchten Sie die Material-Instanz mit Code "${archivingInstance?.humanCode || '-'}" archivieren?`}
+        confirmText="Archivieren"
+        variant="warning"
+      />
+
+      <ConfirmModal
+        isOpen={isUnarchiveModalOpen}
+        onClose={() => setIsUnarchiveModalOpen(false)}
+        onConfirm={handleUnarchive}
+        title="Material-Instanz reaktivieren"
+        message={`Möchten Sie die Material-Instanz mit Code "${unarchivingInstance?.humanCode || '-'}" reaktivieren?`}
+        confirmText="Reaktivieren"
+        variant="warning"
       />
 
       {/* Detail Modal */}

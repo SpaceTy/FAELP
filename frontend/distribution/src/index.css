@@ -848,6 +848,11 @@ body {
   color: #3730a3;
 }
 
+.status-archived {
+  background-color: #f3f4f6;
+  color: #374151;
+}
+
 .status-cancelled {
   background-color: #fee2e2;
   color: #991b1b;

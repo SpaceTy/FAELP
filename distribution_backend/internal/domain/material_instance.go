@@ -21,6 +21,7 @@ const (
 	StatusAvailable = "available"
 	StatusRented    = "rented"
 	StatusReturned  = "returned"
+	StatusArchived  = "archived"
 )
 
 // CreateMaterialInstanceInput contains fields for creating a new material instance
