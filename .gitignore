@@ -41,3 +41,7 @@ deployment/releases/
 **server
 
 .gocache/
+
+distribution_backend/uploads/
+organization_backend/uploads/
+
