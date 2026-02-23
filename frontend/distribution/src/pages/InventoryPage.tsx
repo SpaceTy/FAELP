@@ -35,6 +35,21 @@ function statusBadgeClass(status: MaterialStatus): string {
   }
 }
 
+function statusIcon(status: MaterialStatus): string {
+  switch (status) {
+    case 'available':
+      return 'A';
+    case 'rented':
+      return 'L';
+    case 'returned':
+      return 'R';
+    case 'archived':
+      return 'X';
+    default:
+      return '?';
+  }
+}
+
 async function copyToClipboard(text: string): Promise<void> {
   try {
     await navigator.clipboard.writeText(text);
@@ -425,7 +440,7 @@ export function InventoryPage() {
               </div>
             </div>
           ) : (
-            <table className="data-table inventory-table">
+            <table className="data-table inventory-table inventory-table-compact">
               <thead>
                 <tr>
                   <th>Code</th>
@@ -435,7 +450,7 @@ export function InventoryPage() {
                   <th>Location</th>
                   <th>Status</th>
                   <th>Use Count</th>
-                  <th>Request ID</th>
+                  <th>Req</th>
                   <th>Updated</th>
                   <th>Actions</th>
                 </tr>
@@ -471,8 +486,12 @@ export function InventoryPage() {
                     <td>{item.description || '-'}</td>
                     <td>{item.location}</td>
                     <td>
-                      <span className={statusBadgeClass(item.status)}>
-                        {STATUS_LABELS[item.status]}
+                      <span
+                        className={`${statusBadgeClass(item.status)} status-icon-badge`}
+                        title={STATUS_LABELS[item.status]}
+                        aria-label={STATUS_LABELS[item.status]}
+                      >
+                        {statusIcon(item.status)}
                       </span>
                     </td>
                     <td>{item.useCount}</td>
@@ -485,22 +504,26 @@ export function InventoryPage() {
                     </td>
                     <td>{formatDate(item.updatedAt)}</td>
                     <td>
-                      <div className="flex items-center gap-2">
+                      <div className="action-buttons">
                         <button
                           type="button"
-                          className="btn-secondary btn-secondary-light text-xs px-2 py-1"
+                          className="table-icon-btn"
                           disabled={isMutating || item.status === 'rented'}
                           onClick={() => (item.status === 'archived' ? handleUnarchive(item) : handleArchive(item))}
+                          title={item.status === 'archived' ? 'Unarchive item' : 'Archive item'}
+                          aria-label={item.status === 'archived' ? 'Unarchive item' : 'Archive item'}
                         >
-                          {item.status === 'archived' ? 'Unarchive' : 'Archive'}
+                          {item.status === 'archived' ? 'U' : 'A'}
                         </button>
                         <button
                           type="button"
-                          className="btn-secondary btn-secondary-light text-xs px-2 py-1"
+                          className="table-icon-btn table-icon-btn-danger"
                           disabled={isMutating}
                           onClick={() => handleDelete(item)}
+                          title="Delete item"
+                          aria-label="Delete item"
                         >
-                          Delete
+                          X
                         </button>
                       </div>
                     </td>
