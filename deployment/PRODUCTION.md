@@ -33,13 +33,14 @@ Ensure these files exist and are correct:
 - `deployment/orgbackend/container/.env`
 - `deployment/distbackend/container/.env`
 
-Minimum production requirements:
+All environment variables are required (no defaults). Minimum production requirements:
 
 - Org: `WORKOS_API_KEY`, `WORKOS_CLIENT_ID`, strong `JWT_SECRET`, DB credentials
 - Dist: strong `JWT_SECRET`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`, DB credentials
-- Optional upload paths:
-  - Org: `ORG_UPLOAD_PATH` (defaults to `/app/uploads`)
-  - Dist: `DIST_UPLOAD_PATH` (defaults to `/app/uploads`)
+- Postgres host ports: `POSTGRES_HOST_PORT` (5432 for org, 5433 for dist)
+- Upload paths: `UPLOAD_PATH` (typically `/app/uploads`)
+
+Note: `DB_PORT` is hardcoded to `5432` (the internal container port). Use `POSTGRES_HOST_PORT` to configure the host-facing port.
 
 ## 4) Start full stack
 
@@ -80,36 +81,8 @@ This creates `deployment/releases/faelp_deployment_<timestamp>.tar.gz` containin
 - `deployment/docker-compose.production.yml`
 - `deployment/PRODUCTION.md`
 
-## Optional: Release backend container images via SFTP
-
-Build the backend container contexts, create Podman image tar files, and upload them:
-
-```bash
-make release-images
-```
-
-This runs:
-
-- `make deploy-org deploy-dist`
-- `podman build` for orgbackend and distbackend images
-- `podman save` tar exports into `deployment/releases/`
-- SFTP upload to `apply.tysmp.com:/home/st/fae/releases/images`
-
-Org-only or dist-only flows:
-
-```bash
-make release-images-org
-make release-images-dist
-```
-
-For custom host/user/remote path, run the script directly:
-
-```bash
-deployment/scripts/release_backend_images_sftp.sh --host <host> --user <user> --remote-dir <path>
-```
-
 ## Notes
 
 - `entrypoint.sh` in each backend auto-runs DB bootstrap and will auto-generate `JWT_SECRET` only when it is missing or placeholder (`replace-me`).
 - Backend binaries still run migrations at startup; keep migration files and binary versions aligned in each release.
-- Production compose now mounts persistent upload volumes (`org-uploads`, `dist-uploads`) so uploaded/synced images survive container recreation.
+- Production compose mounts persistent upload volumes (`org-uploads`, `dist-uploads`) so uploaded/synced images survive container recreation.
