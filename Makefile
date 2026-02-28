@@ -154,8 +154,8 @@ package-deploy-org:
 	mkdir -p $(DEPLOY_ORG_CONTAINER_DIR)/app/frontend/orgadmin
 	cp -R $(DEPLOY_ORG_TEMPLATE_DIR)/. $(DEPLOY_ORG_CONTAINER_DIR)/
 	cp $(ORG_BACKEND_DIR)/bin/orgbackend $(DEPLOY_ORG_CONTAINER_DIR)/app/orgbackend
-	cp -R $(USER_FRONTEND_DIR)/dist $(DEPLOY_ORG_CONTAINER_DIR)/app/frontend/user/
-	cp -R $(ORGADMIN_FRONTEND_DIR)/dist $(DEPLOY_ORG_CONTAINER_DIR)/app/frontend/orgadmin/
+	rsync -a --exclude='assets/material' $(USER_FRONTEND_DIR)/dist/ $(DEPLOY_ORG_CONTAINER_DIR)/app/frontend/user/dist/
+	rsync -a --exclude='assets/material' $(ORGADMIN_FRONTEND_DIR)/dist/ $(DEPLOY_ORG_CONTAINER_DIR)/app/frontend/orgadmin/dist/
 	ENV_SRC=""; \
 	if [ -f $(DEPLOY_ORG_ENV_DEV) ]; then \
 		ENV_SRC="$(DEPLOY_ORG_ENV_DEV)"; \
@@ -184,8 +184,8 @@ package-deploy-dist:
 	mkdir -p $(DEPLOY_DIST_CONTAINER_DIR)/app/frontend/distadmin
 	cp -R $(DEPLOY_DIST_TEMPLATE_DIR)/. $(DEPLOY_DIST_CONTAINER_DIR)/
 	cp $(DIST_BACKEND_DIR)/bin/distbackend $(DEPLOY_DIST_CONTAINER_DIR)/app/distbackend
-	cp -R $(DISTRIBUTION_FRONTEND_DIR)/dist $(DEPLOY_DIST_CONTAINER_DIR)/app/frontend/distribution/
-	cp -R $(DISTADMIN_FRONTEND_DIR)/dist $(DEPLOY_DIST_CONTAINER_DIR)/app/frontend/distadmin/
+	rsync -a --exclude='assets/material' $(DISTRIBUTION_FRONTEND_DIR)/dist/ $(DEPLOY_DIST_CONTAINER_DIR)/app/frontend/distribution/dist/
+	rsync -a --exclude='assets/material' $(DISTADMIN_FRONTEND_DIR)/dist/ $(DEPLOY_DIST_CONTAINER_DIR)/app/frontend/distadmin/dist/
 	ENV_SRC=""; \
 	if [ -f $(DEPLOY_DIST_ENV_DEV) ]; then \
 		ENV_SRC="$(DEPLOY_DIST_ENV_DEV)"; \
