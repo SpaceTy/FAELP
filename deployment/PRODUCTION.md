@@ -39,6 +39,7 @@ All environment variables are required (no defaults). Minimum production require
 - Dist: strong `JWT_SECRET`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`, DB credentials
 - Postgres host ports: `POSTGRES_HOST_PORT` (5432 for org, 5433 for dist)
 - Upload paths: `UPLOAD_PATH` (typically `/app/uploads`)
+- Docker volume names: `POSTGRES_DATA_VOLUME_NAME`, `UPLOADS_VOLUME_NAME`, `SOCKET_VOLUME_NAME`
 
 Note: `DB_PORT` is hardcoded to `5432` (the internal container port). Use `POSTGRES_HOST_PORT` to configure the host-facing port.
 
@@ -85,4 +86,5 @@ This creates `deployment/releases/faelp_deployment_<timestamp>.tar.gz` containin
 
 - `entrypoint.sh` in each backend auto-runs DB bootstrap and will auto-generate `JWT_SECRET` only when it is missing or placeholder (`replace-me`).
 - Backend binaries still run migrations at startup; keep migration files and binary versions aligned in each release.
-- Production compose mounts persistent upload volumes (`org-uploads`, `dist-uploads`) so uploaded/synced images survive container recreation.
+- Set the same `SOCKET_VOLUME_NAME` in both backend `.env` files so org and dist can share Unix sockets.
+- `POSTGRES_DATA_VOLUME_NAME` and `UPLOADS_VOLUME_NAME` are now explicitly set in each backend `.env`.

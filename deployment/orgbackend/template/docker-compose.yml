@@ -59,5 +59,8 @@ services:
 
 volumes:
   socket-volume:
+    name: ${SOCKET_VOLUME_NAME}
   org-uploads:
+    name: ${UPLOADS_VOLUME_NAME}
   org-postgres-data:
+    name: ${POSTGRES_DATA_VOLUME_NAME}

@@ -1,5 +1,6 @@
 import { ComponentChildren } from 'preact';
 import { route } from 'preact-router';
+import { useEffect } from 'preact/hooks';
 import { useAuth } from '@/context/AuthContext';
 
 interface ProtectedRouteProps {
@@ -9,6 +10,12 @@ interface ProtectedRouteProps {
 
 export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRouteProps) {
   const { isAuthenticated, isLoading, isAdmin } = useAuth();
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      route('/login', true);
+    }
+  }, [isAuthenticated, isLoading]);
 
   if (isLoading) {
     return (
@@ -22,8 +29,14 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
   }
 
   if (!isAuthenticated) {
-    route('/login', true);
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent"></div>
+          <p className="mt-2 text-text-secondary">Weiterleitung...</p>
+        </div>
+      </div>
+    );
   }
 
   if (requireAdmin && !isAdmin) {
