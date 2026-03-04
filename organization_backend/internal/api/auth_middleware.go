@@ -1,3 +1,5 @@
+//go:build !devbypass
+
 package api
 
 import (
