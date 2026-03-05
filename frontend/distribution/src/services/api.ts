@@ -29,6 +29,23 @@ class ApiService {
     return data.humanCode;
   }
 
+  async validateMaterialCode(code: string, typeId?: string): Promise<{ valid: boolean; code?: string; typeId?: string; typeIdMatch?: boolean; error?: string }> {
+    const query = new URLSearchParams();
+    query.set('code', code);
+    if (typeId) query.set('typeId', typeId);
+
+    const response = await fetch(`${API_BASE}/api/inventory/validate-code?${query.toString()}`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(error.error || 'Failed to validate material code');
+    }
+
+    return response.json();
+  }
+
   async listIncomingRequests(status: RequestStatus | '' = 'pending', archived = false): Promise<IncomingRequest[]> {
     const query = new URLSearchParams();
     if (status) query.set('status', status);

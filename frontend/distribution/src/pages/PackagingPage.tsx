@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useState, useCallback } from 'preact/hooks';
 import { api, type IncomingRequest } from '@/services/api';
 
 function formatDate(input: string): string {
@@ -29,6 +29,8 @@ export function PackagingPage() {
   const [selectedOrder, setSelectedOrder] = useState<IncomingRequest | null>(null);
   const [packagingOrder, setPackagingOrder] = useState<IncomingRequest | null>(null);
   const [packChecks, setPackChecks] = useState<Record<string, { checked: boolean; codes: string[] }>>({});
+  const [codeValidationErrors, setCodeValidationErrors] = useState<Record<string, Record<string, string>>>({});
+  const [validatingCodes, setValidatingCodes] = useState<Record<string, boolean>>({});
   const [outgoingTrackingCode, setOutgoingTrackingCode] = useState('');
   const [isSubmittingPack, setIsSubmittingPack] = useState(false);
 
@@ -58,9 +60,44 @@ export function PackagingPage() {
       initialChecks[item.materialTypeId] = { checked: false, codes: [] };
     }
     setPackChecks(initialChecks);
+    setCodeValidationErrors({});
+    setValidatingCodes({});
     setOutgoingTrackingCode('');
     setPackagingOrder(order);
   };
+
+  // Validate a single code against the backend
+  const validateCode = useCallback(async (materialTypeId: string, code: string) => {
+    if (!code || code.length !== 5) return;
+
+    setValidatingCodes(prev => ({ ...prev, [`${materialTypeId}-${code}`]: true }));
+
+    try {
+      const result = await api.validateMaterialCode(code, materialTypeId);
+
+      setCodeValidationErrors(prev => ({
+        ...prev,
+        [materialTypeId]: {
+          ...prev[materialTypeId],
+          [code]: result.valid ? '' : (result.error || 'Invalid code'),
+        },
+      }));
+    } catch {
+      // Silently fail validation - we'll show errors on submit
+    } finally {
+      setValidatingCodes(prev => ({ ...prev, [`${materialTypeId}-${code}`]: false }));
+    }
+  }, []);
+
+  // Validate all codes for a material type
+  const validateAllCodesForItem = useCallback(async (materialTypeId: string, codes: string[]) => {
+    const validCodes = codes.filter(c => c && c.length === 5);
+    if (validCodes.length === 0) return;
+
+    for (const code of validCodes) {
+      await validateCode(materialTypeId, code);
+    }
+  }, [validateCode]);
 
   const packedCount = packagingOrder
     ? packagingOrder.items.filter((item) => !!packChecks[item.materialTypeId]?.checked).length
@@ -84,14 +121,26 @@ export function PackagingPage() {
         return hasValidCodes(item.materialTypeId, item.quantity);
       })
     : true;
-  const canMarkPacked = hasAnyPacked && hasTrackingCode && allCheckedHaveCodes && !isSubmittingPack;
+
+  // Check if any checked items have validation errors
+  const hasValidationErrors = packagingOrder
+    ? packagingOrder.items.some((item) => {
+        if (!packChecks[item.materialTypeId]?.checked) return false;
+        const errors = codeValidationErrors[item.materialTypeId] || {};
+        return Object.values(errors).some(error => error !== '');
+      })
+    : false;
+
+  const canMarkPacked = hasAnyPacked && hasTrackingCode && allCheckedHaveCodes && !hasValidationErrors && !isSubmittingPack;
   const markPackedDisabledReason = !hasAnyPacked
     ? 'Check at least one material type to continue.'
     : !hasTrackingCode
       ? 'Enter DHL tracking code to continue.'
       : !allCheckedHaveCodes
         ? 'Enter material codes for all checked items.'
-        : '';
+        : hasValidationErrors
+          ? 'Fix invalid material codes to continue.'
+          : '';
 
   const handleMarkPacked = async () => {
     if (!packagingOrder || !canMarkPacked) {
@@ -352,7 +401,7 @@ export function PackagingPage() {
                           value={check?.codes.join(', ') || ''}
                           onInput={(e) => {
                             const value = (e.target as HTMLInputElement).value;
-                            const codes = value.split(',').map(c => c.trim()).filter(c => c);
+                            const codes = value.split(',').map(c => c.trim().toUpperCase()).filter(c => c);
                             setPackChecks((prev) => ({
                               ...prev,
                               [item.materialTypeId]: {
@@ -360,6 +409,15 @@ export function PackagingPage() {
                                 codes,
                               },
                             }));
+                            // Trigger validation after a short delay
+                            setTimeout(() => {
+                              validateAllCodesForItem(item.materialTypeId, codes);
+                            }, 500);
+                          }}
+                          onBlur={() => {
+                            if (check?.codes.length) {
+                              validateAllCodesForItem(item.materialTypeId, check.codes);
+                            }
                           }}
                           className="w-full px-2 py-1 text-sm border border-slate-300 rounded-md"
                           placeholder={item.quantity === 1 ? 'Enter material code' : 'Enter codes, comma separated'}
@@ -367,6 +425,21 @@ export function PackagingPage() {
                         {!hasEnoughCodes && check && check.codes.length > 0 && (
                           <span className="text-xs text-red-500">Need {item.quantity - codesEntered} more code(s)</span>
                         )}
+                        {/* Show validation errors for each code */}
+                        {check?.codes.map((code, idx) => {
+                          const error = codeValidationErrors[item.materialTypeId]?.[code];
+                          const isValidating = validatingCodes[`${item.materialTypeId}-${code}`];
+                          if (!error && !isValidating) return null;
+                          return (
+                            <div key={idx} className="text-xs mt-1">
+                              {isValidating ? (
+                                <span className="text-text-secondary">Validating {code}...</span>
+                              ) : error ? (
+                                <span className="text-red-500">{code}: {error}</span>
+                              ) : null}
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   );
