@@ -12,8 +12,9 @@ import (
 
 // AuthHandler handles authentication endpoints
 type AuthHandler struct {
-	store      *db.Store
-	jwtService *auth.JWTService
+	store       *db.Store
+	jwtService  *auth.JWTService
+	auditLogger *db.AuditLogger
 }
 
 // NewAuthHandler creates a new auth handler
@@ -21,6 +22,15 @@ func NewAuthHandler(store *db.Store, jwtService *auth.JWTService) *AuthHandler {
 	return &AuthHandler{
 		store:      store,
 		jwtService: jwtService,
+	}
+}
+
+// NewAuthHandlerWithAudit creates a new auth handler with audit logging
+func NewAuthHandlerWithAudit(store *db.Store, jwtService *auth.JWTService, auditLogger *db.AuditLogger) *AuthHandler {
+	return &AuthHandler{
+		store:       store,
+		jwtService:  jwtService,
+		auditLogger: auditLogger,
 	}
 }
 
@@ -131,6 +141,14 @@ func (h *AuthHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if h.auditLogger != nil {
+		userCtx, _ := auth.GetUserFromContext(r.Context())
+		_ = h.auditLogger.Log(r.Context(), userCtx.UserID, userCtx.Username, "user.create", "user", user.ID, map[string]interface{}{
+			"username": user.Username,
+			"isAdmin":  user.IsAdmin,
+		}, nil)
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(user)
@@ -186,9 +204,22 @@ func (h *AuthHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	existing, err := h.store.GetUserByID(r.Context(), id)
+	if err != nil {
+		http.Error(w, `{"error":"user not found"}`, http.StatusNotFound)
+		return
+	}
+
 	if err := h.store.DeleteUser(r.Context(), id); err != nil {
 		http.Error(w, `{"error":"user not found"}`, http.StatusNotFound)
 		return
+	}
+
+	if h.auditLogger != nil {
+		_ = h.auditLogger.Log(r.Context(), userCtx.UserID, userCtx.Username, "user.delete", "user", id, nil, map[string]interface{}{
+			"username": existing.Username,
+			"isAdmin":  existing.IsAdmin,
+		})
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -317,6 +348,11 @@ func (h *AuthHandler) ResetUserPassword(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	if h.auditLogger != nil {
+		adminCtx, _ := auth.GetUserFromContext(r.Context())
+		_ = h.auditLogger.Log(r.Context(), adminCtx.UserID, adminCtx.Username, "user.reset_password", "user", id, nil, nil)
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "password reset successful"})
 }
@@ -346,6 +382,12 @@ func (h *AuthHandler) SetUserAdmin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	existing, err := h.store.GetUserByID(r.Context(), id)
+	if err != nil {
+		http.Error(w, `{"error":"user not found"}`, http.StatusNotFound)
+		return
+	}
+
 	var req SetUserAdminRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, `{"error":"invalid request body"}`, http.StatusBadRequest)
@@ -365,6 +407,14 @@ func (h *AuthHandler) SetUserAdmin(w http.ResponseWriter, r *http.Request) {
 		}
 		http.Error(w, `{"error":"failed to update user"}`, http.StatusInternalServerError)
 		return
+	}
+
+	if h.auditLogger != nil {
+		_ = h.auditLogger.Log(r.Context(), userCtx.UserID, userCtx.Username, "user.set_admin", "user", id, map[string]interface{}{
+			"isAdmin": user.IsAdmin,
+		}, map[string]interface{}{
+			"isAdmin": existing.IsAdmin,
+		})
 	}
 
 	w.Header().Set("Content-Type", "application/json")

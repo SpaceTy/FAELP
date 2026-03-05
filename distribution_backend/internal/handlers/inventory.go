@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"distribution_backend/internal/auth"
 	"distribution_backend/internal/client"
 	"distribution_backend/internal/db"
 	"distribution_backend/internal/domain"
@@ -21,9 +22,10 @@ import (
 
 // InventoryHandler handles inventory endpoints.
 type InventoryHandler struct {
-	store      *db.Store
-	orgClient  *client.OrgClient
-	uploadPath string
+	store       *db.Store
+	orgClient   *client.OrgClient
+	uploadPath  string
+	auditLogger *db.AuditLogger
 }
 
 // NewInventoryHandler creates a new inventory handler.
@@ -32,6 +34,14 @@ func NewInventoryHandler(store *db.Store, orgClient *client.OrgClient, uploadPat
 		uploadPath = "uploads"
 	}
 	return &InventoryHandler{store: store, orgClient: orgClient, uploadPath: uploadPath}
+}
+
+// NewInventoryHandlerWithAudit creates a new inventory handler with audit logging.
+func NewInventoryHandlerWithAudit(store *db.Store, orgClient *client.OrgClient, uploadPath string, auditLogger *db.AuditLogger) *InventoryHandler {
+	if strings.TrimSpace(uploadPath) == "" {
+		uploadPath = "uploads"
+	}
+	return &InventoryHandler{store: store, orgClient: orgClient, uploadPath: uploadPath, auditLogger: auditLogger}
 }
 
 // GetMaterialTypes returns all material types from the organization backend.
@@ -112,6 +122,15 @@ func (h *InventoryHandler) CreateMaterialInstance(w http.ResponseWriter, r *http
 		}
 		http.Error(w, `{"error":"failed to create material instance"}`, http.StatusInternalServerError)
 		return
+	}
+
+	if h.auditLogger != nil {
+		userCtx, _ := auth.GetUserFromContext(r.Context())
+		_ = h.auditLogger.Log(r.Context(), userCtx.UserID, userCtx.Username, "inventory.create", "material_instance", instance.ID, map[string]interface{}{
+			"humanCode": instance.HumanCode,
+			"typeId":    instance.TypeID,
+			"location":  instance.Location,
+		}, nil)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -419,6 +438,15 @@ func (h *InventoryHandler) ImportInventoryCSV(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	if h.auditLogger != nil {
+		userCtx, _ := auth.GetUserFromContext(r.Context())
+		_ = h.auditLogger.Log(r.Context(), userCtx.UserID, userCtx.Username, "inventory.import", "material_instance", "", map[string]interface{}{
+			"importedCount": len(inputs),
+			"createdCount":  createdCount,
+			"updatedCount":  updatedCount,
+		}, nil)
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(importInventoryResponse{
 		ImportedCount: len(inputs),
@@ -450,6 +478,16 @@ func (h *InventoryHandler) UpdateMaterialInstance(w http.ResponseWriter, r *http
 		return
 	}
 
+	existing, err := h.store.GetMaterialInstanceByID(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			http.Error(w, `{"error":"material instance not found"}`, http.StatusNotFound)
+			return
+		}
+		http.Error(w, `{"error":"failed to fetch material instance"}`, http.StatusInternalServerError)
+		return
+	}
+
 	instance, err := h.store.UpdateMaterialInstance(r.Context(), id, req)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -458,6 +496,23 @@ func (h *InventoryHandler) UpdateMaterialInstance(w http.ResponseWriter, r *http
 		}
 		http.Error(w, `{"error":"failed to update material instance"}`, http.StatusInternalServerError)
 		return
+	}
+
+	if h.auditLogger != nil {
+		userCtx, _ := auth.GetUserFromContext(r.Context())
+		previousState := map[string]interface{}{
+			"humanCode":   existing.HumanCode,
+			"typeId":      existing.TypeID,
+			"description": existing.Description,
+			"status":      existing.Status,
+			"useCount":    existing.UseCount,
+			"location":    existing.Location,
+		}
+		newState := map[string]interface{}{
+			"status":   instance.Status,
+			"location": instance.Location,
+		}
+		_ = h.auditLogger.Log(r.Context(), userCtx.UserID, userCtx.Username, "inventory.update", "material_instance", instance.ID, newState, previousState)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -472,7 +527,7 @@ func (h *InventoryHandler) DeleteMaterialInstance(w http.ResponseWriter, r *http
 		return
 	}
 
-	_, err := h.store.GetMaterialInstanceByID(r.Context(), id)
+	existing, err := h.store.GetMaterialInstanceByID(r.Context(), id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			http.Error(w, `{"error":"material instance not found"}`, http.StatusNotFound)
@@ -485,6 +540,22 @@ func (h *InventoryHandler) DeleteMaterialInstance(w http.ResponseWriter, r *http
 	if err := h.store.DeleteMaterialInstance(r.Context(), id); err != nil {
 		http.Error(w, `{"error":"failed to delete material instance"}`, http.StatusInternalServerError)
 		return
+	}
+
+	if h.auditLogger != nil {
+		userCtx, _ := auth.GetUserFromContext(r.Context())
+		previousState := map[string]interface{}{
+			"humanCode":   existing.HumanCode,
+			"typeId":      existing.TypeID,
+			"description": existing.Description,
+			"status":      existing.Status,
+			"useCount":    existing.UseCount,
+			"location":    existing.Location,
+		}
+		if existing.CurrentRequestID != nil {
+			previousState["currentRequestId"] = *existing.CurrentRequestID
+		}
+		_ = h.auditLogger.Log(r.Context(), userCtx.UserID, userCtx.Username, "inventory.delete", "material_instance", id, nil, previousState)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -523,6 +594,14 @@ func (h *InventoryHandler) ArchiveMaterialInstance(w http.ResponseWriter, r *htt
 		return
 	}
 
+	if h.auditLogger != nil {
+		userCtx, _ := auth.GetUserFromContext(r.Context())
+		previousState := map[string]interface{}{
+			"status": existing.Status,
+		}
+		_ = h.auditLogger.Log(r.Context(), userCtx.UserID, userCtx.Username, "inventory.archive", "material_instance", instance.ID, map[string]interface{}{"status": instance.Status}, previousState)
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(instance)
 }
@@ -559,6 +638,14 @@ func (h *InventoryHandler) UnarchiveMaterialInstance(w http.ResponseWriter, r *h
 		return
 	}
 
+	if h.auditLogger != nil {
+		userCtx, _ := auth.GetUserFromContext(r.Context())
+		previousState := map[string]interface{}{
+			"status": existing.Status,
+		}
+		_ = h.auditLogger.Log(r.Context(), userCtx.UserID, userCtx.Username, "inventory.unarchive", "material_instance", instance.ID, map[string]interface{}{"status": instance.Status}, previousState)
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(instance)
 }
@@ -591,6 +678,14 @@ func (h *InventoryHandler) AssignToRequest(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	if h.auditLogger != nil {
+		userCtx, _ := auth.GetUserFromContext(r.Context())
+		_ = h.auditLogger.Log(r.Context(), userCtx.UserID, userCtx.Username, "inventory.assign", "material_instance", instance.ID, map[string]interface{}{
+			"requestId": req.RequestID,
+			"status":    instance.Status,
+		}, nil)
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(instance)
 }
@@ -611,6 +706,14 @@ func (h *InventoryHandler) ReleaseFromRequest(w http.ResponseWriter, r *http.Req
 		}
 		http.Error(w, `{"error":"failed to release material instance"}`, http.StatusInternalServerError)
 		return
+	}
+
+	if h.auditLogger != nil {
+		userCtx, _ := auth.GetUserFromContext(r.Context())
+		_ = h.auditLogger.Log(r.Context(), userCtx.UserID, userCtx.Username, "inventory.release", "material_instance", instance.ID, map[string]interface{}{
+			"status":   instance.Status,
+			"useCount": instance.UseCount,
+		}, nil)
 	}
 
 	w.Header().Set("Content-Type", "application/json")

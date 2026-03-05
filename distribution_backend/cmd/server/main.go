@@ -59,7 +59,11 @@ func main() {
 	// Initialize auth services
 	jwtService := auth.NewJWTService(cfg.JWTSecret)
 	authMiddleware := auth.NewMiddleware(jwtService)
-	authHandler := handlers.NewAuthHandler(store, jwtService)
+
+	// Initialize audit logger and handler
+	auditLogger := db.NewAuditLogger(store)
+	auditHandler := handlers.NewAuditHandler(store, auditLogger)
+	authHandler := handlers.NewAuthHandlerWithAudit(store, jwtService, auditLogger)
 
 	// Initialize organization backend client (prefer Unix socket if configured)
 	orgClient := client.NewOrgClient(cfg.OrgBackend.URL, cfg.OrgBackend.APIKey, cfg.OrgBackend.SocketPath)
@@ -70,8 +74,8 @@ func main() {
 	}
 
 	uploadsPath := cfg.UploadPath
-	inventoryHandler := handlers.NewInventoryHandler(store, orgClient, uploadsPath)
-	requestsHandler := handlers.NewRequestsHandler(store, orgClient, distributionCenterID, uploadsPath)
+	inventoryHandler := handlers.NewInventoryHandlerWithAudit(store, orgClient, uploadsPath, auditLogger)
+	requestsHandler := handlers.NewRequestsHandlerWithAudit(store, orgClient, distributionCenterID, uploadsPath, auditLogger)
 
 	// Create cancellable context for background services
 	ctx, cancel := context.WithCancel(context.Background())
@@ -137,6 +141,11 @@ func main() {
 	mux.HandleFunc("POST /api/requests/{id}/cancel", authMiddleware.RequireAuth(requestsHandler.CancelAssignedIncomingRequest))
 	mux.HandleFunc("POST /api/requests/{id}/archive", authMiddleware.RequireAuth(requestsHandler.ArchiveIncomingRequest))
 	mux.HandleFunc("POST /api/requests/{id}/unarchive", authMiddleware.RequireAuth(requestsHandler.UnarchiveIncomingRequest))
+
+	// Audit log endpoints (admin only)
+	mux.HandleFunc("GET /api/audit", authMiddleware.RequireAdmin(auditHandler.ListAuditEntries))
+	mux.HandleFunc("GET /api/audit/{id}", authMiddleware.RequireAdmin(auditHandler.GetAuditEntry))
+	mux.HandleFunc("POST /api/audit/{id}/rollback", authMiddleware.RequireAdmin(auditHandler.RollbackAuditEntry))
 
 	// Internal endpoint for org backend to get available material counts (Unix socket only, no auth needed)
 	mux.HandleFunc("GET /internal/available-materials", inventoryHandler.GetAvailableMaterialCounts)

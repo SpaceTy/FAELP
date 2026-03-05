@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"distribution_backend/internal/auth"
 	"distribution_backend/internal/client"
 	"distribution_backend/internal/db"
 )
@@ -16,6 +17,7 @@ type RequestsHandler struct {
 	store                *db.Store
 	distributionCenterID string
 	uploadPath           string
+	auditLogger          *db.AuditLogger
 }
 
 // NewRequestsHandler creates a new requests handler.
@@ -28,6 +30,20 @@ func NewRequestsHandler(store *db.Store, orgClient *client.OrgClient, distributi
 		store:                store,
 		distributionCenterID: distributionCenterID,
 		uploadPath:           uploadPath,
+	}
+}
+
+// NewRequestsHandlerWithAudit creates a new requests handler with audit logging.
+func NewRequestsHandlerWithAudit(store *db.Store, orgClient *client.OrgClient, distributionCenterID, uploadPath string, auditLogger *db.AuditLogger) *RequestsHandler {
+	if strings.TrimSpace(uploadPath) == "" {
+		uploadPath = "uploads"
+	}
+	return &RequestsHandler{
+		orgClient:            orgClient,
+		store:                store,
+		distributionCenterID: distributionCenterID,
+		uploadPath:           uploadPath,
+		auditLogger:          auditLogger,
 	}
 }
 
@@ -220,6 +236,13 @@ func (h *RequestsHandler) ApproveIncomingRequest(w http.ResponseWriter, r *http.
 		return
 	}
 
+	if h.auditLogger != nil {
+		userCtx, _ := auth.GetUserFromContext(r.Context())
+		_ = h.auditLogger.Log(r.Context(), userCtx.UserID, userCtx.Username, "request.approve", "request", requestID, map[string]interface{}{
+			"status": approved.Status,
+		}, nil)
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(approved)
 }
@@ -263,6 +286,14 @@ func (h *RequestsHandler) MarkIncomingRequestInAction(w http.ResponseWriter, r *
 		return
 	}
 
+	if h.auditLogger != nil {
+		userCtx, _ := auth.GetUserFromContext(r.Context())
+		_ = h.auditLogger.Log(r.Context(), userCtx.UserID, userCtx.Username, "request.in_action", "request", requestID, map[string]interface{}{
+			"status":               updated.Status,
+			"outgoingTrackingCode": body.OutgoingTrackingCode,
+		}, nil)
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(updated)
 }
@@ -288,6 +319,13 @@ func (h *RequestsHandler) CancelAssignedIncomingRequest(w http.ResponseWriter, r
 	if err != nil {
 		http.Error(w, `{"error":"failed to cancel request"}`, http.StatusBadGateway)
 		return
+	}
+
+	if h.auditLogger != nil {
+		userCtx, _ := auth.GetUserFromContext(r.Context())
+		_ = h.auditLogger.Log(r.Context(), userCtx.UserID, userCtx.Username, "request.cancel", "request", requestID, map[string]interface{}{
+			"status": updated.Status,
+		}, nil)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -320,6 +358,13 @@ func (h *RequestsHandler) ArchiveIncomingRequest(w http.ResponseWriter, r *http.
 		_ = h.store.SetRequestArchived(r.Context(), requestID, true)
 	}
 
+	if h.auditLogger != nil {
+		userCtx, _ := auth.GetUserFromContext(r.Context())
+		_ = h.auditLogger.Log(r.Context(), userCtx.UserID, userCtx.Username, "request.archive", "request", requestID, map[string]interface{}{
+			"archived": true,
+		}, nil)
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(updated)
 }
@@ -348,6 +393,13 @@ func (h *RequestsHandler) UnarchiveIncomingRequest(w http.ResponseWriter, r *htt
 	}
 	if h.store != nil {
 		_ = h.store.SetRequestArchived(r.Context(), requestID, false)
+	}
+
+	if h.auditLogger != nil {
+		userCtx, _ := auth.GetUserFromContext(r.Context())
+		_ = h.auditLogger.Log(r.Context(), userCtx.UserID, userCtx.Username, "request.unarchive", "request", requestID, map[string]interface{}{
+			"archived": false,
+		}, nil)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
