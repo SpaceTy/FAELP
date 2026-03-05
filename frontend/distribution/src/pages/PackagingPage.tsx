@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useState, useCallback } from 'preact/hooks';
 import { api, type IncomingRequest } from '@/services/api';
 
 function formatDate(input: string): string {
@@ -28,7 +28,9 @@ export function PackagingPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<IncomingRequest | null>(null);
   const [packagingOrder, setPackagingOrder] = useState<IncomingRequest | null>(null);
-  const [packChecks, setPackChecks] = useState<Record<string, boolean>>({});
+  const [packChecks, setPackChecks] = useState<Record<string, { checked: boolean; codes: string[] }>>({});
+  const [codeValidationErrors, setCodeValidationErrors] = useState<Record<string, Record<string, string>>>({});
+  const [validatingCodes, setValidatingCodes] = useState<Record<string, boolean>>({});
   const [outgoingTrackingCode, setOutgoingTrackingCode] = useState('');
   const [isSubmittingPack, setIsSubmittingPack] = useState(false);
 
@@ -53,26 +55,92 @@ export function PackagingPage() {
   const fulfillableCount = orders.filter((order) => order.isFulfillable).length;
 
   const openPackagingModal = (order: IncomingRequest) => {
-    const initialChecks: Record<string, boolean> = {};
+    const initialChecks: Record<string, { checked: boolean; codes: string[] }> = {};
     for (const item of order.items) {
-      initialChecks[item.materialTypeId] = false;
+      initialChecks[item.materialTypeId] = { checked: false, codes: [] };
     }
     setPackChecks(initialChecks);
+    setCodeValidationErrors({});
+    setValidatingCodes({});
     setOutgoingTrackingCode('');
     setPackagingOrder(order);
   };
 
+  // Validate a single code against the backend
+  const validateCode = useCallback(async (materialTypeId: string, code: string) => {
+    if (!code || code.length !== 5) return;
+
+    setValidatingCodes(prev => ({ ...prev, [`${materialTypeId}-${code}`]: true }));
+
+    try {
+      const result = await api.validateMaterialCode(code, materialTypeId);
+
+      setCodeValidationErrors(prev => ({
+        ...prev,
+        [materialTypeId]: {
+          ...prev[materialTypeId],
+          [code]: result.valid ? '' : (result.error || 'Invalid code'),
+        },
+      }));
+    } catch {
+      // Silently fail validation - we'll show errors on submit
+    } finally {
+      setValidatingCodes(prev => ({ ...prev, [`${materialTypeId}-${code}`]: false }));
+    }
+  }, []);
+
+  // Validate all codes for a material type
+  const validateAllCodesForItem = useCallback(async (materialTypeId: string, codes: string[]) => {
+    const validCodes = codes.filter(c => c && c.length === 5);
+    if (validCodes.length === 0) return;
+
+    for (const code of validCodes) {
+      await validateCode(materialTypeId, code);
+    }
+  }, [validateCode]);
+
   const packedCount = packagingOrder
-    ? packagingOrder.items.filter((item) => !!packChecks[item.materialTypeId]).length
+    ? packagingOrder.items.filter((item) => !!packChecks[item.materialTypeId]?.checked).length
     : 0;
+
+  const getCodesEnteredCount = (materialTypeId: string, _requiredQty: number): number => {
+    const check = packChecks[materialTypeId];
+    if (!check || !check.codes) return 0;
+    return check.codes.filter(c => c.trim()).length;
+  };
+
+  const hasValidCodes = (materialTypeId: string, requiredQty: number): boolean => {
+    return getCodesEnteredCount(materialTypeId, requiredQty) >= requiredQty;
+  };
+
   const hasAnyPacked = packedCount > 0;
   const hasTrackingCode = outgoingTrackingCode.trim().length > 0;
-  const canMarkPacked = hasAnyPacked && hasTrackingCode && !isSubmittingPack;
+  const allCheckedHaveCodes = packagingOrder
+    ? packagingOrder.items.every((item) => {
+        if (!packChecks[item.materialTypeId]?.checked) return true;
+        return hasValidCodes(item.materialTypeId, item.quantity);
+      })
+    : true;
+
+  // Check if any checked items have validation errors
+  const hasValidationErrors = packagingOrder
+    ? packagingOrder.items.some((item) => {
+        if (!packChecks[item.materialTypeId]?.checked) return false;
+        const errors = codeValidationErrors[item.materialTypeId] || {};
+        return Object.values(errors).some(error => error !== '');
+      })
+    : false;
+
+  const canMarkPacked = hasAnyPacked && hasTrackingCode && allCheckedHaveCodes && !hasValidationErrors && !isSubmittingPack;
   const markPackedDisabledReason = !hasAnyPacked
     ? 'Check at least one material type to continue.'
     : !hasTrackingCode
       ? 'Enter DHL tracking code to continue.'
-      : '';
+      : !allCheckedHaveCodes
+        ? 'Enter material codes for all checked items.'
+        : hasValidationErrors
+          ? 'Fix invalid material codes to continue.'
+          : '';
 
   const handleMarkPacked = async () => {
     if (!packagingOrder || !canMarkPacked) {
@@ -82,7 +150,14 @@ export function PackagingPage() {
     setIsSubmittingPack(true);
     setError(null);
     try {
-      await api.markIncomingRequestInAction(packagingOrder.id, outgoingTrackingCode.trim());
+      const itemsWithCodes = packagingOrder.items
+        .filter((item) => packChecks[item.materialTypeId]?.checked)
+        .map((item) => ({
+          materialTypeId: item.materialTypeId,
+          codes: packChecks[item.materialTypeId]?.codes.filter(c => c.trim()) || [],
+        }));
+
+      await api.markIncomingRequestInAction(packagingOrder.id, outgoingTrackingCode.trim(), itemsWithCodes);
       setPackagingOrder(null);
       setOutgoingTrackingCode('');
       await loadData();
@@ -281,34 +356,94 @@ export function PackagingPage() {
                 <p>{packedCount}/{packagingOrder.items.length} material types picked</p>
               </div>
               <div className="space-y-2">
-                {packagingOrder.items.map((item) => (
-                  <label key={item.materialTypeId} className="packaging-check-item">
-                    <input
-                      type="checkbox"
-                      checked={!!packChecks[item.materialTypeId]}
-                      onChange={() =>
-                        setPackChecks((prev) => ({
-                          ...prev,
-                          [item.materialTypeId]: !prev[item.materialTypeId],
-                        }))
-                      }
-                    />
-                    <div className="packaging-check-image">
-                      {item.materialImageUrl ? (
-                        <img src={item.materialImageUrl} alt={item.materialName} />
-                      ) : (
-                        <div className="packaging-image-placeholder">No Image</div>
-                      )}
+                {packagingOrder.items.map((item) => {
+                  const check = packChecks[item.materialTypeId];
+                  const codesEntered = getCodesEnteredCount(item.materialTypeId, item.quantity);
+                  const hasEnoughCodes = hasValidCodes(item.materialTypeId, item.quantity);
+                  const canCheck = check && check.codes.length > 0;
+
+                  return (
+                    <div key={item.materialTypeId} className="packaging-check-item">
+                      <input
+                        type="checkbox"
+                        checked={!!check?.checked}
+                        disabled={!canCheck}
+                        onChange={() =>
+                          setPackChecks((prev) => ({
+                            ...prev,
+                            [item.materialTypeId]: {
+                              ...prev[item.materialTypeId],
+                              checked: !prev[item.materialTypeId].checked,
+                            },
+                          }))
+                        }
+                      />
+                      <div className="packaging-check-image">
+                        {item.materialImageUrl ? (
+                          <img src={item.materialImageUrl} alt={item.materialName} />
+                        ) : (
+                          <div className="packaging-image-placeholder">No Image</div>
+                        )}
+                      </div>
+                      <div className="packaging-check-text">
+                        <strong>{item.materialName}</strong>
+                        <span>Required: {item.quantity}</span>
+                        <span className={item.isFulfillable ? 'stock-check stock-check-ok' : 'stock-check stock-check-missing'}>
+                          Available: {item.availableQuantity}
+                        </span>
+                      </div>
+                      <div className="material-codes-input">
+                        <label className="block text-xs font-semibold mb-1">
+                          Material Codes ({codesEntered}/{item.quantity})
+                        </label>
+                        <input
+                          type="text"
+                          value={check?.codes.join(', ') || ''}
+                          onInput={(e) => {
+                            const value = (e.target as HTMLInputElement).value;
+                            const codes = value.split(',').map(c => c.trim().toUpperCase()).filter(c => c);
+                            setPackChecks((prev) => ({
+                              ...prev,
+                              [item.materialTypeId]: {
+                                ...prev[item.materialTypeId],
+                                codes,
+                              },
+                            }));
+                            // Trigger validation after a short delay
+                            setTimeout(() => {
+                              validateAllCodesForItem(item.materialTypeId, codes);
+                            }, 500);
+                          }}
+                          onBlur={() => {
+                            if (check?.codes.length) {
+                              validateAllCodesForItem(item.materialTypeId, check.codes);
+                            }
+                          }}
+                          className="w-full px-2 py-1 text-sm border border-slate-300 rounded-md"
+                          placeholder={item.quantity === 1 ? 'Enter material code' : 'Enter codes, comma separated'}
+                        />
+                        {!hasEnoughCodes && check && check.codes.length > 0 && (
+                          <span className="text-xs text-red-500">Need {item.quantity - codesEntered} more code(s)</span>
+                        )}
+                        {/* Show validation errors for each code */}
+                        {check?.codes.map((code, idx) => {
+                          const error = codeValidationErrors[item.materialTypeId]?.[code];
+                          const isValidating = validatingCodes[`${item.materialTypeId}-${code}`];
+                          if (!error && !isValidating) return null;
+                          return (
+                            <div key={idx} className="text-xs mt-1">
+                              {isValidating ? (
+                                <span className="text-text-secondary">Validating {code}...</span>
+                              ) : error ? (
+                                <span className="text-red-500">{code}: {error}</span>
+                              ) : null}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                    <div className="packaging-check-text">
-                      <strong>{item.materialName}</strong>
-                      <span>Required: {item.quantity}</span>
-                      <span className={item.isFulfillable ? 'stock-check stock-check-ok' : 'stock-check stock-check-missing'}>
-                        Available: {item.availableQuantity}
-                      </span>
-                    </div>
-                  </label>
-                ))}
+                  );
+                })}
               </div>
               <div className="mt-4">
                 <label className="block text-sm font-semibold mb-2" htmlFor="outgoing-tracking-code">

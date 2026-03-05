@@ -1,7 +1,10 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -224,8 +227,14 @@ func (h *RequestsHandler) ApproveIncomingRequest(w http.ResponseWriter, r *http.
 	_ = json.NewEncoder(w).Encode(approved)
 }
 
+type packagingItem struct {
+	MaterialTypeID string   `json:"materialTypeId"`
+	Codes          []string `json:"codes"`
+}
+
 type markInActionBody struct {
-	OutgoingTrackingCode string `json:"outgoingTrackingCode"`
+	OutgoingTrackingCode string          `json:"outgoingTrackingCode"`
+	Items                []packagingItem `json:"items"`
 }
 
 // MarkIncomingRequestInAction marks an approved request as inAction with outgoing tracking code.
@@ -255,6 +264,33 @@ func (h *RequestsHandler) MarkIncomingRequestInAction(w http.ResponseWriter, r *
 	if body.OutgoingTrackingCode == "" {
 		http.Error(w, `{"error":"outgoingTrackingCode is required"}`, http.StatusBadRequest)
 		return
+	}
+
+	// Validate that all provided codes are valid for their material types
+	if len(body.Items) > 0 && h.store != nil {
+		for _, item := range body.Items {
+			for _, code := range item.Codes {
+				code = strings.ToUpper(strings.TrimSpace(code))
+				if code == "" {
+					continue
+				}
+
+				instance, err := h.store.GetMaterialInstanceByHumanCode(r.Context(), code)
+				if err != nil {
+					if errors.Is(err, sql.ErrNoRows) {
+						http.Error(w, fmt.Sprintf(`{"error":"invalid code '%s': material instance not found"}`, code), http.StatusBadRequest)
+						return
+					}
+					http.Error(w, `{"error":"failed to validate material codes"}`, http.StatusInternalServerError)
+					return
+				}
+
+				if instance.TypeID != item.MaterialTypeID {
+					http.Error(w, fmt.Sprintf(`{"error":"invalid code '%s': does not belong to the expected material type"}`, code), http.StatusBadRequest)
+					return
+				}
+			}
+		}
 	}
 
 	updated, err := h.orgClient.MarkRequestInAction(r.Context(), requestID, h.distributionCenterID, body.OutgoingTrackingCode)

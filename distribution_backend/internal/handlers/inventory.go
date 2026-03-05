@@ -85,6 +85,66 @@ func (h *InventoryHandler) GenerateMaterialCode(w http.ResponseWriter, r *http.R
 	_ = json.NewEncoder(w).Encode(generatedCodeResponse{HumanCode: code})
 }
 
+type validateCodeResponse struct {
+	Valid      bool   `json:"valid"`
+	Code       string `json:"code,omitempty"`
+	TypeID     string `json:"typeId,omitempty"`
+	TypeIDMatch bool  `json:"typeIdMatch,omitempty"`
+	Error      string `json:"error,omitempty"`
+}
+
+// ValidateMaterialCode validates that a human code exists and optionally matches a material type.
+func (h *InventoryHandler) ValidateMaterialCode(w http.ResponseWriter, r *http.Request) {
+	code := strings.ToUpper(strings.TrimSpace(r.URL.Query().Get("code")))
+	expectedTypeID := strings.TrimSpace(r.URL.Query().Get("typeId"))
+
+	if code == "" {
+		http.Error(w, `{"error":"code is required"}`, http.StatusBadRequest)
+		return
+	}
+
+	if !humanCodePattern.MatchString(code) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(validateCodeResponse{
+			Valid: false,
+			Error: "Code must be exactly 5 uppercase letters",
+		})
+		return
+	}
+
+	instance, err := h.store.GetMaterialInstanceByHumanCode(r.Context(), code)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(validateCodeResponse{
+				Valid: false,
+				Code:  code,
+				Error: "Material code not found",
+			})
+			return
+		}
+		http.Error(w, `{"error":"failed to validate code"}`, http.StatusInternalServerError)
+		return
+	}
+
+	response := validateCodeResponse{
+		Valid:  true,
+		Code:   instance.HumanCode,
+		TypeID: instance.TypeID,
+	}
+
+	if expectedTypeID != "" {
+		response.TypeIDMatch = instance.TypeID == expectedTypeID
+		if !response.TypeIDMatch {
+			response.Valid = false
+			response.Error = "Code does not belong to the expected material type"
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(response)
+}
+
 // CreateMaterialInstance creates a new inventory item.
 func (h *InventoryHandler) CreateMaterialInstance(w http.ResponseWriter, r *http.Request) {
 	var req domain.CreateMaterialInstanceInput

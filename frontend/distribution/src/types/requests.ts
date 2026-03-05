@@ -32,10 +32,6 @@ export interface BorrowRequest {
 export interface RequestStats {
   pending: number;
   approved: number;
-  inAction: number;
-  returned: number;
-  cancelled: number;
-  archived: number;
   total: number;
 }
 

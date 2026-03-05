@@ -80,6 +80,23 @@ func (s *Store) GetMaterialInstanceByID(ctx context.Context, id string) (domain.
 	return mapMaterialInstance(row), nil
 }
 
+// GetMaterialInstanceByHumanCode returns a single material instance by human code
+func (s *Store) GetMaterialInstanceByHumanCode(ctx context.Context, humanCode string) (domain.MaterialInstance, error) {
+	var row materialInstanceRow
+	err := s.db.QueryRowContext(ctx, `
+		SELECT id, human_code, type_id, description, status, use_count, location, current_request_id, created_at, updated_at
+		FROM material_instances
+		WHERE human_code = $1
+	`, humanCode).Scan(
+		&row.ID, &row.HumanCode, &row.TypeID, &row.Description, &row.Status, &row.UseCount, &row.Location,
+		&row.CurrentRequestID, &row.CreatedAt, &row.UpdatedAt,
+	)
+	if err != nil {
+		return domain.MaterialInstance{}, err
+	}
+	return mapMaterialInstance(row), nil
+}
+
 // ListMaterialInstances returns material instances with optional filters
 func (s *Store) ListMaterialInstances(ctx context.Context, params ListMaterialInstancesParams) ([]domain.MaterialInstance, error) {
 	args := []any{}
