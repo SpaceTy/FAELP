@@ -1,4 +1,5 @@
 version: "3.8"
+name: faelp-dist
 
 services:
   postgres:
@@ -60,6 +61,7 @@ services:
 volumes:
   socket-volume:
     name: ${SOCKET_VOLUME_NAME}
+    external: true
   dist-uploads:
     name: ${UPLOADS_VOLUME_NAME}
   dist-postgres-data:
