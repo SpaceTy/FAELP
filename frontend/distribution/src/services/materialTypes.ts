@@ -2,7 +2,7 @@ import { authSignal } from '@/context/AuthContext';
 import type { MaterialType } from '@/types/inventory';
 import { resolveAssetUrl } from '@/utils/url';
 
-const API_BASE = import.meta.env.VITE_API_URL || '';
+const API_BASE = '';
 
 class MaterialTypesService {
   private getAuthHeaders(): Record<string, string> {

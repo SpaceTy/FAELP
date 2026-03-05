@@ -12,7 +12,7 @@ import type {
 import type { RequestStatus } from '@/types/requests';
 import { resolveAssetUrl } from '@/utils/url';
 
-const API_BASE = import.meta.env.VITE_API_URL || '';
+const API_BASE = '';
 
 class ApiService {
   async generateMaterialCode(): Promise<string> {
