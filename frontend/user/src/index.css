@@ -8,72 +8,135 @@ body {
 }
 
 /* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  @apply bg-gray-200;
-}
-
-::-webkit-scrollbar-thumb {
-  @apply bg-gray-400 rounded;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  @apply bg-gray-500;
-}
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { @apply bg-gray-200; }
+::-webkit-scrollbar-thumb { @apply bg-gray-400 rounded; }
+::-webkit-scrollbar-thumb:hover { @apply bg-gray-500; }
 
 /* Status badge colors */
-.status-pending {
-  @apply bg-yellow-100 text-yellow-800 border-yellow-200;
-}
-
-.status-inAction {
-  @apply bg-blue-100 text-blue-800 border-blue-200;
-}
-
-.status-returned {
-  @apply bg-green-100 text-green-800 border-green-200;
-}
+.status-pending  { @apply bg-yellow-100 text-yellow-800 border-yellow-200; }
+.status-inAction { @apply bg-blue-100 text-blue-800 border-blue-200; }
+.status-returned { @apply bg-green-100 text-green-800 border-green-200; }
 
 /* Cart flash animation */
 @keyframes cart-flash {
-  0% {
-    transform: scale(1);
-    box-shadow: 0 0 0 0 rgba(var(--color-primary-rgb), 0.7);
-  }
-  50% {
-    transform: scale(1.1);
-    box-shadow: 0 0 0 10px rgba(var(--color-primary-rgb), 0);
-  }
-  100% {
-    transform: scale(1);
-    box-shadow: 0 0 0 0 rgba(var(--color-primary-rgb), 0);
-  }
+  0%   { transform: scale(1);   box-shadow: 0 0 0 0 rgba(72, 187, 120, 0.7); }
+  50%  { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(72, 187, 120, 0); }
+  100% { transform: scale(1);   box-shadow: 0 0 0 0 rgba(72, 187, 120, 0); }
 }
+.animate-cart-flash { animation: cart-flash 0.6s ease-out; }
 
-.animate-cart-flash {
-  animation: cart-flash 0.6s ease-out;
-}
+/* ============================================================
+   Dark Mode
+   ============================================================ */
 
-/* Cart flash animation */
-@keyframes cart-flash {
-  0% {
-    transform: scale(1);
-    box-shadow: 0 0 0 0 rgba(var(--color-primary-rgb), 0.7);
-  }
-  50% {
-    transform: scale(1.1);
-    box-shadow: 0 0 0 10px rgba(var(--color-primary-rgb), 0);
-  }
-  100% {
-    transform: scale(1);
-    box-shadow: 0 0 0 0 rgba(var(--color-primary-rgb), 0);
-  }
-}
+.dark body { background-color: #0d1520; color: #e2e8f0; }
 
-.animate-cart-flash {
-  animation: cart-flash 0.6s ease-out;
+/* Scrollbar */
+.dark ::-webkit-scrollbar-track { background: #1a2535; }
+.dark ::-webkit-scrollbar-thumb { background: #334155; }
+.dark ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+/* Status badge classes */
+.dark .status-pending  { background-color: #3d1f00; color: #fcd34d; border-color: #78350f; }
+.dark .status-inAction { background-color: #0f2340; color: #93c5fd; border-color: #1e3a5f; }
+.dark .status-returned { background-color: #0a2d1a; color: #6ee7b7; border-color: #166534; }
+
+/* Generic inputs */
+.dark input, .dark select, .dark textarea {
+  background-color: #1a2535;
+  border-color: #2a3a50;
+  color: #e2e8f0;
 }
+.dark input::placeholder { color: #4a5f78; }
+.dark select option { background-color: #1a2535; }
+
+/* ---- Backgrounds ---- */
+.dark .bg-white     { background-color: #1a2535 !important; }
+.dark .bg-gray-50   { background-color: #131e2d !important; }
+.dark .bg-gray-100  { background-color: #162030 !important; }
+.dark .bg-gray-200  { background-color: #1e2f44 !important; }
+.dark .bg-slate-50  { background-color: #131e2d !important; }
+.dark .bg-slate-100 { background-color: #162030 !important; }
+.dark .bg-slate-200 { background-color: #1e2f44 !important; }
+.dark .bg-background { background-color: #0d1520 !important; }
+
+/* Inverted button (bg-slate-900 used for CTA) */
+.dark .bg-slate-900 { background-color: #334155 !important; }
+.dark .hover\:bg-slate-800:hover { background-color: #475569 !important; }
+
+/* ---- Borders ---- */
+.dark .border-gray-200   { border-color: #2a3a50 !important; }
+.dark .border-gray-300   { border-color: #334155 !important; }
+.dark .border-slate-100  { border-color: #1e2f44 !important; }
+.dark .border-slate-200  { border-color: #2a3a50 !important; }
+.dark .border-slate-300  { border-color: #334155 !important; }
+.dark .divide-gray-200 > * + *  { border-color: #2a3a50 !important; }
+.dark .divide-slate-200 > * + * { border-color: #2a3a50 !important; }
+.dark .hover\:border-slate-300:hover { border-color: #475569 !important; }
+
+/* ---- Text ---- */
+.dark .text-gray-400   { color: #4a5f78 !important; }
+.dark .text-gray-500   { color: #64748b !important; }
+.dark .text-gray-600   { color: #94a3b8 !important; }
+.dark .text-gray-700   { color: #cbd5e1 !important; }
+.dark .text-gray-800   { color: #e2e8f0 !important; }
+.dark .text-gray-900   { color: #f1f5f9 !important; }
+.dark .text-slate-400  { color: #4a5f78 !important; }
+.dark .text-slate-500  { color: #64748b !important; }
+.dark .text-slate-600  { color: #94a3b8 !important; }
+.dark .text-slate-700  { color: #cbd5e1 !important; }
+.dark .text-slate-800  { color: #e2e8f0 !important; }
+.dark .text-slate-900  { color: #f1f5f9 !important; }
+
+/* ---- Custom tokens ---- */
+.dark .bg-secondary { background-color: #0c1a33 !important; }
+.dark .hover\:bg-secondary-hover:hover { background-color: #1a2d50 !important; }
+.dark .text-text-primary   { color: #f1f5f9 !important; }
+.dark .text-text-secondary { color: #94a3b8 !important; }
+.dark .text-secondary      { color: #e2e8f0 !important; }
+
+/* ---- Hover states ---- */
+.dark .hover\:bg-gray-50:hover  { background-color: #162030 !important; }
+.dark .hover\:bg-gray-100:hover { background-color: #1e2f44 !important; }
+.dark .hover\:bg-gray-200:hover { background-color: #253352 !important; }
+
+/* ---- Status badge inline classes (used in MyRequestsPage) ---- */
+.dark .bg-amber-50    { background-color: #3d1f00 !important; }
+.dark .text-amber-700 { color: #fcd34d !important; }
+.dark .border-amber-200 { border-color: #78350f !important; }
+
+.dark .bg-blue-50    { background-color: #0f2340 !important; }
+.dark .bg-blue-100   { background-color: #0f2340 !important; }
+.dark .text-blue-700 { color: #93c5fd !important; }
+.dark .text-blue-800 { color: #93c5fd !important; }
+.dark .border-blue-200 { border-color: #1e3a5f !important; }
+
+.dark .bg-emerald-50   { background-color: #0a2d1a !important; }
+.dark .text-emerald-700 { color: #6ee7b7 !important; }
+.dark .border-emerald-200 { border-color: #166534 !important; }
+
+.dark .bg-green-50   { background-color: #0a2d1a !important; }
+.dark .bg-green-100  { background-color: #0a2d1a !important; }
+.dark .text-green-700 { color: #6ee7b7 !important; }
+.dark .text-green-800 { color: #6ee7b7 !important; }
+.dark .border-green-200 { border-color: #166534 !important; }
+
+.dark .bg-rose-50    { background-color: #2d0a0f !important; }
+.dark .text-rose-700 { color: #fda4af !important; }
+.dark .border-rose-200 { border-color: #9f1239 !important; }
+.dark .hover\:bg-rose-100:hover { background-color: #3d0f16 !important; }
+
+/* ---- Error / red states ---- */
+.dark .bg-red-50     { background-color: #2d0a0f !important; }
+.dark .border-red-200 { border-color: #991b1b !important; }
+.dark .text-red-600  { color: #fca5a5 !important; }
+.dark .text-red-700  { color: #fca5a5 !important; }
+.dark .text-red-800  { color: #fca5a5 !important; }
+
+/* ---- Dot indicators in status badges ---- */
+.dark .bg-amber-500  { background-color: #f59e0b !important; }
+.dark .bg-blue-500   { background-color: #3b82f6 !important; }
+.dark .bg-emerald-500 { background-color: #10b981 !important; }
+.dark .bg-rose-500   { background-color: #f43f5e !important; }
+.dark .bg-slate-500  { background-color: #64748b !important; }
