@@ -472,6 +472,14 @@ body {
   color: #805ad5;
 }
 
+.stat-value.returned {
+  color: #5a67d8;
+}
+
+.stat-value.unpacked {
+  color: #dd6b20;
+}
+
 /* Content Section */
 .content-section {
   display: flex;
@@ -949,6 +957,11 @@ body {
   color: #065f46;
 }
 
+.status-unpacked {
+  background-color: #fed7aa;
+  color: #9a3412;
+}
+
 .packaging-check-item {
   display: flex;
   align-items: center;
@@ -985,6 +998,12 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.1rem;
+}
+
+.material-codes-input {
+  flex: 1;
+  min-width: 200px;
+  margin-left: auto;
 }
 
 /* Action Buttons in Table */

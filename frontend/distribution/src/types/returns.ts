@@ -1,4 +1,4 @@
-export type ReturnStatus = 'awaiting' | 'received' | 'inspection' | 'completed';
+export type ReturnStatus = 'awaiting' | 'received' | 'inspection' | 'completed' | 'unpacked' | 'inAction' | 'returned';
 export type ItemCondition = 'excellent' | 'good' | 'fair' | 'damaged' | 'missing';
 export type ItemDestination = 'inventory' | 'cleaning' | 'repair' | 'writeoff';
 
@@ -32,10 +32,9 @@ export interface ReturnRecord {
 }
 
 export interface ReturnStats {
-  overdue: number;
-  dueToday: number;
-  toInspect: number;
-  completedToday: number;
+  inAction: number;
+  returned: number;
+  unpacked: number;
 }
 
 export interface ListReturnsParams {

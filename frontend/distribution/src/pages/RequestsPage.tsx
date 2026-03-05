@@ -6,7 +6,7 @@ import type {
   RequestStatus,
 } from '@/types/requests';
 
-const STATUS_OPTIONS: Array<RequestStatus | ''> = ['', 'pending', 'approved', 'inAction', 'returned', 'cancelled'];
+const STATUS_OPTIONS: Array<RequestStatus | ''> = ['', 'pending', 'approved'];
 
 function statusClass(status: RequestStatus): string {
   switch (status) {
@@ -97,7 +97,7 @@ function mapIncomingRequest(input: IncomingRequest): BorrowRequest {
 
 export function RequestsPage() {
   const [requests, setRequests] = useState<BorrowRequest[]>([]);
-  const [stats, setStats] = useState<RequestStats>({ pending: 0, approved: 0, inAction: 0, returned: 0, cancelled: 0, archived: 0, total: 0 });
+  const [stats, setStats] = useState<RequestStats>({ pending: 0, approved: 0, total: 0 });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedRequest, setSelectedRequest] = useState<BorrowRequest | null>(null);
@@ -107,34 +107,23 @@ export function RequestsPage() {
   const [unarchivingRequestID, setUnarchivingRequestID] = useState<string | null>(null);
 
   const [statusFilter, setStatusFilter] = useState<RequestStatus | ''>('pending');
-  const [showArchived, setShowArchived] = useState(false);
 
   const loadData = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const [pendingRaw, approvedRaw, inActionRaw, returnedRaw, cancelledRaw] = await Promise.all([
-        api.listIncomingRequests('pending', showArchived),
-        api.listIncomingRequests('approved', showArchived),
-        api.listIncomingRequests('inAction', showArchived),
-        api.listIncomingRequests('returned', showArchived),
-        api.listIncomingRequests('cancelled', showArchived),
+      const [pendingRaw, approvedRaw] = await Promise.all([
+        api.listIncomingRequests('pending', false),
+        api.listIncomingRequests('approved', false),
       ]);
 
       const pending = pendingRaw.map(mapIncomingRequest);
       const approved = approvedRaw.map(mapIncomingRequest);
-      const inAction = inActionRaw.map(mapIncomingRequest);
-      const returned = returnedRaw.map(mapIncomingRequest);
-      const cancelled = cancelledRaw.map(mapIncomingRequest);
-      const all = [...pending, ...approved, ...inAction, ...returned, ...cancelled];
+      const all = [...pending, ...approved];
 
       setStats({
         pending: pending.length,
         approved: approved.length,
-        inAction: inAction.length,
-        returned: returned.length,
-        cancelled: cancelled.length,
-        archived: all.filter((request) => request.archived).length,
         total: all.length,
       });
 
@@ -152,7 +141,7 @@ export function RequestsPage() {
 
   useEffect(() => {
     loadData();
-  }, [showArchived, statusFilter]);
+  }, [statusFilter]);
 
   const handleApprove = async (requestID: string) => {
     setApprovingRequestID(requestID);
@@ -224,14 +213,6 @@ export function RequestsPage() {
               </label>
             ))}
           </div>
-          <label className="checkbox-label mt-3">
-            <input
-              type="checkbox"
-              checked={showArchived}
-              onChange={(e) => setShowArchived((e.target as HTMLInputElement).checked)}
-            />
-            <span>Show archived</span>
-          </label>
         </div>
 
         <div className="stats-card">
@@ -243,22 +224,6 @@ export function RequestsPage() {
           <div className="stat-row">
             <span>Approved:</span>
             <span className="stat-value approved">{stats.approved}</span>
-          </div>
-          <div className="stat-row">
-            <span>Returned:</span>
-            <span className="stat-value rejected">{stats.returned}</span>
-          </div>
-          <div className="stat-row">
-            <span>In Action:</span>
-            <span className="stat-value pending">{stats.inAction}</span>
-          </div>
-          <div className="stat-row">
-            <span>Cancelled:</span>
-            <span className="stat-value cancelled">{stats.cancelled}</span>
-          </div>
-          <div className="stat-row">
-            <span>Archived:</span>
-            <span className="stat-value">{stats.archived}</span>
           </div>
           <div className="stat-row">
             <span>Total:</span>

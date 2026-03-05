@@ -1,21 +1,52 @@
 import { useEffect, useState, useMemo } from 'preact/hooks';
-import { mockReturnsService } from '@/services/mockReturns';
+import { api, type IncomingRequest } from '@/services/api';
 import type {
   ReturnRecord,
   ReturnStats,
   ReturnStatus,
   ItemCondition,
   ItemDestination,
-  ListReturnsParams,
 } from '@/types/returns';
 
-const STATUS_OPTIONS: Array<ReturnStatus | ''> = ['', 'awaiting', 'received', 'inspection', 'completed'];
-const DUE_DATE_OPTIONS: Array<ListReturnsParams['dueDate']> = ['', 'overdue', 'today', 'week', 'later'];
+const STATUS_OPTIONS: Array<ReturnStatus | ''> = ['', 'inAction', 'returned', 'unpacked'];
 const CONDITION_OPTIONS: ItemCondition[] = ['excellent', 'good', 'fair', 'damaged', 'missing'];
 const DESTINATION_OPTIONS: ItemDestination[] = ['inventory', 'cleaning', 'repair', 'writeoff'];
 
+function mapIncomingRequestToReturnRecord(req: IncomingRequest): ReturnRecord {
+  return {
+    id: req.id,
+    requestId: req.id,
+    borrowerName: req.shippingName,
+    borrowerOrg: `Customer ${req.customerId.slice(0, 8)}`,
+    borrowerEmail: '-',
+    borrowerPhone: '-',
+    items: req.items.map((item) => ({
+      materialTypeId: item.materialTypeId,
+      materialName: item.materialName,
+      quantity: item.quantity,
+      condition: 'good' as ItemCondition,
+      destination: 'inventory' as ItemDestination,
+      isInspected: false,
+      returnToInventory: true,
+    })),
+    status: req.status as ReturnStatus,
+    sentDate: req.createdAt,
+    dueDate: req.plannedReturnDate || req.deliveryDate,
+    receivedDate: req.status === 'returned' ? req.updatedAt : undefined,
+    purpose: req.note || '-',
+    createdAt: req.createdAt,
+    updatedAt: req.updatedAt,
+  };
+}
+
 function statusClass(status: ReturnStatus): string {
   switch (status) {
+    case 'inAction':
+      return 'status-badge status-in-progress';
+    case 'returned':
+      return 'status-badge status-returned';
+    case 'unpacked':
+      return 'status-badge status-unpacked';
     case 'awaiting':
       return 'status-badge status-awaiting';
     case 'received':
@@ -31,6 +62,12 @@ function statusClass(status: ReturnStatus): string {
 
 function statusLabel(status: ReturnStatus): string {
   switch (status) {
+    case 'inAction':
+      return 'In Action';
+    case 'returned':
+      return 'Returned';
+    case 'unpacked':
+      return 'Unpacked';
     case 'awaiting':
       return 'Awaiting Return';
     case 'received':
@@ -88,14 +125,13 @@ function getDueInfo(dueDate: string, status: ReturnStatus): { label: string; dat
 
 export function ReturnsPage() {
   const [returns, setReturns] = useState<ReturnRecord[]>([]);
-  const [stats, setStats] = useState<ReturnStats>({ overdue: 0, dueToday: 0, toInspect: 0, completedToday: 0 });
+  const [stats, setStats] = useState<ReturnStats>({ inAction: 0, returned: 0, unpacked: 0 });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedReturn, setSelectedReturn] = useState<ReturnRecord | null>(null);
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<ReturnStatus | ''>('');
-  const [dueFilter, setDueFilter] = useState<ListReturnsParams['dueDate']>('');
 
   // Inspection state
   const [inspectionState, setInspectionState] = useState<Record<number, { condition: ItemCondition; destination: ItemDestination; returnToInventory: boolean }>>({});
@@ -104,15 +140,24 @@ export function ReturnsPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const [returnsData, statsData] = await Promise.all([
-        mockReturnsService.listReturns({
-          status: statusFilter,
-          dueDate: dueFilter,
-        }),
-        mockReturnsService.getReturnStats(),
+      const [inActionRaw, returnedRaw] = await Promise.all([
+        api.listIncomingRequests('inAction', false),
+        api.listIncomingRequests('returned', false),
       ]);
-      setReturns(returnsData);
-      setStats(statsData);
+
+      const inActionRecords = inActionRaw.map(mapIncomingRequestToReturnRecord);
+      const returnedRecords = returnedRaw.map(mapIncomingRequestToReturnRecord);
+      const allRecords = [...inActionRecords, ...returnedRecords];
+
+      const filtered = allRecords.filter((r) => !statusFilter || r.status === statusFilter);
+
+      setReturns(filtered);
+
+      setStats({
+        inAction: inActionRecords.length,
+        returned: returnedRecords.length,
+        unpacked: 0,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load returns');
     } finally {
@@ -122,7 +167,7 @@ export function ReturnsPage() {
 
   useEffect(() => {
     loadData();
-  }, [statusFilter, dueFilter]);
+  }, [statusFilter]);
 
   useEffect(() => {
     if (selectedReturn) {
@@ -138,32 +183,12 @@ export function ReturnsPage() {
     }
   }, [selectedReturn]);
 
-  const handleInspectItem = async (returnId: string, itemIndex: number) => {
-    const state = inspectionState[itemIndex];
-    if (!state) return;
-
-    try {
-      await mockReturnsService.inspectItem({
-        returnId,
-        itemIndex,
-        condition: state.condition,
-        destination: state.destination,
-        returnToInventory: state.returnToInventory,
-      });
-      await loadData();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to inspect item');
-    }
+  const handleInspectItem = async (_returnId: string, _itemIndex: number) => {
+    setError('Inspection functionality requires backend implementation');
   };
 
-  const handleCompleteReturn = async (returnId: string) => {
-    try {
-      await mockReturnsService.completeReturn({ returnId });
-      setSelectedReturn(null);
-      await loadData();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to complete return');
-    }
+  const handleCompleteReturn = async (_returnId: string) => {
+    setError('Complete return functionality requires backend implementation');
   };
 
   const inspectedCount = useMemo(() => {
@@ -197,50 +222,19 @@ export function ReturnsPage() {
           </div>
         </div>
 
-        <div className="filter-section">
-          <h3>Due Date</h3>
-          <div className="filter-group">
-            {DUE_DATE_OPTIONS.map((d) => (
-              <label key={d || 'all'} className="checkbox-label">
-                <input
-                  type="radio"
-                  name="due"
-                  checked={dueFilter === d}
-                  onChange={() => setDueFilter(d)}
-                />
-                <span>
-                  {d
-                    ? d === 'overdue'
-                      ? 'Overdue'
-                      : d === 'today'
-                      ? 'Due Today'
-                      : d === 'week'
-                      ? 'Due This Week'
-                      : 'Later'
-                    : 'All'}
-                </span>
-              </label>
-            ))}
-          </div>
-        </div>
-
         <div className="stats-card">
           <h3>Returns Overview</h3>
           <div className="stat-row">
-            <span>Overdue:</span>
-            <span className="stat-value rejected">{stats.overdue}</span>
+            <span>In Action:</span>
+            <span className="stat-value in-progress">{stats.inAction}</span>
           </div>
           <div className="stat-row">
-            <span>Due Today:</span>
-            <span className="stat-value pending">{stats.dueToday}</span>
+            <span>Returned:</span>
+            <span className="stat-value returned">{stats.returned}</span>
           </div>
           <div className="stat-row">
-            <span>To Inspect:</span>
-            <span className="stat-value in-progress">{stats.toInspect}</span>
-          </div>
-          <div className="stat-row">
-            <span>Completed Today:</span>
-            <span className="stat-value approved">{stats.completedToday}</span>
+            <span>Unpacked:</span>
+            <span className="stat-value unpacked">{stats.unpacked}</span>
           </div>
         </div>
       </aside>

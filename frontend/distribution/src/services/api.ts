@@ -63,11 +63,15 @@ class ApiService {
     return normalizeIncomingRequest(data);
   }
 
-  async markIncomingRequestInAction(requestID: string, outgoingTrackingCode: string): Promise<IncomingRequest> {
+  async markIncomingRequestInAction(
+    requestID: string,
+    outgoingTrackingCode: string,
+    items?: Array<{ materialTypeId: string; codes: string[] }>
+  ): Promise<IncomingRequest> {
     const response = await fetch(`${API_BASE}/api/requests/${encodeURIComponent(requestID)}/in-action`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
-      body: JSON.stringify({ outgoingTrackingCode }),
+      body: JSON.stringify({ outgoingTrackingCode, items }),
     });
 
     if (!response.ok) {

@@ -163,19 +163,10 @@ class MockReturnsService {
   async getReturnStats(): Promise<ReturnStats> {
     await new Promise((resolve) => setTimeout(resolve, 200));
 
-    const now = new Date('2026-01-19');
-
     return {
-      overdue: mockReturns.filter((r) => {
-        const due = new Date(r.dueDate);
-        return due < now && r.status !== 'completed';
-      }).length,
-      dueToday: mockReturns.filter((r) => {
-        const due = new Date(r.dueDate);
-        return due.toDateString() === now.toDateString() && r.status !== 'completed';
-      }).length,
-      toInspect: mockReturns.filter((r) => r.status === 'received' || r.status === 'inspection').length,
-      completedToday: 6, // Mock constant
+      inAction: mockReturns.filter((r) => r.status === 'inAction').length,
+      returned: mockReturns.filter((r) => r.status === 'returned').length,
+      unpacked: mockReturns.filter((r) => r.status === 'unpacked').length,
     };
   }
 
