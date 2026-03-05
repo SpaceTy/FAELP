@@ -38,16 +38,28 @@ export function Header({ currentPath }: HeaderProps) {
             Inventar
           </a>
           {user?.isAdmin && (
-            <a
-              href="/accounts"
-              className={`px-4 py-2 rounded transition-colors text-sm font-medium ${
-                isActive('/accounts')
-                  ? 'bg-logistics-secondary text-white'
-                  : 'text-gray-300 hover:bg-logistics-secondary hover:text-white'
-              }`}
-            >
-              Accounts
-            </a>
+            <>
+              <a
+                href="/accounts"
+                className={`px-4 py-2 rounded transition-colors text-sm font-medium ${
+                  isActive('/accounts')
+                    ? 'bg-logistics-secondary text-white'
+                    : 'text-gray-300 hover:bg-logistics-secondary hover:text-white'
+                }`}
+              >
+                Accounts
+              </a>
+              <a
+                href="/audit"
+                className={`px-4 py-2 rounded transition-colors text-sm font-medium ${
+                  isActive('/audit')
+                    ? 'bg-logistics-secondary text-white'
+                    : 'text-gray-300 hover:bg-logistics-secondary hover:text-white'
+                }`}
+              >
+                Audit-Log
+              </a>
+            </>
           )}
         </nav>
 

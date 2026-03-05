@@ -6,6 +6,7 @@ import { Header } from '@/components/Header';
 import { LoginPage } from '@/pages/LoginPage';
 import { AccountsPage } from '@/pages/AccountsPage';
 import { InventoryPage } from '@/pages/InventoryPage';
+import { AuditLogPage } from '@/pages/AuditLogPage';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 
 const LoginPageWrapper = (_props: RoutableProps) => <LoginPage />;
@@ -17,6 +18,11 @@ const InventoryPageWrapper = (_props: RoutableProps) => (
 const AccountsPageWrapper = (_props: RoutableProps) => (
   <ProtectedRoute requireAdmin>
     <AccountsPage />
+  </ProtectedRoute>
+);
+const AuditLogPageWrapper = (_props: RoutableProps) => (
+  <ProtectedRoute requireAdmin>
+    <AuditLogPage />
   </ProtectedRoute>
 );
 
@@ -44,6 +50,7 @@ function AppContent() {
           <InventoryPageWrapper path="/" />
           <InventoryPageWrapper path="/inventory" />
           <AccountsPageWrapper path="/accounts" />
+          <AuditLogPageWrapper path="/audit" />
         </Router>
       </div>
     </div>
