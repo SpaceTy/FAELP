@@ -29,18 +29,16 @@ export function Header() {
           >
             Meine Anfragen
           </a>
-          <a
-            href="/profile"
-            className="px-4 py-2 rounded transition-colors hover:bg-secondary-hover"
-          >
-            Profil
-          </a>
+          
         </nav>
 
         <div className="flex items-center gap-4">
-          <button className="px-4 py-2 border border-white rounded hover:bg-white/10 transition-colors">
+          <a
+            href="/hilfe"
+            className="px-4 py-2 border border-white rounded hover:bg-white/10 transition-colors"
+          >
             Hilfe
-          </button>
+          </a>
           <a
             href="/cart"
             className="px-4 py-2 bg-primary text-secondary font-medium rounded hover:bg-primary-hover transition-colors"
