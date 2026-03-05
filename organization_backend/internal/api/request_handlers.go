@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -16,8 +17,9 @@ import (
 )
 
 type RequestHandler struct {
-	Store        *db.Store
-	EmailService *email.Service
+	Store           *db.Store
+	EmailService    *email.Service
+	RequestNotifier *db.RequestNotifier
 }
 
 type createRequestRequest struct {
@@ -587,4 +589,50 @@ func (h *RequestHandler) sendStatusNotificationAsync(req domain.Request, previou
 		defer cancel()
 		h.sendStatusNotification(ctx, req, previousStatus, newStatus, trackingCode)
 	}()
+}
+
+// SubscribeMyRequests streams SSE events when the authenticated customer's requests change.
+func (h *RequestHandler) SubscribeMyRequests(w http.ResponseWriter, r *http.Request) {
+	if h.RequestNotifier == nil {
+		http.Error(w, `{"error":"not available"}`, http.StatusServiceUnavailable)
+		return
+	}
+
+	claims := GetClaimsFromContext(r.Context())
+	if claims == nil {
+		writeError(w, http.StatusUnauthorized, "unauthorized", "Authentication required")
+		return
+	}
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "streaming unsupported", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+
+	fmt.Fprintf(w, ": connected\n\n")
+	flusher.Flush()
+
+	subID, updates := h.RequestNotifier.Subscribe()
+	defer h.RequestNotifier.Unsubscribe(subID)
+
+	for {
+		select {
+		case <-r.Context().Done():
+			return
+		case notif, ok := <-updates:
+			if !ok {
+				return
+			}
+			if notif.CustomerID != claims.CustomerID {
+				continue
+			}
+			fmt.Fprintf(w, "event: update\ndata: {\"type\":\"change\"}\n\n")
+			flusher.Flush()
+		}
+	}
 }

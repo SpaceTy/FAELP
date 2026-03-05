@@ -29,22 +29,30 @@ func NewMiddleware(jwtService *JWTService) *Middleware {
 	return &Middleware{jwtService: jwtService}
 }
 
-// RequireAuth middleware validates JWT token and adds user to context
+// RequireAuth middleware validates JWT token and adds user to context.
+// Accepts token via Authorization header or ?token= query param (for SSE connections).
 func (m *Middleware) RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		var token string
+
 		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" {
+		if authHeader != "" {
+			parts := strings.SplitN(authHeader, " ", 2)
+			if len(parts) == 2 && strings.ToLower(parts[0]) == "bearer" {
+				token = parts[1]
+			}
+		}
+
+		if token == "" {
+			token = r.URL.Query().Get("token")
+		}
+
+		if token == "" {
 			http.Error(w, `{"error":"missing authorization header"}`, http.StatusUnauthorized)
 			return
 		}
 
-		parts := strings.SplitN(authHeader, " ", 2)
-		if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
-			http.Error(w, `{"error":"invalid authorization header format"}`, http.StatusUnauthorized)
-			return
-		}
-
-		claims, err := m.jwtService.ValidateToken(parts[1])
+		claims, err := m.jwtService.ValidateToken(token)
 		if err != nil {
 			http.Error(w, `{"error":"invalid or expired token"}`, http.StatusUnauthorized)
 			return

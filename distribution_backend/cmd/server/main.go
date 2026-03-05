@@ -74,7 +74,6 @@ func main() {
 	}
 
 	uploadsPath := cfg.UploadPath
-	inventoryHandler := handlers.NewInventoryHandlerWithAudit(store, orgClient, uploadsPath, auditLogger)
 	requestsHandler := handlers.NewRequestsHandlerWithAudit(store, orgClient, distributionCenterID, uploadsPath, auditLogger)
 
 	// Create cancellable context for background services
@@ -93,6 +92,13 @@ func main() {
 	} else {
 		log.Printf("Distribution center ID not configured, availability notifier disabled")
 	}
+
+	inventoryNotifier := db.NewInventoryNotifier(cfg.DatabaseURL)
+	if err := inventoryNotifier.Start(ctx); err != nil {
+		log.Printf("Failed to start inventory notifier: %v", err)
+	}
+	inventoryHandler := handlers.NewInventoryHandlerWithAudit(store, orgClient, uploadsPath, auditLogger).
+		WithInventoryNotifier(inventoryNotifier)
 
 	mux := http.NewServeMux()
 
@@ -116,6 +122,9 @@ func main() {
 	mux.HandleFunc("DELETE /api/users/{id}", authMiddleware.RequireAdmin(authHandler.DeleteUser))
 	mux.HandleFunc("PUT /api/users/{id}/password", authMiddleware.RequireAdmin(authHandler.ResetUserPassword))
 	mux.HandleFunc("PUT /api/users/{id}/admin", authMiddleware.RequireAdmin(authHandler.SetUserAdmin))
+
+	// Inventory SSE endpoint (authenticated, supports ?token= for EventSource)
+	mux.HandleFunc("GET /api/inventory/subscribe", authMiddleware.RequireAuth(inventoryHandler.SubscribeInventory))
 
 	// Inventory endpoints (authenticated)
 	mux.HandleFunc("POST /api/inventory", authMiddleware.RequireAuth(inventoryHandler.CreateMaterialInstance))

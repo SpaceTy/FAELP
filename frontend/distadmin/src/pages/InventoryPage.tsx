@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback, useMemo } from 'preact/hooks';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'preact/hooks';
 import { inventoryService } from '@/services/inventory';
 import { materialTypesService } from '@/services/materialTypes';
+import { authSignal } from '@/context/AuthContext';
 import type { MaterialInstance, MaterialStatus, InventorySummary, MaterialType } from '@/types/inventory';
 import { InventoryFormModal } from '@/components/InventoryFormModal';
 import { ConfirmModal } from '@/components/ConfirmModal';
@@ -115,6 +116,21 @@ export function InventoryPage() {
     loadData();
     loadMaterialTypes();
   }, [loadData, loadMaterialTypes]);
+
+  // Keep a stable ref to loadData so the SSE handler always calls the latest version
+  const loadDataRef = useRef(loadData);
+  loadDataRef.current = loadData;
+
+  useEffect(() => {
+    const token = authSignal.value?.token;
+    if (!token) return;
+
+    const es = new EventSource(`/api/inventory/subscribe?token=${encodeURIComponent(token)}`);
+    es.addEventListener('update', () => loadDataRef.current());
+    es.onerror = () => { /* EventSource auto-reconnects */ };
+
+    return () => es.close();
+  }, []);
 
   // Summary calculations
   const summaryByStatus = useMemo(() => {

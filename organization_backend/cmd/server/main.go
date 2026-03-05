@@ -47,11 +47,15 @@ func main() {
 
 	store := db.NewStore(conn)
 	materialNotifier := db.NewMaterialNotifier(cfg.DatabaseURL)
+	requestNotifier := db.NewRequestNotifier(cfg.DatabaseURL)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	if err := materialNotifier.Start(ctx); err != nil {
 		log.Fatalf("material notifier start failed: %v", err)
+	}
+	if err := requestNotifier.Start(ctx); err != nil {
+		log.Fatalf("request notifier start failed: %v", err)
 	}
 
 	handler := &api.Handler{
@@ -92,8 +96,9 @@ func main() {
 	}
 
 	requestHandler := &api.RequestHandler{
-		Store:        store,
-		EmailService: emailService,
+		Store:           store,
+		EmailService:    emailService,
+		RequestNotifier: requestNotifier,
 	}
 
 	router := api.Routes(handler, authHandler, materialTypeHandler, uploadHandler, dcHandler, requestHandler, cfg.JWTSecret)

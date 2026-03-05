@@ -1,7 +1,6 @@
 import { createContext, ComponentChildren } from 'preact';
 import { useContext, useEffect, useState } from 'preact/hooks';
 import { api } from '@/services/api';
-import { API_REFRESH_INTERVAL_MS } from '@/constants/polling';
 import type { Material, MaterialCategory } from '@/types/material';
 
 interface MaterialTypesContextValue {
@@ -82,11 +81,29 @@ export function MaterialTypesProvider({ children }: { children: ComponentChildre
   useEffect(() => {
     fetchMaterials();
 
-    const intervalId = window.setInterval(() => {
-      fetchMaterials(true);
-    }, API_REFRESH_INTERVAL_MS);
+    const es = new EventSource('/api/material-types/subscribe');
 
-    return () => window.clearInterval(intervalId);
+    es.addEventListener('update', (e: MessageEvent) => {
+      const data = JSON.parse(e.data);
+      if (data.type === 'snapshot') {
+        const enriched = (data.materials || []).map((m: Material) => ({
+          ...m,
+          category: determineCategory(m),
+          imageUrl: ensureImageUrl(m),
+        }));
+        setMaterials(enriched);
+      } else if (data.type === 'update' && data.material) {
+        const m = data.material as Material;
+        const enriched = { ...m, category: determineCategory(m), imageUrl: ensureImageUrl(m) };
+        setMaterials(prev => prev.map(existing => existing.id === enriched.id ? enriched : existing));
+      }
+    });
+
+    es.onerror = () => {
+      // EventSource auto-reconnects; no action needed
+    };
+
+    return () => es.close();
   }, []);
 
   const materialsById = new Map(materials.map(m => [m.id, m]));

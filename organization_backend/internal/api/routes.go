@@ -62,6 +62,7 @@ func Routes(handler *Handler, authHandler *AuthHandler, materialTypeHandler *Mat
 			r.Use(AuthMiddleware(jwtSecret))
 			r.Post("/", requestHandler.CreateRequest)
 			r.Get("/my", requestHandler.ListMyRequests)
+			r.Get("/subscribe", requestHandler.SubscribeMyRequests)
 			r.Post("/{id}/cancel", requestHandler.CancelMyRequest)
 		})
 	})

@@ -22,10 +22,11 @@ import (
 
 // InventoryHandler handles inventory endpoints.
 type InventoryHandler struct {
-	store       *db.Store
-	orgClient   *client.OrgClient
-	uploadPath  string
-	auditLogger *db.AuditLogger
+	store             *db.Store
+	orgClient         *client.OrgClient
+	uploadPath        string
+	auditLogger       *db.AuditLogger
+	inventoryNotifier *db.InventoryNotifier
 }
 
 // NewInventoryHandler creates a new inventory handler.
@@ -42,6 +43,49 @@ func NewInventoryHandlerWithAudit(store *db.Store, orgClient *client.OrgClient, 
 		uploadPath = "uploads"
 	}
 	return &InventoryHandler{store: store, orgClient: orgClient, uploadPath: uploadPath, auditLogger: auditLogger}
+}
+
+// WithInventoryNotifier attaches a notifier for real-time SSE support.
+func (h *InventoryHandler) WithInventoryNotifier(n *db.InventoryNotifier) *InventoryHandler {
+	h.inventoryNotifier = n
+	return h
+}
+
+// SubscribeInventory streams SSE events whenever inventory changes.
+func (h *InventoryHandler) SubscribeInventory(w http.ResponseWriter, r *http.Request) {
+	if h.inventoryNotifier == nil {
+		http.Error(w, `{"error":"not available"}`, http.StatusServiceUnavailable)
+		return
+	}
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "streaming unsupported", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+
+	fmt.Fprintf(w, ": connected\n\n")
+	flusher.Flush()
+
+	subID, updates := h.inventoryNotifier.Subscribe()
+	defer h.inventoryNotifier.Unsubscribe(subID)
+
+	for {
+		select {
+		case <-r.Context().Done():
+			return
+		case _, ok := <-updates:
+			if !ok {
+				return
+			}
+			fmt.Fprintf(w, "event: update\ndata: {\"type\":\"change\"}\n\n")
+			flusher.Flush()
+		}
+	}
 }
 
 // GetMaterialTypes returns all material types from the organization backend.

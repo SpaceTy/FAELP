@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'preact/hooks';
+import { useState, useEffect, useCallback } from 'preact/hooks';
 import { api } from '@/services/api';
 import { authSignal } from '@/context/AuthContext';
 import { useMaterialTypes } from '@/context/MaterialTypesContext';
-import { API_REFRESH_INTERVAL_MS } from '@/constants/polling';
 import type { Request, RequestItem } from '@/types/request';
 import type { Material } from '@/types/material';
 import { resolveAssetUrl } from '@/utils/url';
@@ -119,6 +118,21 @@ export function MyRequestsPage() {
   const [cancellingRequestIds, setCancellingRequestIds] = useState<Set<string>>(new Set());
   const { materialsById } = useMaterialTypes();
 
+  const fetchRequests = useCallback(async (backgroundRefresh = false) => {
+    const token = authSignal.value?.token;
+    if (!token) return;
+    if (!backgroundRefresh) setLoading(true);
+    try {
+      const data = await api.getMyRequests(token);
+      setRequests(data);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load requests');
+    } finally {
+      if (!backgroundRefresh) setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     const token = authSignal.value?.token;
     if (!token) {
@@ -126,32 +140,14 @@ export function MyRequestsPage() {
       return;
     }
 
-    const fetchRequests = async (backgroundRefresh = false) => {
-      if (!backgroundRefresh) {
-        setLoading(true);
-      }
-
-      try {
-        const data = await api.getMyRequests(token);
-        setRequests(data);
-        setError(null);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load requests');
-      } finally {
-        if (!backgroundRefresh) {
-          setLoading(false);
-        }
-      }
-    };
-
     fetchRequests();
 
-    const intervalId = window.setInterval(() => {
-      fetchRequests(true);
-    }, API_REFRESH_INTERVAL_MS);
+    const es = new EventSource(`/api/requests/subscribe?token=${encodeURIComponent(token)}`);
+    es.addEventListener('update', () => fetchRequests(true));
+    es.onerror = () => { /* EventSource auto-reconnects */ };
 
-    return () => window.clearInterval(intervalId);
-  }, []);
+    return () => es.close();
+  }, [fetchRequests]);
 
   const getStatusConfig = (status: Request['status']) => {
     switch (status) {
