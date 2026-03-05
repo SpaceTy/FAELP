@@ -37,3 +37,43 @@ body {
 .status-returned {
   @apply bg-green-100 text-green-800 border-green-200;
 }
+
+/* Cart flash animation */
+@keyframes cart-flash {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(var(--color-primary-rgb), 0.7);
+  }
+  50% {
+    transform: scale(1.1);
+    box-shadow: 0 0 0 10px rgba(var(--color-primary-rgb), 0);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(var(--color-primary-rgb), 0);
+  }
+}
+
+.animate-cart-flash {
+  animation: cart-flash 0.6s ease-out;
+}
+
+/* Cart flash animation */
+@keyframes cart-flash {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(var(--color-primary-rgb), 0.7);
+  }
+  50% {
+    transform: scale(1.1);
+    box-shadow: 0 0 0 10px rgba(var(--color-primary-rgb), 0);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(var(--color-primary-rgb), 0);
+  }
+}
+
+.animate-cart-flash {
+  animation: cart-flash 0.6s ease-out;
+}

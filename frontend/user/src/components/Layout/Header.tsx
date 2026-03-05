@@ -1,10 +1,22 @@
-import { getItemCount } from '@/hooks/useCart';
+import { useEffect, useState, useRef } from 'preact/hooks';
+import { cartSignal, getItemCount } from '@/hooks/useCart';
 import { useAuth } from '@/context/AuthContext';
 import { UserMenu } from '@/components/Auth/UserMenu';
 
 export function Header() {
   const itemCount = getItemCount();
   const { isAuthenticated } = useAuth();
+  const [isFlashing, setIsFlashing] = useState(false);
+  const prevCountRef = useRef(itemCount);
+
+  useEffect(() => {
+    const currentCount = getItemCount();
+    if (currentCount > prevCountRef.current) {
+      setIsFlashing(true);
+      setTimeout(() => setIsFlashing(false), 600);
+    }
+    prevCountRef.current = currentCount;
+  }, [cartSignal.value]);
 
   return (
     <header className="bg-secondary text-white shadow-md flex-shrink-0 z-50">
@@ -43,7 +55,9 @@ export function Header() {
           </button>
           <a
             href="/cart"
-            className="px-4 py-2 bg-primary text-secondary font-medium rounded hover:bg-primary-hover transition-colors"
+            className={`px-4 py-2 bg-primary text-secondary font-medium rounded hover:bg-primary-hover transition-all ${
+              isFlashing ? 'animate-cart-flash scale-110' : ''
+            }`}
           >
             Warenkorb ({itemCount})
           </a>
