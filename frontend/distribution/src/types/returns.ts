@@ -5,6 +5,7 @@ export type ItemDestination = 'inventory' | 'cleaning' | 'repair' | 'writeoff';
 export interface ReturnedItem {
   materialTypeId: string;
   materialName: string;
+  materialImageUrl?: string;
   quantity: number;
   unitId?: string;
   condition: ItemCondition;

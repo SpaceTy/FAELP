@@ -87,7 +87,7 @@ export function CartPage() {
             </div>
             <button
               onClick={clearCart}
-              className="px-4 py-2 text-red-600 border border-red-600 rounded hover:bg-red-50 transition-colors"
+              className="px-4 py-2 text-red-600 border border-red-600 rounded hover:bg-red-50 dark:hover:bg-red-950 transition-colors"
             >
               Warenkorb leeren
             </button>

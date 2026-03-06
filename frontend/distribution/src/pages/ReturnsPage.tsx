@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'preact/hooks';
+import { useEffect, useState, useMemo, useCallback } from 'preact/hooks';
 import { api, type IncomingRequest } from '@/services/api';
 import type {
   ReturnRecord,
@@ -23,6 +23,7 @@ function mapIncomingRequestToReturnRecord(req: IncomingRequest): ReturnRecord {
     items: req.items.map((item) => ({
       materialTypeId: item.materialTypeId,
       materialName: item.materialName,
+      materialImageUrl: item.materialImageUrl,
       quantity: item.quantity,
       condition: 'good' as ItemCondition,
       destination: 'inventory' as ItemDestination,
@@ -121,6 +122,36 @@ function getDueInfo(dueDate: string, status: ReturnStatus): { label: string; dat
     return { label: 'Due:', date: 'Today', overdue: true };
   }
   return { label: 'Due:', date: formatDate(dueDate), overdue: false };
+}
+
+function ItemCarousel({ items }: { items: ReturnRecord['items'] }) {
+  const [idx, setIdx] = useState(0);
+  const prev = useCallback(() => setIdx((i) => (i - 1 + items.length) % items.length), [items.length]);
+  const next = useCallback(() => setIdx((i) => (i + 1) % items.length) , [items.length]);
+  if (items.length === 0) return null;
+  const item = items[idx];
+  return (
+    <div className="item-carousel">
+      <div className="item-carousel-slide">
+        {item.materialImageUrl ? (
+          <img className="material-thumb" src={item.materialImageUrl} alt={item.materialName} />
+        ) : (
+          <span className="material-thumb-placeholder">?</span>
+        )}
+        <div className="item-carousel-info">
+          <span className="item-name">{item.materialName}</span>
+          <span className="item-qty">{item.quantity}x</span>
+        </div>
+      </div>
+      {items.length > 1 && (
+        <div className="item-carousel-nav">
+          <button className="item-carousel-btn" onClick={prev}>‹</button>
+          <span className="item-carousel-counter">{idx + 1}/{items.length}</span>
+          <button className="item-carousel-btn" onClick={next}>›</button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function ReturnsPage() {
@@ -309,23 +340,11 @@ export function ReturnsPage() {
                       <h4>Borrower</h4>
                       <p className="borrower-name">{returnRecord.borrowerName}</p>
                       <p className="borrower-org">{returnRecord.borrowerOrg}</p>
-                      <p className="borrower-contact">{returnRecord.borrowerEmail}</p>
-                      <p className="borrower-phone">{returnRecord.borrowerPhone}</p>
                     </div>
 
                     <div className="items-borrowed">
                       <h4>Items to Return ({returnRecord.items.length})</h4>
-                      {returnRecord.items.slice(0, 3).map((item, idx) => (
-                        <div key={idx} className="borrowed-item">
-                          <span className="item-qty">{item.quantity}x</span>
-                          <span className="item-name">{item.materialName}</span>
-                        </div>
-                      ))}
-                      {returnRecord.items.length > 3 && (
-                        <p className="text-sm text-text-secondary">
-                          +{returnRecord.items.length - 3} more items
-                        </p>
-                      )}
+                      <ItemCarousel items={returnRecord.items} />
                     </div>
 
                     <div className="loan-info">
