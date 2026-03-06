@@ -29,6 +29,7 @@ DEPLOY_REMOTE_PATH?=/home/st/fae
 	deploy-org package-deploy-org \
 	deploy-dist package-deploy-dist \
 	rsync-deploy \
+	cont cont-org cont-dist \
 	setup setup-db help
 # =============================================================================
 # Development - Run everything
@@ -176,6 +177,7 @@ package-deploy-org:
 	@echo "Org deployment bundle ready at $(DEPLOY_ORG_CONTAINER_DIR)"
 
 deploy-org: build-org-backend build-user build-orgadmin package-deploy-org
+	../faeenv/distribute_envs.sh
 
 package-deploy-dist:
 	@echo "Packaging dist deployment bundle..."
@@ -206,6 +208,17 @@ package-deploy-dist:
 	@echo "Dist deployment bundle ready at $(DEPLOY_DIST_CONTAINER_DIR)"
 
 deploy-dist: build-dist-backend build-distribution build-distadmin package-deploy-dist
+	../faeenv/distribute-env.sh
+
+cont-org: deploy-org
+	@echo "Bringing up org container..."
+	cd $(DEPLOY_ORG_CONTAINER_DIR) && podman compose up -d --build --force-recreate
+
+cont-dist: deploy-dist
+	@echo "Bringing up dist container..."
+	cd $(DEPLOY_DIST_CONTAINER_DIR) && podman compose up -d --build --force-recreate
+
+cont: cont-org cont-dist
 
 rsync-deploy: deploy-org deploy-dist
 	@echo "Syncing deployment to $(DEPLOY_USER)@$(DEPLOY_HOST):$(DEPLOY_REMOTE_PATH)"
