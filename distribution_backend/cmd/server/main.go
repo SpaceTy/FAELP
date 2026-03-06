@@ -151,6 +151,7 @@ func main() {
 	mux.HandleFunc("POST /api/requests/{id}/cancel", authMiddleware.RequireAuth(requestsHandler.CancelAssignedIncomingRequest))
 	mux.HandleFunc("POST /api/requests/{id}/archive", authMiddleware.RequireAuth(requestsHandler.ArchiveIncomingRequest))
 	mux.HandleFunc("POST /api/requests/{id}/unarchive", authMiddleware.RequireAuth(requestsHandler.UnarchiveIncomingRequest))
+	mux.HandleFunc("POST /api/requests/{id}/inspect-item", authMiddleware.RequireAuth(requestsHandler.InspectReturnItem))
 
 	// Audit log endpoints (admin only)
 	mux.HandleFunc("GET /api/audit", authMiddleware.RequireAdmin(auditHandler.ListAuditEntries))

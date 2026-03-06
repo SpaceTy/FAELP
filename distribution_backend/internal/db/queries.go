@@ -483,6 +483,28 @@ func mapMaterialInstance(row materialInstanceRow) domain.MaterialInstance {
 	return instance
 }
 
+// ReturnAndInspectMaterialInstance marks a returned item as inspected: clears request assignment,
+// increments use_count, updates status and optionally updates location (if non-empty).
+func (s *Store) ReturnAndInspectMaterialInstance(ctx context.Context, id string, newStatus string, location string) (domain.MaterialInstance, error) {
+	var row materialInstanceRow
+	err := s.db.QueryRowContext(ctx, `
+		UPDATE material_instances
+		SET status = $2,
+		    location = CASE WHEN $3 = '' THEN location ELSE $3 END,
+		    use_count = use_count + 1,
+		    current_request_id = NULL
+		WHERE id = $1
+		RETURNING id, human_code, type_id, description, status, use_count, location, current_request_id, created_at, updated_at
+	`, id, newStatus, location).Scan(
+		&row.ID, &row.HumanCode, &row.TypeID, &row.Description, &row.Status, &row.UseCount, &row.Location,
+		&row.CurrentRequestID, &row.CreatedAt, &row.UpdatedAt,
+	)
+	if err != nil {
+		return domain.MaterialInstance{}, err
+	}
+	return mapMaterialInstance(row), nil
+}
+
 // GenerateMaterialHumanCode creates a unique 5-letter code for writing on physical inventory.
 func (s *Store) GenerateMaterialHumanCode(ctx context.Context) (string, error) {
 	const maxAttempts = 20

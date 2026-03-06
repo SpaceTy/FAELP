@@ -145,6 +145,28 @@ class ApiService {
     return normalizeIncomingRequest(data);
   }
 
+  async inspectReturnItem(requestId: string, input: {
+    itemIndex: number;
+    humanCode: string;
+    condition: string;
+    destination: string;
+    returnToInventory: boolean;
+    location: string;
+  }): Promise<{ id: string; humanCode: string; status: string; location: string }> {
+    const response = await fetch(`${API_BASE}/api/requests/${encodeURIComponent(requestId)}/inspect-item`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(input),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(error.error || 'Failed to mark item as inspected');
+    }
+
+    return response.json();
+  }
+
   async login(credentials: LoginRequest): Promise<LoginResponse> {
     const response = await fetch(`${API_BASE}/api/auth/login`, {
       method: 'POST',

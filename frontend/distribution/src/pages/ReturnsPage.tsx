@@ -165,7 +165,7 @@ export function ReturnsPage() {
   const [statusFilter, setStatusFilter] = useState<ReturnStatus | ''>('');
 
   // Inspection state
-  const [inspectionState, setInspectionState] = useState<Record<number, { condition: ItemCondition; destination: ItemDestination; returnToInventory: boolean }>>({});
+  const [inspectionState, setInspectionState] = useState<Record<number, { condition: ItemCondition; destination: ItemDestination; returnToInventory: boolean; humanCode: string; location: string }>>({});
 
   const loadData = async () => {
     setIsLoading(true);
@@ -202,20 +202,46 @@ export function ReturnsPage() {
 
   useEffect(() => {
     if (selectedReturn) {
-      const initialState: Record<number, { condition: ItemCondition; destination: ItemDestination; returnToInventory: boolean }> = {};
+      const initialState: Record<number, { condition: ItemCondition; destination: ItemDestination; returnToInventory: boolean; humanCode: string; location: string }> = {};
       selectedReturn.items.forEach((item, idx) => {
         initialState[idx] = {
           condition: item.condition,
           destination: item.destination,
           returnToInventory: item.returnToInventory,
+          humanCode: '',
+          location: item.location || '',
         };
       });
       setInspectionState(initialState);
     }
   }, [selectedReturn]);
 
-  const handleInspectItem = async (_returnId: string, _itemIndex: number) => {
-    setError('Inspection functionality requires backend implementation');
+  const handleInspectItem = async (returnId: string, itemIndex: number) => {
+    const state = inspectionState[itemIndex];
+    if (!state) return;
+    if (!state.humanCode.trim()) {
+      setError('Please enter the item code before marking as inspected');
+      return;
+    }
+    setError(null);
+    try {
+      await api.inspectReturnItem(returnId, {
+        itemIndex,
+        humanCode: state.humanCode.trim(),
+        condition: state.condition,
+        destination: state.destination,
+        returnToInventory: state.returnToInventory,
+        location: state.location,
+      });
+      setSelectedReturn((prev) => {
+        if (!prev) return prev;
+        const items = [...prev.items];
+        items[itemIndex] = { ...items[itemIndex], isInspected: true };
+        return { ...prev, items };
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to mark item as inspected');
+    }
   };
 
   const handleCompleteReturn = async (_returnId: string) => {
@@ -420,8 +446,12 @@ export function ReturnsPage() {
                     <strong>{selectedReturn.borrowerName}</strong>
                   </p>
                   <p>{selectedReturn.borrowerOrg}</p>
-                  <p>{selectedReturn.borrowerEmail}</p>
-                  <p>{selectedReturn.borrowerPhone}</p>
+                  {selectedReturn.borrowerEmail && selectedReturn.borrowerEmail !== '-' && (
+                    <p>{selectedReturn.borrowerEmail}</p>
+                  )}
+                  {selectedReturn.borrowerPhone && selectedReturn.borrowerPhone !== '-' && (
+                    <p>{selectedReturn.borrowerPhone}</p>
+                  )}
                 </div>
                 <div>
                   <h4 className="font-semibold mb-2">Loan Information</h4>
@@ -482,10 +512,41 @@ export function ReturnsPage() {
                           />
                           <label htmlFor={`inspect-${selectedReturn.id}-${idx}`}>Return to Inventory</label>
                         </div>
+                        {item.materialImageUrl ? (
+                          <img
+                            className="material-thumb"
+                            src={item.materialImageUrl}
+                            alt={item.materialName}
+                            style={{ width: '2.5rem', height: '2.5rem', objectFit: 'cover', borderRadius: '4px', flexShrink: 0 }}
+                          />
+                        ) : (
+                          <span
+                            className="material-thumb-placeholder"
+                            style={{ width: '2.5rem', height: '2.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, borderRadius: '4px', background: 'var(--color-background, #f0f2f5)', fontSize: '1.2rem' }}
+                          >
+                            🖼
+                          </span>
+                        )}
                         <div className="item-details">
                           <h5>{item.materialName}</h5>
-                          {item.unitId && <p className="text-sm text-text-secondary">Unit: {item.unitId}</p>}
                           <p className="text-sm text-text-secondary">Sent: {formatDate(selectedReturn.sentDate)}</p>
+                          {isInspected ? (
+                            <p className="text-sm font-mono font-semibold">{state.humanCode}</p>
+                          ) : (
+                            <input
+                              type="text"
+                              className="code-input"
+                              placeholder="Scan or enter item code"
+                              value={state.humanCode}
+                              style={{ fontFamily: 'monospace', textTransform: 'uppercase', width: '100%', marginTop: '0.25rem' }}
+                              onChange={(e) =>
+                                setInspectionState({
+                                  ...inspectionState,
+                                  [idx]: { ...state, humanCode: (e.target as HTMLInputElement).value.toUpperCase() },
+                                })
+                              }
+                            />
+                          )}
                         </div>
                         <div className="item-quantity">
                           <span className="qty-label">Qty</span>
@@ -496,6 +557,7 @@ export function ReturnsPage() {
                           <select
                             className={`condition-select ${state.condition}`}
                             value={state.condition}
+                            disabled={isInspected}
                             onChange={(e) =>
                               setInspectionState({
                                 ...inspectionState,
@@ -515,6 +577,7 @@ export function ReturnsPage() {
                           <select
                             className="destination-select"
                             value={state.destination}
+                            disabled={isInspected}
                             onChange={(e) =>
                               setInspectionState({
                                 ...inspectionState,
@@ -524,10 +587,29 @@ export function ReturnsPage() {
                           >
                             {DESTINATION_OPTIONS.map((d) => (
                               <option key={d} value={d}>
-                                {d === 'inventory' ? (item.location || 'Inventory') : d.charAt(0).toUpperCase() + d.slice(1)}
+                                {d.charAt(0).toUpperCase() + d.slice(1)}
                               </option>
                             ))}
                           </select>
+                        </div>
+                        <div className="item-location">
+                          <span className="dest-label">Location</span>
+                          {isInspected ? (
+                            <span className="text-sm">{state.location || '—'}</span>
+                          ) : (
+                            <input
+                              type="text"
+                              className="location-input"
+                              placeholder="Storage location"
+                              value={state.location}
+                              onChange={(e) =>
+                                setInspectionState({
+                                  ...inspectionState,
+                                  [idx]: { ...state, location: (e.target as HTMLInputElement).value },
+                                })
+                              }
+                            />
+                          )}
                         </div>
                         <div className="item-status-badge">
                           {isInspected ? (

@@ -1630,7 +1630,8 @@ body {
 }
 
 .item-condition,
-.item-destination {
+.item-destination,
+.item-location {
   text-align: center;
 }
 
@@ -1647,6 +1648,17 @@ body {
   border: 1px solid #e2e8f0;
   border-radius: 4px;
   font-size: 0.85rem;
+}
+
+.code-input,
+.location-input {
+  padding: 0.3rem 0.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  width: 100%;
+  background: #fff;
+  color: #1f2937;
 }
 
 .condition-select.excellent,
@@ -1978,7 +1990,9 @@ body {
 .dark .search-input,
 .dark .sort-select,
 .dark .condition-select,
-.dark .destination-select {
+.dark .destination-select,
+.dark .code-input,
+.dark .location-input {
   background-color: #162032;
   border-color: #334155;
   color: #f1f5f9;

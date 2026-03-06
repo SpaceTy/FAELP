@@ -442,6 +442,77 @@ func (h *RequestsHandler) UnarchiveIncomingRequest(w http.ResponseWriter, r *htt
 	_ = json.NewEncoder(w).Encode(updated)
 }
 
+type inspectItemBody struct {
+	ItemIndex         int    `json:"itemIndex"`
+	HumanCode         string `json:"humanCode"`
+	Condition         string `json:"condition"`
+	Destination       string `json:"destination"`
+	ReturnToInventory bool   `json:"returnToInventory"`
+	Location          string `json:"location"`
+}
+
+// InspectReturnItem looks up a returned material instance by human code,
+// updates its location, increments use_count, and sets its status based on destination.
+func (h *RequestsHandler) InspectReturnItem(w http.ResponseWriter, r *http.Request) {
+	if h.store == nil {
+		http.Error(w, `{"error":"inventory store not configured"}`, http.StatusServiceUnavailable)
+		return
+	}
+
+	requestID := strings.TrimSpace(r.PathValue("id"))
+	if requestID == "" {
+		http.Error(w, `{"error":"request id is required"}`, http.StatusBadRequest)
+		return
+	}
+
+	var body inspectItemBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, `{"error":"invalid json body"}`, http.StatusBadRequest)
+		return
+	}
+
+	body.HumanCode = strings.ToUpper(strings.TrimSpace(body.HumanCode))
+	if body.HumanCode == "" {
+		http.Error(w, `{"error":"humanCode is required"}`, http.StatusBadRequest)
+		return
+	}
+
+	instance, err := h.store.GetMaterialInstanceByHumanCode(r.Context(), body.HumanCode)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			http.Error(w, fmt.Sprintf(`{"error":"item with code '%s' not found"}`, body.HumanCode), http.StatusNotFound)
+			return
+		}
+		http.Error(w, `{"error":"failed to look up material instance"}`, http.StatusInternalServerError)
+		return
+	}
+
+	newStatus := "available"
+	if body.Destination == "writeoff" {
+		newStatus = "archived"
+	}
+
+	updated, err := h.store.ReturnAndInspectMaterialInstance(r.Context(), instance.ID, newStatus, strings.TrimSpace(body.Location))
+	if err != nil {
+		http.Error(w, `{"error":"failed to update material instance"}`, http.StatusInternalServerError)
+		return
+	}
+
+	if h.auditLogger != nil {
+		userCtx, _ := auth.GetUserFromContext(r.Context())
+		_ = h.auditLogger.Log(r.Context(), userCtx.UserID, userCtx.Username, "request.inspect_item", "request", requestID, map[string]interface{}{
+			"humanCode":   body.HumanCode,
+			"condition":   body.Condition,
+			"destination": body.Destination,
+			"location":    body.Location,
+			"newStatus":   newStatus,
+		}, nil)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(updated)
+}
+
 func derefString(input *string) string {
 	if input == nil {
 		return ""
