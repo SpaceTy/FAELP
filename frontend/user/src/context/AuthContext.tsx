@@ -3,7 +3,7 @@ import { useContext, useState, useEffect, useCallback } from 'preact/hooks';
 import { signal } from '@preact/signals';
 import { API_REFRESH_INTERVAL_MS } from '@/constants/polling';
 import type { Customer, AuthSession } from '@/types/auth';
-import { authService } from '@/services/auth';
+import { authService, AuthError } from '@/services/auth';
 
 interface AuthContextType {
   userId: string | null;
@@ -46,8 +46,11 @@ export function AuthProvider({ children }: { children: ComponentChildren }) {
             const updatedSession = { ...sessionWithUserId, customer, userId: customer.id };
             authSignal.value = updatedSession;
             localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedSession));
-          } catch {
-            clearSession();
+          } catch (err) {
+            // Only clear session on auth errors (token invalid/expired), not transient network issues
+            if (err instanceof AuthError && (err.status === 401 || err.status === 403)) {
+              clearSession();
+            }
           }
         };
 
