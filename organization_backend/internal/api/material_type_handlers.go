@@ -11,6 +11,7 @@ import (
 	"organization_backend/internal/domain"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/lib/pq"
 )
 
 // MaterialTypeHandler handles material type related requests
@@ -124,6 +125,11 @@ func (h *MaterialTypeHandler) CreateMaterialType(w http.ResponseWriter, r *http.
 
 	mt, err := h.Store.CreateMaterialType(r.Context(), id, req.Name, req.Description, req.ImageURL)
 	if err != nil {
+		log.Printf("ERROR CreateMaterialType id=%q name=%q: %v", id, req.Name, err)
+		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
+			writeError(w, http.StatusConflict, "duplicate_id", "A material type with this name (or a similar one) already exists")
+			return
+		}
 		writeError(w, http.StatusInternalServerError, "create_failed", "Failed to create material type")
 		return
 	}

@@ -11,6 +11,7 @@ import (
 	"image/jpeg"
 	"image/png"
 	"io"
+	"log"
 	"mime"
 	"net/http"
 	"os"
@@ -48,6 +49,7 @@ func (h *UploadHandler) UploadMaterialTypeImage(w http.ResponseWriter, r *http.R
 			writeError(w, http.StatusRequestEntityTooLarge, "file_too_large", "Image exceeds upload size limit")
 			return
 		}
+		log.Printf("ERROR UploadMaterialTypeImage id=%q parse form: %v", id, err)
 		writeError(w, http.StatusBadRequest, "invalid_form", "Failed to parse form")
 		return
 	}
@@ -55,6 +57,7 @@ func (h *UploadHandler) UploadMaterialTypeImage(w http.ResponseWriter, r *http.R
 	// Get the file from the form
 	file, header, err := r.FormFile("image")
 	if err != nil {
+		log.Printf("ERROR UploadMaterialTypeImage id=%q form file: %v", id, err)
 		writeError(w, http.StatusBadRequest, "missing_file", "No image file provided")
 		return
 	}
@@ -63,24 +66,29 @@ func (h *UploadHandler) UploadMaterialTypeImage(w http.ResponseWriter, r *http.R
 	contentType := normalizeContentType(header.Header.Get("Content-Type"))
 	fileBytes, err := io.ReadAll(file)
 	if err != nil {
+		log.Printf("ERROR UploadMaterialTypeImage id=%q read: %v", id, err)
 		writeError(w, http.StatusBadRequest, "read_error", "Failed to read image")
 		return
 	}
 
 	detectedType := normalizeContentType(http.DetectContentType(fileBytes))
 	if !isValidImageType(contentType) && !isValidImageType(detectedType) {
+		log.Printf("ERROR UploadMaterialTypeImage id=%q invalid type content-type=%q detected=%q", id, contentType, detectedType)
 		writeError(w, http.StatusBadRequest, "invalid_type", "Invalid image type. Allowed: jpeg, png, webp, gif")
 		return
 	}
 
+	// Prefer detected type (from actual bytes) over the header, which browsers sometimes set incorrectly.
+	// Only fall back to header content-type if detection returns a generic type.
 	decodeType := detectedType
-	if isValidImageType(contentType) {
+	if detectedType == "application/octet-stream" && isValidImageType(contentType) {
 		decodeType = contentType
 	}
 
 	// Decode the image
 	img, format, err := decodeImage(bytes.NewReader(fileBytes), decodeType)
 	if err != nil {
+		log.Printf("ERROR UploadMaterialTypeImage id=%q decode type=%q: %v", id, decodeType, err)
 		writeError(w, http.StatusBadRequest, "decode_error", "Failed to decode image")
 		return
 	}

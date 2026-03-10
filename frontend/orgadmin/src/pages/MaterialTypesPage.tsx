@@ -36,15 +36,16 @@ export function MaterialTypesPage() {
   };
 
   const handleCreate = async (input: CreateMaterialTypeInput, imageFile?: File) => {
-    try {
-      const newMaterialType = await materialTypeService.createMaterialType(input);
-      if (imageFile) {
+    const newMaterialType = await materialTypeService.createMaterialType(input);
+    await loadMaterialTypes();
+    setIsFormModalOpen(false);
+    if (imageFile) {
+      try {
         await materialTypeService.uploadImage(newMaterialType.id, imageFile);
+        await loadMaterialTypes();
+      } catch (err) {
+        setError(`Materialtyp erstellt, aber Bild-Upload fehlgeschlagen: ${err instanceof Error ? err.message : 'Unbekannter Fehler'}. Bitte über "Bearbeiten" erneut versuchen.`);
       }
-      await loadMaterialTypes();
-      setIsFormModalOpen(false);
-    } catch (err) {
-      throw err;
     }
   };
 
