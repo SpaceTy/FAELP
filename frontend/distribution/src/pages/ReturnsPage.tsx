@@ -8,7 +8,7 @@ import type {
   ItemDestination,
 } from '@/types/returns';
 
-const STATUS_OPTIONS: Array<ReturnStatus | ''> = ['', 'inAction', 'returned', 'unpacked'];
+const STATUS_OPTIONS: Array<ReturnStatus | ''> = ['', 'inAction', 'returned'];
 const CONDITION_OPTIONS: ItemCondition[] = ['excellent', 'good', 'fair', 'damaged', 'missing'];
 const DESTINATION_OPTIONS: ItemDestination[] = ['inventory', 'cleaning', 'repair', 'writeoff'];
 
@@ -108,7 +108,8 @@ function formatDate(input: string): string {
 
 function getDueInfo(dueDate: string, status: ReturnStatus): { label: string; date: string; overdue: boolean } {
   const due = new Date(dueDate);
-  const now = new Date('2026-01-19');
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
   const diffDays = Math.floor((now.getTime() - due.getTime()) / (1000 * 60 * 60 * 24));
 
   if (status === 'completed') {
@@ -165,7 +166,7 @@ export function ReturnsPage() {
   const [statusFilter, setStatusFilter] = useState<ReturnStatus | ''>('');
 
   // Inspection state
-  const [inspectionState, setInspectionState] = useState<Record<number, { condition: ItemCondition; destination: ItemDestination; returnToInventory: boolean; humanCode: string; location: string }>>({});
+  const [inspectionState, setInspectionState] = useState<Record<number, { condition: ItemCondition; destination: ItemDestination; humanCode: string; location: string; error: string | null }>>({});
 
   const loadData = async () => {
     setIsLoading(true);
@@ -201,36 +202,66 @@ export function ReturnsPage() {
   }, [statusFilter]);
 
   useEffect(() => {
-    if (selectedReturn) {
-      const initialState: Record<number, { condition: ItemCondition; destination: ItemDestination; returnToInventory: boolean; humanCode: string; location: string }> = {};
-      selectedReturn.items.forEach((item, idx) => {
-        initialState[idx] = {
-          condition: item.condition,
-          destination: item.destination,
-          returnToInventory: item.returnToInventory,
-          humanCode: '',
-          location: item.location || '',
-        };
+    if (!selectedReturn) return;
+
+    const initialState: Record<number, { condition: ItemCondition; destination: ItemDestination; humanCode: string; location: string; error: string | null }> = {};
+    selectedReturn.items.forEach((item, idx) => {
+      initialState[idx] = {
+        condition: item.condition,
+        destination: item.destination,
+        humanCode: '',
+        location: item.location || '',
+        error: null,
+      };
+    });
+    setInspectionState(initialState);
+
+    // Pre-fill human codes from assigned instances
+    api.getRequestInstances(selectedReturn.id).then((instances) => {
+      if (instances.length === 0) return;
+      // Build a map: typeId -> [humanCode, ...] (in order)
+      const byType = new Map<string, string[]>();
+      for (const inst of instances) {
+        if (!byType.has(inst.typeId)) byType.set(inst.typeId, []);
+        byType.get(inst.typeId)!.push(inst.humanCode);
+      }
+      // Track how many codes per type we've assigned
+      const usedCount = new Map<string, number>();
+      setInspectionState((prev) => {
+        const next = { ...prev };
+        selectedReturn.items.forEach((item, idx) => {
+          if (next[idx]?.humanCode) return; // already has a code
+          const codes = byType.get(item.materialTypeId);
+          if (!codes) return;
+          const used = usedCount.get(item.materialTypeId) ?? 0;
+          if (used < codes.length) {
+            next[idx] = { ...next[idx], humanCode: codes[used] };
+            usedCount.set(item.materialTypeId, used + 1);
+          }
+        });
+        return next;
       });
-      setInspectionState(initialState);
-    }
+    }).catch(() => { /* silently ignore — codes can be entered manually */ });
   }, [selectedReturn]);
 
   const handleInspectItem = async (returnId: string, itemIndex: number) => {
     const state = inspectionState[itemIndex];
     if (!state) return;
     if (!state.humanCode.trim()) {
-      setError('Please enter the item code before marking as inspected');
+      setInspectionState((prev) => ({
+        ...prev,
+        [itemIndex]: { ...prev[itemIndex], error: 'Enter the item code before marking as inspected' },
+      }));
       return;
     }
-    setError(null);
+    setInspectionState((prev) => ({ ...prev, [itemIndex]: { ...prev[itemIndex], error: null } }));
     try {
       await api.inspectReturnItem(returnId, {
         itemIndex,
         humanCode: state.humanCode.trim(),
         condition: state.condition,
         destination: state.destination,
-        returnToInventory: state.returnToInventory,
+        returnToInventory: state.destination === 'inventory',
         location: state.location,
       });
       setSelectedReturn((prev) => {
@@ -240,13 +271,32 @@ export function ReturnsPage() {
         return { ...prev, items };
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to mark item as inspected');
+      setInspectionState((prev) => ({
+        ...prev,
+        [itemIndex]: { ...prev[itemIndex], error: err instanceof Error ? err.message : 'Failed to mark item as inspected' },
+      }));
     }
   };
 
-  const handleCompleteReturn = async (_returnId: string) => {
-    setError('Complete return functionality requires backend implementation');
+  const handleCompleteReturn = async (returnId: string) => {
+    setError(null);
+    try {
+      await api.archiveIncomingRequest(returnId);
+      setSelectedReturn(null);
+      await loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to complete return');
+    }
   };
+
+  function destinationForCondition(condition: ItemCondition): ItemDestination {
+    switch (condition) {
+      case 'fair': return 'cleaning';
+      case 'damaged': return 'repair';
+      case 'missing': return 'writeoff';
+      default: return 'inventory';
+    }
+  }
 
   const inspectedCount = useMemo(() => {
     if (!selectedReturn) return 0;
@@ -288,10 +338,6 @@ export function ReturnsPage() {
           <div className="stat-row">
             <span>Returned:</span>
             <span className="stat-value returned">{stats.returned}</span>
-          </div>
-          <div className="stat-row">
-            <span>Unpacked:</span>
-            <span className="stat-value unpacked">{stats.unpacked}</span>
           </div>
         </div>
       </aside>
@@ -352,7 +398,7 @@ export function ReturnsPage() {
                       {isOverdue && (
                         <span className="days-overdue">
                           {Math.floor(
-                            (new Date('2026-01-19').getTime() - new Date(returnRecord.dueDate).getTime()) /
+                            (new Date().getTime() - new Date(returnRecord.dueDate).getTime()) /
                               (1000 * 60 * 60 * 24)
                           )}{' '}
                           days overdue
@@ -404,7 +450,7 @@ export function ReturnsPage() {
                         <button className="btn-secondary">Contact Borrower</button>
                       </>
                     )}
-                    {(returnRecord.status === 'received' || returnRecord.status === 'inspection') && (
+                    {(returnRecord.status === 'returned' || returnRecord.status === 'received' || returnRecord.status === 'inspection') && (
                       <button className="btn-primary" onClick={() => setSelectedReturn(returnRecord)}>
                         Inspect Items
                       </button>
@@ -489,7 +535,9 @@ export function ReturnsPage() {
                     const state = inspectionState[idx] || {
                       condition: item.condition,
                       destination: item.destination,
-                      returnToInventory: item.returnToInventory,
+                      humanCode: '',
+                      location: item.location || '',
+                      error: null,
                     };
                     const isInspected = item.isInspected;
 
@@ -498,20 +546,6 @@ export function ReturnsPage() {
                         key={idx}
                         className={`inspection-item ${isInspected ? 'inspected' : ''} ${state.condition}`}
                       >
-                        <div className="item-select">
-                          <input
-                            type="checkbox"
-                            id={`inspect-${selectedReturn.id}-${idx}`}
-                            checked={state.returnToInventory}
-                            onChange={(e) =>
-                              setInspectionState({
-                                ...inspectionState,
-                                [idx]: { ...state, returnToInventory: (e.target as HTMLInputElement).checked },
-                              })
-                            }
-                          />
-                          <label htmlFor={`inspect-${selectedReturn.id}-${idx}`}>Return to Inventory</label>
-                        </div>
                         {item.materialImageUrl ? (
                           <img
                             className="material-thumb"
@@ -524,28 +558,32 @@ export function ReturnsPage() {
                             className="material-thumb-placeholder"
                             style={{ width: '2.5rem', height: '2.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, borderRadius: '4px', background: 'var(--color-background, #f0f2f5)', fontSize: '1.2rem' }}
                           >
-                            🖼
+                            ?
                           </span>
                         )}
                         <div className="item-details">
                           <h5>{item.materialName}</h5>
-                          <p className="text-sm text-text-secondary">Sent: {formatDate(selectedReturn.sentDate)}</p>
                           {isInspected ? (
                             <p className="text-sm font-mono font-semibold">{state.humanCode}</p>
                           ) : (
-                            <input
-                              type="text"
-                              className="code-input"
-                              placeholder="Scan or enter item code"
-                              value={state.humanCode}
-                              style={{ fontFamily: 'monospace', textTransform: 'uppercase', width: '100%', marginTop: '0.25rem' }}
-                              onChange={(e) =>
-                                setInspectionState({
-                                  ...inspectionState,
-                                  [idx]: { ...state, humanCode: (e.target as HTMLInputElement).value.toUpperCase() },
-                                })
-                              }
-                            />
+                            <>
+                              <input
+                                type="text"
+                                className={`code-input${state.error ? ' input-error' : ''}`}
+                                placeholder="Scan or enter item code"
+                                value={state.humanCode}
+                                style={{ fontFamily: 'monospace', textTransform: 'uppercase', width: '100%', marginTop: '0.25rem' }}
+                                onChange={(e) =>
+                                  setInspectionState((prev) => ({
+                                    ...prev,
+                                    [idx]: { ...state, humanCode: (e.target as HTMLInputElement).value.toUpperCase(), error: null },
+                                  }))
+                                }
+                              />
+                              {state.error && (
+                                <p className="text-xs" style={{ color: '#e53e3e', marginTop: '0.2rem' }}>{state.error}</p>
+                              )}
+                            </>
                           )}
                         </div>
                         <div className="item-quantity">
@@ -558,12 +596,13 @@ export function ReturnsPage() {
                             className={`condition-select ${state.condition}`}
                             value={state.condition}
                             disabled={isInspected}
-                            onChange={(e) =>
-                              setInspectionState({
-                                ...inspectionState,
-                                [idx]: { ...state, condition: (e.target as HTMLSelectElement).value as ItemCondition },
-                              })
-                            }
+                            onChange={(e) => {
+                              const newCondition = (e.target as HTMLSelectElement).value as ItemCondition;
+                              setInspectionState((prev) => ({
+                                ...prev,
+                                [idx]: { ...state, condition: newCondition, destination: destinationForCondition(newCondition) },
+                              }));
+                            }}
                           >
                             {CONDITION_OPTIONS.map((c) => (
                               <option key={c} value={c}>
@@ -579,10 +618,10 @@ export function ReturnsPage() {
                             value={state.destination}
                             disabled={isInspected}
                             onChange={(e) =>
-                              setInspectionState({
-                                ...inspectionState,
+                              setInspectionState((prev) => ({
+                                ...prev,
                                 [idx]: { ...state, destination: (e.target as HTMLSelectElement).value as ItemDestination },
-                              })
+                              }))
                             }
                           >
                             {DESTINATION_OPTIONS.map((d) => (
@@ -603,10 +642,10 @@ export function ReturnsPage() {
                               placeholder="Storage location"
                               value={state.location}
                               onChange={(e) =>
-                                setInspectionState({
-                                  ...inspectionState,
+                                setInspectionState((prev) => ({
+                                  ...prev,
                                   [idx]: { ...state, location: (e.target as HTMLInputElement).value },
-                                })
+                                }))
                               }
                             />
                           )}
@@ -621,7 +660,7 @@ export function ReturnsPage() {
                               className="btn-mark-inspected"
                               onClick={() => handleInspectItem(selectedReturn.id, idx)}
                             >
-                              Mark Inspected
+                              Inspect
                             </button>
                           )}
                         </div>

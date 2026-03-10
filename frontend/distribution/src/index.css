@@ -1595,7 +1595,7 @@ body {
 
 .inspection-item {
   display: grid;
-  grid-template-columns: auto 1fr auto auto auto auto;
+  grid-template-columns: auto 1fr auto auto auto auto auto;
   align-items: center;
   gap: 1rem;
   padding: 1rem;
@@ -1659,6 +1659,11 @@ body {
   width: 100%;
   background: #fff;
   color: #1f2937;
+}
+
+.code-input.input-error {
+  border-color: #e53e3e;
+  background-color: #fff5f5;
 }
 
 .condition-select.excellent,
@@ -1997,6 +2002,7 @@ body {
   border-color: #334155;
   color: #f1f5f9;
 }
+.dark .code-input.input-error { border-color: #fc8181; background-color: #2d1515; }
 .dark .search-btn { background-color: #2563eb; }
 .dark .search-btn:hover { background-color: #1d4ed8; }
 

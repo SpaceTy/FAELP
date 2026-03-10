@@ -145,6 +145,19 @@ class ApiService {
     return normalizeIncomingRequest(data);
   }
 
+  async getRequestInstances(requestId: string): Promise<Array<{ id: string; humanCode: string; typeId: string; status: string; location: string }>> {
+    const response = await fetch(`${API_BASE}/api/requests/${encodeURIComponent(requestId)}/instances`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(error.error || 'Failed to fetch request instances');
+    }
+
+    return response.json();
+  }
+
   async inspectReturnItem(requestId: string, input: {
     itemIndex: number;
     humanCode: string;

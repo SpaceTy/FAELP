@@ -12,6 +12,7 @@ import (
 	"distribution_backend/internal/auth"
 	"distribution_backend/internal/client"
 	"distribution_backend/internal/db"
+	"distribution_backend/internal/domain"
 )
 
 // RequestsHandler handles incoming request endpoints.
@@ -290,6 +291,7 @@ func (h *RequestsHandler) MarkIncomingRequestInAction(w http.ResponseWriter, r *
 	}
 
 	// Validate that all provided codes are valid for their material types
+	var instancesToAssign []domain.MaterialInstance
 	if len(body.Items) > 0 && h.store != nil {
 		for _, item := range body.Items {
 			for _, code := range item.Codes {
@@ -312,6 +314,8 @@ func (h *RequestsHandler) MarkIncomingRequestInAction(w http.ResponseWriter, r *
 					http.Error(w, fmt.Sprintf(`{"error":"invalid code '%s': does not belong to the expected material type"}`, code), http.StatusBadRequest)
 					return
 				}
+
+				instancesToAssign = append(instancesToAssign, instance)
 			}
 		}
 	}
@@ -320,6 +324,16 @@ func (h *RequestsHandler) MarkIncomingRequestInAction(w http.ResponseWriter, r *
 	if err != nil {
 		http.Error(w, `{"error":"failed to mark request inAction"}`, http.StatusBadGateway)
 		return
+	}
+
+	// Assign material instances to this request
+	if h.store != nil {
+		for _, instance := range instancesToAssign {
+			if _, err := h.store.AssignToRequest(r.Context(), instance.ID, requestID); err != nil {
+				http.Error(w, fmt.Sprintf(`{"error":"failed to assign material instance '%s' to request"}`, instance.HumanCode), http.StatusInternalServerError)
+				return
+			}
+		}
 	}
 
 	if h.auditLogger != nil {
@@ -511,6 +525,29 @@ func (h *RequestsHandler) InspectReturnItem(w http.ResponseWriter, r *http.Reque
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(updated)
+}
+
+// GetRequestInstances returns all material instances currently assigned to a request.
+func (h *RequestsHandler) GetRequestInstances(w http.ResponseWriter, r *http.Request) {
+	if h.store == nil {
+		http.Error(w, `{"error":"inventory store not configured"}`, http.StatusServiceUnavailable)
+		return
+	}
+
+	requestID := strings.TrimSpace(r.PathValue("id"))
+	if requestID == "" {
+		http.Error(w, `{"error":"request id is required"}`, http.StatusBadRequest)
+		return
+	}
+
+	instances, err := h.store.GetInstancesByRequestID(r.Context(), requestID)
+	if err != nil {
+		http.Error(w, `{"error":"failed to fetch request instances"}`, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(instances)
 }
 
 func derefString(input *string) string {

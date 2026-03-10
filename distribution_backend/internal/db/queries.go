@@ -80,6 +80,36 @@ func (s *Store) GetMaterialInstanceByID(ctx context.Context, id string) (domain.
 	return mapMaterialInstance(row), nil
 }
 
+// GetInstancesByRequestID returns all material instances currently assigned to a request.
+func (s *Store) GetInstancesByRequestID(ctx context.Context, requestID string) ([]domain.MaterialInstance, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT id, human_code, type_id, description, status, use_count, location, current_request_id, created_at, updated_at
+		FROM material_instances
+		WHERE current_request_id = $1
+		ORDER BY type_id, human_code
+	`, requestID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var result []domain.MaterialInstance
+	for rows.Next() {
+		var row materialInstanceRow
+		if err := rows.Scan(
+			&row.ID, &row.HumanCode, &row.TypeID, &row.Description, &row.Status, &row.UseCount, &row.Location,
+			&row.CurrentRequestID, &row.CreatedAt, &row.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		result = append(result, mapMaterialInstance(row))
+	}
+	if result == nil {
+		result = []domain.MaterialInstance{}
+	}
+	return result, rows.Err()
+}
+
 // GetMaterialInstanceByHumanCode returns a single material instance by human code
 func (s *Store) GetMaterialInstanceByHumanCode(ctx context.Context, humanCode string) (domain.MaterialInstance, error) {
 	var row materialInstanceRow
