@@ -177,7 +177,7 @@ package-deploy-org:
 	@echo "Org deployment bundle ready at $(DEPLOY_ORG_CONTAINER_DIR)"
 
 deploy-org: build-org-backend build-user build-orgadmin package-deploy-org
-	../faeenv/distribute_envs.sh
+	/home/st/Documents/coding/faeenv/distribute-env.sh
 
 package-deploy-dist:
 	@echo "Packaging dist deployment bundle..."
@@ -208,7 +208,7 @@ package-deploy-dist:
 	@echo "Dist deployment bundle ready at $(DEPLOY_DIST_CONTAINER_DIR)"
 
 deploy-dist: build-dist-backend build-distribution build-distadmin package-deploy-dist
-	../faeenv/distribute-env.sh
+	/home/st/Documents/coding/faeenv/distribute-env.sh
 
 cont-org: deploy-org
 	@echo "Bringing up org container..."
