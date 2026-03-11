@@ -128,6 +128,7 @@ func main() {
 
 	// Inventory endpoints (authenticated)
 	mux.HandleFunc("POST /api/inventory", authMiddleware.RequireAuth(inventoryHandler.CreateMaterialInstance))
+	mux.HandleFunc("POST /api/inventory/bulk", authMiddleware.RequireAuth(inventoryHandler.BulkCreateMaterialInstances))
 	mux.HandleFunc("GET /api/inventory", authMiddleware.RequireAuth(inventoryHandler.ListMaterialInstances))
 	mux.HandleFunc("GET /api/inventory/export", authMiddleware.RequireAuth(inventoryHandler.ExportInventoryCSV))
 	mux.HandleFunc("POST /api/inventory/import", authMiddleware.RequireAuth(inventoryHandler.ImportInventoryCSV))
