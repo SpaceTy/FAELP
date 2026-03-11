@@ -119,6 +119,10 @@ type generatedCodeResponse struct {
 	HumanCode string `json:"humanCode"`
 }
 
+type bulkCreateResponse struct {
+	CreatedCount int `json:"createdCount"`
+}
+
 type importInventoryResponse struct {
 	ImportedCount int `json:"importedCount"`
 	CreatedCount  int `json:"createdCount"`
@@ -140,11 +144,11 @@ func (h *InventoryHandler) GenerateMaterialCode(w http.ResponseWriter, r *http.R
 }
 
 type validateCodeResponse struct {
-	Valid      bool   `json:"valid"`
-	Code       string `json:"code,omitempty"`
-	TypeID     string `json:"typeId,omitempty"`
-	TypeIDMatch bool  `json:"typeIdMatch,omitempty"`
-	Error      string `json:"error,omitempty"`
+	Valid       bool   `json:"valid"`
+	Code        string `json:"code,omitempty"`
+	TypeID      string `json:"typeId,omitempty"`
+	TypeIDMatch bool   `json:"typeIdMatch,omitempty"`
+	Error       string `json:"error,omitempty"`
 }
 
 // ValidateMaterialCode validates that a human code exists and optionally matches a material type.
@@ -242,6 +246,54 @@ func (h *InventoryHandler) CreateMaterialInstance(w http.ResponseWriter, r *http
 	_ = json.NewEncoder(w).Encode(instance)
 }
 
+// BulkCreateMaterialInstances creates multiple inventory items with generated codes.
+func (h *InventoryHandler) BulkCreateMaterialInstances(w http.ResponseWriter, r *http.Request) {
+	var req domain.BulkCreateMaterialInstancesInput
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, `{"error":"invalid request body"}`, http.StatusBadRequest)
+		return
+	}
+
+	req.TypeID = strings.TrimSpace(req.TypeID)
+	if req.TypeID == "" {
+		http.Error(w, `{"error":"typeId is required"}`, http.StatusBadRequest)
+		return
+	}
+	if req.Quantity <= 0 {
+		http.Error(w, `{"error":"quantity must be greater than 0"}`, http.StatusBadRequest)
+		return
+	}
+	if req.Quantity > 1000 {
+		http.Error(w, `{"error":"quantity must be 1000 or less"}`, http.StatusBadRequest)
+		return
+	}
+	if !req.Acknowledged {
+		http.Error(w, `{"error":"bulk add acknowledgement is required"}`, http.StatusBadRequest)
+		return
+	}
+
+	const bulkLocation = "Bulk Add Pending Labeling"
+	instances, err := h.store.CreateMaterialInstancesBulk(r.Context(), req, bulkLocation)
+	if err != nil {
+		http.Error(w, `{"error":"failed to bulk create material instances"}`, http.StatusInternalServerError)
+		return
+	}
+
+	if h.auditLogger != nil {
+		userCtx, _ := auth.GetUserFromContext(r.Context())
+		_ = h.auditLogger.Log(r.Context(), userCtx.UserID, userCtx.Username, "inventory.bulk_create", "material_instance", "", map[string]interface{}{
+			"typeId":       req.TypeID,
+			"quantity":     len(instances),
+			"location":     bulkLocation,
+			"acknowledged": req.Acknowledged,
+		}, nil)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	_ = json.NewEncoder(w).Encode(bulkCreateResponse{CreatedCount: len(instances)})
+}
+
 // GetMaterialInstance returns one inventory item by ID.
 func (h *InventoryHandler) GetMaterialInstance(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
@@ -291,6 +343,7 @@ func (h *InventoryHandler) ListMaterialInstances(w http.ResponseWriter, r *http.
 		Status:    r.URL.Query().Get("status"),
 		Location:  r.URL.Query().Get("location"),
 		HumanCode: strings.ToUpper(strings.TrimSpace(r.URL.Query().Get("humanCode"))),
+		Query:     strings.TrimSpace(r.URL.Query().Get("query")),
 		Limit:     limit,
 		Offset:    offset,
 	}
@@ -321,6 +374,7 @@ func (h *InventoryHandler) ExportInventoryCSV(w http.ResponseWriter, r *http.Req
 		Status:    r.URL.Query().Get("status"),
 		Location:  r.URL.Query().Get("location"),
 		HumanCode: strings.ToUpper(strings.TrimSpace(r.URL.Query().Get("humanCode"))),
+		Query:     strings.TrimSpace(r.URL.Query().Get("query")),
 	}
 
 	if params.Status != "" && !isValidMaterialStatus(params.Status) {

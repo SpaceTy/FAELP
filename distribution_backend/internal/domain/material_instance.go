@@ -33,6 +33,13 @@ type CreateMaterialInstanceInput struct {
 	Location    string `json:"location"`
 }
 
+// BulkCreateMaterialInstancesInput contains fields for creating many material instances at once.
+type BulkCreateMaterialInstancesInput struct {
+	TypeID       string `json:"typeId"`
+	Quantity     int    `json:"quantity"`
+	Acknowledged bool   `json:"acknowledged"`
+}
+
 // UpdateMaterialInstanceInput contains fields for updating a material instance
 type UpdateMaterialInstanceInput struct {
 	Status   string `json:"status"`

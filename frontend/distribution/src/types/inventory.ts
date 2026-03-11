@@ -32,6 +32,7 @@ export interface ListMaterialInstancesParams {
   status?: MaterialStatus | '';
   location?: string;
   humanCode?: string;
+  query?: string;
   limit?: number;
   offset?: number;
 }
@@ -42,6 +43,16 @@ export interface CreateMaterialInput {
   description: string;
   useCount: number;
   location: string;
+}
+
+export interface BulkCreateMaterialInput {
+  typeId: string;
+  quantity: number;
+  acknowledged: boolean;
+}
+
+export interface BulkCreateMaterialResponse {
+  createdCount: number;
 }
 
 export interface AssignMaterialInput {
