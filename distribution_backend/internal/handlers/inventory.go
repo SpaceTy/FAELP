@@ -255,8 +255,13 @@ func (h *InventoryHandler) BulkCreateMaterialInstances(w http.ResponseWriter, r 
 	}
 
 	req.TypeID = strings.TrimSpace(req.TypeID)
+	req.Location = strings.TrimSpace(req.Location)
 	if req.TypeID == "" {
 		http.Error(w, `{"error":"typeId is required"}`, http.StatusBadRequest)
+		return
+	}
+	if req.Location == "" {
+		http.Error(w, `{"error":"location is required"}`, http.StatusBadRequest)
 		return
 	}
 	if req.Quantity <= 0 {
@@ -272,8 +277,7 @@ func (h *InventoryHandler) BulkCreateMaterialInstances(w http.ResponseWriter, r 
 		return
 	}
 
-	const bulkLocation = "Bulk Add Pending Labeling"
-	instances, err := h.store.CreateMaterialInstancesBulk(r.Context(), req, bulkLocation)
+	instances, err := h.store.CreateMaterialInstancesBulk(r.Context(), req, req.Location)
 	if err != nil {
 		http.Error(w, `{"error":"failed to bulk create material instances"}`, http.StatusInternalServerError)
 		return
@@ -284,7 +288,7 @@ func (h *InventoryHandler) BulkCreateMaterialInstances(w http.ResponseWriter, r 
 		_ = h.auditLogger.Log(r.Context(), userCtx.UserID, userCtx.Username, "inventory.bulk_create", "material_instance", "", map[string]interface{}{
 			"typeId":       req.TypeID,
 			"quantity":     len(instances),
-			"location":     bulkLocation,
+			"location":     req.Location,
 			"acknowledged": req.Acknowledged,
 		}, nil)
 	}

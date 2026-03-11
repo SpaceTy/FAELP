@@ -37,6 +37,7 @@ type CreateMaterialInstanceInput struct {
 type BulkCreateMaterialInstancesInput struct {
 	TypeID       string `json:"typeId"`
 	Quantity     int    `json:"quantity"`
+	Location     string `json:"location"`
 	Acknowledged bool   `json:"acknowledged"`
 }
 

@@ -48,6 +48,7 @@ export interface CreateMaterialInput {
 export interface BulkCreateMaterialInput {
   typeId: string;
   quantity: number;
+  location: string;
   acknowledged: boolean;
 }
 

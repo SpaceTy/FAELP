@@ -111,6 +111,7 @@ export function InventoryPage() {
   const [addItemError, setAddItemError] = useState<string | null>(null);
   const [bulkTypeId, setBulkTypeId] = useState('');
   const [bulkQuantity, setBulkQuantity] = useState(1);
+  const [bulkLocation, setBulkLocation] = useState('');
   const [bulkAcknowledged, setBulkAcknowledged] = useState(false);
   const [bulkSearchQuery, setBulkSearchQuery] = useState('');
   const [bulkTypeDropdownOpen, setBulkTypeDropdownOpen] = useState(false);
@@ -379,6 +380,11 @@ export function InventoryPage() {
       return;
     }
 
+    if (!bulkLocation.trim()) {
+      setError('Location is required for bulk add.');
+      return;
+    }
+
     if (!bulkAcknowledged) {
       setError('You must confirm that you read and understand the bulk add notice.');
       return;
@@ -389,11 +395,13 @@ export function InventoryPage() {
       const result = await api.bulkCreateMaterialInstances({
         typeId: bulkTypeId.trim(),
         quantity: bulkQuantity,
+        location: bulkLocation.trim(),
         acknowledged: bulkAcknowledged,
       });
       const materialLabel = materialTypeByID.get(bulkTypeId)?.name || bulkTypeId;
       setBulkAddResultMessage(`Bulk added ${result.createdCount} ${materialLabel} item${result.createdCount === 1 ? '' : 's'} to inventory.`);
       setBulkQuantity(1);
+      setBulkLocation('');
       setBulkAcknowledged(false);
       setIsBulkAddModalOpen(false);
       await loadData(activeFiltersRef.current, { append: false, offset: 0 });
@@ -1204,6 +1212,18 @@ export function InventoryPage() {
                       disabled={isBulkAdding}
                     />
                   </div>
+                </div>
+                <div>
+                  <label className="bulk-add-label" htmlFor="bulk-location-input">Location</label>
+                  <input
+                    id="bulk-location-input"
+                    type="text"
+                    value={bulkLocation}
+                    onInput={(e) => setBulkLocation((e.target as HTMLInputElement).value)}
+                    className="search-input"
+                    placeholder="e.g. Shelf A"
+                    disabled={isBulkAdding}
+                  />
                 </div>
                 <div className="bulk-add-notice">
                   <p>
