@@ -22,7 +22,7 @@ DEPLOY_USER?=$(USER)
 DEPLOY_REMOTE_PATH?=/home/st/fae
 
 .PHONY: dev dev-org dev-dist dev-all dev-backends \
-	install install-org install-dist \
+	install install-org install-dist npsetup \
 	build build-org build-dist build-all \
 	clean clean-org clean-dist clean-all \
 	test test-org test-dist \
@@ -99,6 +99,8 @@ install-distribution:
 	cd $(DISTRIBUTION_FRONTEND_DIR) && npm install
 
 install-frontends: install-user install-orgadmin install-distadmin install-distribution
+
+npsetup: install-frontends
 
 install-org:
 	cd $(ORG_BACKEND_DIR) && go mod tidy

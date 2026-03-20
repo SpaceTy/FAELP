@@ -2,6 +2,8 @@ import { authSignal } from '@/context/AuthContext';
 import type { LoginRequest, LoginResponse, User } from '@/types/auth';
 import type {
   AssignMaterialInput,
+  BulkCreateMaterialInput,
+  BulkCreateMaterialResponse,
   CreateMaterialInput,
   ImportInventoryResponse,
   InventorySummaryItem,
@@ -222,12 +224,28 @@ class ApiService {
     return response.json();
   }
 
+  async bulkCreateMaterialInstances(input: BulkCreateMaterialInput): Promise<BulkCreateMaterialResponse> {
+    const response = await fetch(`${API_BASE}/api/inventory/bulk`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(input),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(error.error || 'Failed to bulk add inventory');
+    }
+
+    return response.json();
+  }
+
   async listMaterialInstances(params: ListMaterialInstancesParams = {}): Promise<MaterialInstance[]> {
     const query = new URLSearchParams();
     if (params.typeId) query.set('typeId', params.typeId);
     if (params.status) query.set('status', params.status);
     if (params.location) query.set('location', params.location);
     if (params.humanCode) query.set('humanCode', params.humanCode);
+    if (params.query) query.set('query', params.query);
     if (typeof params.limit === 'number') query.set('limit', String(params.limit));
     if (typeof params.offset === 'number') query.set('offset', String(params.offset));
 
@@ -250,6 +268,7 @@ class ApiService {
     if (params.status) query.set('status', params.status);
     if (params.location) query.set('location', params.location);
     if (params.humanCode) query.set('humanCode', params.humanCode);
+    if (params.query) query.set('query', params.query);
 
     const suffix = query.toString() ? `?${query.toString()}` : '';
     const response = await fetch(`${API_BASE}/api/inventory/export${suffix}`, {

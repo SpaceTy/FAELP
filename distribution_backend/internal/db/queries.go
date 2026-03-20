@@ -4,10 +4,12 @@ import (
 	"context"
 	"crypto/rand"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 
 	"distribution_backend/internal/domain"
+	"github.com/lib/pq"
 )
 
 type Store struct {
@@ -24,6 +26,7 @@ type ListMaterialInstancesParams struct {
 	Status    string
 	Location  string
 	HumanCode string
+	Query     string
 	Limit     int
 	Offset    int
 }
@@ -61,6 +64,77 @@ func (s *Store) CreateMaterialInstance(ctx context.Context, input domain.CreateM
 		return domain.MaterialInstance{}, err
 	}
 	return mapMaterialInstance(row), nil
+}
+
+// CreateMaterialInstancesBulk creates many inventory items with generated human codes in one transaction.
+func (s *Store) CreateMaterialInstancesBulk(ctx context.Context, input domain.BulkCreateMaterialInstancesInput, location string) ([]domain.MaterialInstance, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	stmt, err := tx.PrepareContext(ctx, `
+		INSERT INTO material_instances (id, human_code, type_id, description, status, use_count, location)
+		VALUES (gen_random_uuid()::text, $1, $2, '', $3, 0, $4)
+		RETURNING id, human_code, type_id, description, status, use_count, location, current_request_id, created_at, updated_at
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+
+	items := make([]domain.MaterialInstance, 0, input.Quantity)
+	generatedCodes := make(map[string]struct{}, input.Quantity)
+
+	for range input.Quantity {
+		created := false
+		for attempts := 0; attempts < 50; attempts++ {
+			code, codeErr := randomHumanCode()
+			if codeErr != nil {
+				err = codeErr
+				return nil, err
+			}
+			if _, exists := generatedCodes[code]; exists {
+				continue
+			}
+
+			var row materialInstanceRow
+			scanErr := stmt.QueryRowContext(ctx, code, input.TypeID, domain.StatusAvailable, location).Scan(
+				&row.ID, &row.HumanCode, &row.TypeID, &row.Description, &row.Status, &row.UseCount, &row.Location,
+				&row.CurrentRequestID, &row.CreatedAt, &row.UpdatedAt,
+			)
+			if scanErr == nil {
+				generatedCodes[code] = struct{}{}
+				items = append(items, mapMaterialInstance(row))
+				created = true
+				break
+			}
+
+			var pqErr *pq.Error
+			if errors.As(scanErr, &pqErr) && pqErr.Code == "23505" && pqErr.Constraint == "material_instances_human_code_key" {
+				continue
+			}
+
+			err = scanErr
+			return nil, err
+		}
+
+		if !created {
+			err = fmt.Errorf("failed to generate a unique material code for bulk add")
+			return nil, err
+		}
+	}
+
+	if err = tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return items, nil
 }
 
 // GetMaterialInstanceByID returns a single material instance by ID
@@ -148,6 +222,17 @@ func (s *Store) ListMaterialInstances(ctx context.Context, params ListMaterialIn
 		args = append(args, params.HumanCode)
 		where = append(where, fmt.Sprintf("human_code = $%d", len(args)))
 	}
+	if params.Query != "" {
+		args = append(args, "%"+params.Query+"%")
+		searchArgPos := len(args)
+		where = append(where, fmt.Sprintf(`(
+			id ILIKE $%[1]d OR
+			human_code ILIKE $%[1]d OR
+			type_id ILIKE $%[1]d OR
+			description ILIKE $%[1]d OR
+			location ILIKE $%[1]d
+		)`, searchArgPos))
+	}
 
 	limit := params.Limit
 	if limit <= 0 || limit > 1000 {
@@ -210,6 +295,17 @@ func (s *Store) ListMaterialInstancesForExport(ctx context.Context, params ListM
 	if params.HumanCode != "" {
 		args = append(args, params.HumanCode)
 		where = append(where, fmt.Sprintf("human_code = $%d", len(args)))
+	}
+	if params.Query != "" {
+		args = append(args, "%"+params.Query+"%")
+		searchArgPos := len(args)
+		where = append(where, fmt.Sprintf(`(
+			id ILIKE $%[1]d OR
+			human_code ILIKE $%[1]d OR
+			type_id ILIKE $%[1]d OR
+			description ILIKE $%[1]d OR
+			location ILIKE $%[1]d
+		)`, searchArgPos))
 	}
 
 	query := fmt.Sprintf(`
