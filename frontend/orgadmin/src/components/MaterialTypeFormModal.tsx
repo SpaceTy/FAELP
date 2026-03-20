@@ -41,7 +41,8 @@ export function MaterialTypeFormModal({ materialType, onSubmit, onClose }: Mater
     e.preventDefault();
     setIsDragging(false);
     const file = e.dataTransfer?.files[0];
-    if (file && file.type.startsWith('image/')) {
+    const isHeic = file && (file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif'));
+    if (file && (file.type.startsWith('image/') || isHeic)) {
       handleImageChange(file);
     }
   }, []);
@@ -153,7 +154,7 @@ export function MaterialTypeFormModal({ materialType, onSubmit, onClose }: Mater
                     </p>
                     <input
                       type="file"
-                      accept="image/*"
+                      accept="image/*,.heic,.heif"
                       onChange={(e) => handleImageChange((e.target as HTMLInputElement).files?.[0] || null)}
                       className="hidden"
                       id="image-input"

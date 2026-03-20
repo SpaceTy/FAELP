@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/adrium/goheif"
 	"github.com/chai2010/webp"
 	"github.com/go-chi/chi/v5"
 	"golang.org/x/image/draw"
@@ -72,9 +73,13 @@ func (h *UploadHandler) UploadMaterialTypeImage(w http.ResponseWriter, r *http.R
 	}
 
 	detectedType := normalizeContentType(http.DetectContentType(fileBytes))
+	// http.DetectContentType doesn't recognize HEIC; detect it from magic bytes as fallback.
+	if detectedType == "application/octet-stream" && detectHEIC(fileBytes) {
+		detectedType = "image/heic"
+	}
 	if !isValidImageType(contentType) && !isValidImageType(detectedType) {
 		log.Printf("ERROR UploadMaterialTypeImage id=%q invalid type content-type=%q detected=%q", id, contentType, detectedType)
-		writeError(w, http.StatusBadRequest, "invalid_type", "Invalid image type. Allowed: jpeg, png, webp, gif")
+		writeError(w, http.StatusBadRequest, "invalid_type", "Invalid image type. Allowed: jpeg, png, webp, gif, heic")
 		return
 	}
 
@@ -137,6 +142,24 @@ func (h *UploadHandler) UploadMaterialTypeImage(w http.ResponseWriter, r *http.R
 	})
 }
 
+// detectHEIC checks if the data is a HEIC/HEIF image via ISO Base Media File Format magic bytes.
+// http.DetectContentType does not recognize HEIC, so this manual check is required.
+func detectHEIC(data []byte) bool {
+	if len(data) < 12 {
+		return false
+	}
+	if string(data[4:8]) != "ftyp" {
+		return false
+	}
+	brand := string(data[8:12])
+	for _, b := range []string{"heic", "heix", "hevc", "hevx", "heim", "heis", "hevm", "hevs", "mif1", "msf1"} {
+		if brand == b {
+			return true
+		}
+	}
+	return false
+}
+
 // isValidImageType checks if the content type is a valid image type
 func isValidImageType(contentType string) bool {
 	contentType = normalizeContentType(contentType)
@@ -146,6 +169,8 @@ func isValidImageType(contentType string) bool {
 		"image/png",
 		"image/webp",
 		"image/gif",
+		"image/heic",
+		"image/heif",
 	}
 	for _, t := range validTypes {
 		if strings.EqualFold(contentType, t) {
@@ -171,6 +196,9 @@ func decodeImage(r io.Reader, contentType string) (image.Image, string, error) {
 	case "image/gif":
 		img, format, err := image.Decode(r)
 		return img, format, err
+	case "image/heic", "image/heif":
+		img, err := goheif.Decode(r)
+		return img, "heic", err
 	default:
 		// Try to detect format automatically
 		img, format, err := image.Decode(r)
