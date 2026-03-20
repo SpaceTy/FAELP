@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'preact/hooks';
-import type { MaterialType, CreateMaterialTypeInput, UpdateMaterialTypeInput } from '@/types/material';
+import { CATEGORY_LABELS, type MaterialType, type CreateMaterialTypeInput, type UpdateMaterialTypeInput, type MaterialCategory } from '@/types/material';
 import { resolveAssetUrl } from '@/utils/url';
 
 interface MaterialTypeFormModalProps {
@@ -17,6 +17,7 @@ export function MaterialTypeFormModal({ materialType, onSubmit, onClose }: Mater
   const isEditing = !!materialType;
   const [name, setName] = useState(materialType?.name || '');
   const [description, setDescription] = useState(materialType?.description || '');
+  const [category, setCategory] = useState<MaterialCategory>(materialType?.category || 'Reanimation');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(getFullImageUrl(materialType?.imageUrl) || null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -63,7 +64,7 @@ export function MaterialTypeFormModal({ materialType, onSubmit, onClose }: Mater
     setIsSubmitting(true);
 
     try {
-      const input = { name, description };
+      const input = { name, description, category };
       await onSubmit(input, imageFile || undefined);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ein Fehler ist aufgetreten');
@@ -116,6 +117,24 @@ export function MaterialTypeFormModal({ materialType, onSubmit, onClose }: Mater
                 className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary"
                 placeholder="Geben Sie eine detaillierte Beschreibung ein..."
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-1">
+                Kategorie
+              </label>
+              <select
+                required
+                value={category}
+                onChange={(e) => setCategory((e.target as HTMLSelectElement).value as MaterialCategory)}
+                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                {(Object.keys(CATEGORY_LABELS) as MaterialCategory[]).map((option) => (
+                  <option key={option} value={option}>
+                    {CATEGORY_LABELS[option]}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>

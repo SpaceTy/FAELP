@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'preact/hooks';
-import type { MaterialType, CreateMaterialTypeInput, UpdateMaterialTypeInput } from '@/types/material';
+import { CATEGORY_LABELS, type MaterialType, type CreateMaterialTypeInput, type UpdateMaterialTypeInput } from '@/types/material';
 import { materialTypeService } from '@/services/materialTypes';
 import { MaterialTypeFormModal } from '@/components/MaterialTypeFormModal';
 import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
@@ -111,6 +111,9 @@ export function MaterialTypesPage() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                     Beschreibung
                   </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
+                    Kategorie
+                  </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-text-secondary uppercase tracking-wider">
                     Aktionen
                   </th>
@@ -138,6 +141,11 @@ export function MaterialTypesPage() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm text-text-primary line-clamp-2">{mt.description}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="inline-flex rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-text-primary">
+                        {CATEGORY_LABELS[mt.category]}
+                      </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button

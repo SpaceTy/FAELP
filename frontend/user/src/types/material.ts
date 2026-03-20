@@ -1,5 +1,9 @@
 export type MaterialCategory = 'Reanimation' | 'Wundversorgung&Trauma' | 'Zubehoer';
 
+export function isMaterialCategory(value: string | null | undefined): value is MaterialCategory {
+  return value === 'Reanimation' || value === 'Wundversorgung&Trauma' || value === 'Zubehoer';
+}
+
 export interface Material {
   id: string;
   name: string;

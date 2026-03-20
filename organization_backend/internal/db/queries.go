@@ -150,7 +150,7 @@ func (s *Store) GetOrCreateCustomerByWorkOSUser(ctx context.Context, workosUser 
 // ListMaterialTypes returns all material types ordered by name
 func (s *Store) ListMaterialTypes(ctx context.Context) ([]domain.MaterialType, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT id, name, description, image_url
+		SELECT id, name, description, image_url, category
 		FROM material_types
 		ORDER BY name ASC
 	`)
@@ -162,7 +162,7 @@ func (s *Store) ListMaterialTypes(ctx context.Context) ([]domain.MaterialType, e
 	var result []domain.MaterialType
 	for rows.Next() {
 		var mt domain.MaterialType
-		if err := rows.Scan(&mt.ID, &mt.Name, &mt.Description, &mt.ImageURL); err != nil {
+		if err := rows.Scan(&mt.ID, &mt.Name, &mt.Description, &mt.ImageURL, &mt.Category); err != nil {
 			return nil, err
 		}
 		result = append(result, mt)
@@ -182,6 +182,7 @@ func (s *Store) ListMaterialTypesWithAvailability(ctx context.Context) ([]domain
 			mt.name, 
 			mt.description, 
 			mt.image_url,
+			mt.category,
 			COALESCE(ma_totals.total_amount, 0) - COALESCE(reserved_totals.reserved_amount, 0) as available_count
 		FROM material_types mt
 		LEFT JOIN (
@@ -206,7 +207,7 @@ func (s *Store) ListMaterialTypesWithAvailability(ctx context.Context) ([]domain
 	var result []domain.MaterialType
 	for rows.Next() {
 		var mt domain.MaterialType
-		if err := rows.Scan(&mt.ID, &mt.Name, &mt.Description, &mt.ImageURL, &mt.AvailableCount); err != nil {
+		if err := rows.Scan(&mt.ID, &mt.Name, &mt.Description, &mt.ImageURL, &mt.Category, &mt.AvailableCount); err != nil {
 			return nil, err
 		}
 		result = append(result, mt)
@@ -221,10 +222,10 @@ func (s *Store) ListMaterialTypesWithAvailability(ctx context.Context) ([]domain
 func (s *Store) GetMaterialTypeByID(ctx context.Context, id string) (domain.MaterialType, error) {
 	var mt domain.MaterialType
 	err := s.db.QueryRowContext(ctx, `
-		SELECT id, name, description, image_url
+		SELECT id, name, description, image_url, category
 		FROM material_types
 		WHERE id = $1
-	`, id).Scan(&mt.ID, &mt.Name, &mt.Description, &mt.ImageURL)
+	`, id).Scan(&mt.ID, &mt.Name, &mt.Description, &mt.ImageURL, &mt.Category)
 	if err != nil {
 		return domain.MaterialType{}, err
 	}
@@ -232,13 +233,13 @@ func (s *Store) GetMaterialTypeByID(ctx context.Context, id string) (domain.Mate
 }
 
 // CreateMaterialType creates a new material type
-func (s *Store) CreateMaterialType(ctx context.Context, id, name, description, imageURL string) (domain.MaterialType, error) {
+func (s *Store) CreateMaterialType(ctx context.Context, id, name, description, imageURL string, category domain.MaterialCategory) (domain.MaterialType, error) {
 	var mt domain.MaterialType
 	err := s.db.QueryRowContext(ctx, `
-		INSERT INTO material_types (id, name, description, image_url)
-		VALUES ($1, $2, $3, $4)
-		RETURNING id, name, description, image_url
-	`, id, name, description, imageURL).Scan(&mt.ID, &mt.Name, &mt.Description, &mt.ImageURL)
+		INSERT INTO material_types (id, name, description, image_url, category)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING id, name, description, image_url, category
+	`, id, name, description, imageURL, category).Scan(&mt.ID, &mt.Name, &mt.Description, &mt.ImageURL, &mt.Category)
 	if err != nil {
 		return domain.MaterialType{}, err
 	}
@@ -246,14 +247,14 @@ func (s *Store) CreateMaterialType(ctx context.Context, id, name, description, i
 }
 
 // UpdateMaterialType updates an existing material type
-func (s *Store) UpdateMaterialType(ctx context.Context, id, name, description string) (domain.MaterialType, error) {
+func (s *Store) UpdateMaterialType(ctx context.Context, id, name, description string, category domain.MaterialCategory) (domain.MaterialType, error) {
 	var mt domain.MaterialType
 	err := s.db.QueryRowContext(ctx, `
 		UPDATE material_types
-		SET name = $2, description = $3
+		SET name = $2, description = $3, category = $4
 		WHERE id = $1
-		RETURNING id, name, description, image_url
-	`, id, name, description).Scan(&mt.ID, &mt.Name, &mt.Description, &mt.ImageURL)
+		RETURNING id, name, description, image_url, category
+	`, id, name, description, category).Scan(&mt.ID, &mt.Name, &mt.Description, &mt.ImageURL, &mt.Category)
 	if err != nil {
 		return domain.MaterialType{}, err
 	}

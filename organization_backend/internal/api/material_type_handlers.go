@@ -27,8 +27,8 @@ type StoreInterface interface {
 	ListMaterialTypes(ctx context.Context) ([]domain.MaterialType, error)
 	ListMaterialTypesWithAvailability(ctx context.Context) ([]domain.MaterialType, error)
 	GetMaterialTypeByID(ctx context.Context, id string) (domain.MaterialType, error)
-	CreateMaterialType(ctx context.Context, id, name, description, imageURL string) (domain.MaterialType, error)
-	UpdateMaterialType(ctx context.Context, id, name, description string) (domain.MaterialType, error)
+	CreateMaterialType(ctx context.Context, id, name, description, imageURL string, category domain.MaterialCategory) (domain.MaterialType, error)
+	UpdateMaterialType(ctx context.Context, id, name, description string, category domain.MaterialCategory) (domain.MaterialType, error)
 	UpdateMaterialTypeImage(ctx context.Context, id, imageURL string) error
 	DeleteMaterialType(ctx context.Context, id string) error
 	UpdateMaterialAvailability(ctx context.Context, distributionCenterID string, availability map[string]int) error
@@ -91,9 +91,10 @@ func (h *MaterialTypeHandler) GetMaterialType(w http.ResponseWriter, r *http.Req
 
 // CreateMaterialTypeRequest represents the request body for creating a material type
 type CreateMaterialTypeRequest struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	ImageURL    string `json:"imageUrl"`
+	Name        string                  `json:"name"`
+	Description string                  `json:"description"`
+	ImageURL    string                  `json:"imageUrl"`
+	Category    domain.MaterialCategory `json:"category"`
 }
 
 // CreateMaterialType creates a new material type (admin only)
@@ -113,6 +114,14 @@ func (h *MaterialTypeHandler) CreateMaterialType(w http.ResponseWriter, r *http.
 		writeError(w, http.StatusBadRequest, "validation_error", "Description is required")
 		return
 	}
+	if req.Category == "" {
+		writeError(w, http.StatusBadRequest, "validation_error", "Category is required")
+		return
+	}
+	if !req.Category.IsValid() {
+		writeError(w, http.StatusBadRequest, "validation_error", "Category is invalid")
+		return
+	}
 
 	// Generate ID from name: lowercase, replace spaces with underscores, remove special chars
 	id := generateMaterialTypeID(req.Name)
@@ -123,7 +132,7 @@ func (h *MaterialTypeHandler) CreateMaterialType(w http.ResponseWriter, r *http.
 		return
 	}
 
-	mt, err := h.Store.CreateMaterialType(r.Context(), id, req.Name, req.Description, req.ImageURL)
+	mt, err := h.Store.CreateMaterialType(r.Context(), id, req.Name, req.Description, req.ImageURL, req.Category)
 	if err != nil {
 		log.Printf("ERROR CreateMaterialType id=%q name=%q: %v", id, req.Name, err)
 		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
@@ -139,8 +148,9 @@ func (h *MaterialTypeHandler) CreateMaterialType(w http.ResponseWriter, r *http.
 
 // UpdateMaterialTypeRequest represents the request body for updating a material type
 type UpdateMaterialTypeRequest struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
+	Name        string                  `json:"name"`
+	Description string                  `json:"description"`
+	Category    domain.MaterialCategory `json:"category"`
 }
 
 // UpdateMaterialType updates an existing material type (admin only)
@@ -162,8 +172,16 @@ func (h *MaterialTypeHandler) UpdateMaterialType(w http.ResponseWriter, r *http.
 		writeError(w, http.StatusBadRequest, "validation_error", "Description is required")
 		return
 	}
+	if req.Category == "" {
+		writeError(w, http.StatusBadRequest, "validation_error", "Category is required")
+		return
+	}
+	if !req.Category.IsValid() {
+		writeError(w, http.StatusBadRequest, "validation_error", "Category is invalid")
+		return
+	}
 
-	mt, err := h.Store.UpdateMaterialType(r.Context(), id, req.Name, req.Description)
+	mt, err := h.Store.UpdateMaterialType(r.Context(), id, req.Name, req.Description, req.Category)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "update_failed", "Failed to update material type")
 		return
