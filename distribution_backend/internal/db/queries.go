@@ -4,9 +4,11 @@ import (
 	"context"
 	"crypto/rand"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"distribution_backend/internal/domain"
 	"github.com/lib/pq"
@@ -47,6 +49,19 @@ type InventorySummary struct {
 	TypeID string `json:"typeId"`
 	Status string `json:"status"`
 	Count  int    `json:"count"`
+}
+
+type PackagingDraftItem struct {
+	MaterialTypeID string   `json:"materialTypeId"`
+	Codes          []string `json:"codes"`
+}
+
+type PackagingDraft struct {
+	RequestID            string               `json:"requestId"`
+	OutgoingTrackingCode string               `json:"outgoingTrackingCode,omitempty"`
+	Items                []PackagingDraftItem `json:"items"`
+	CreatedAt            time.Time            `json:"createdAt"`
+	UpdatedAt            time.Time            `json:"updatedAt"`
 }
 
 // CreateMaterialInstance creates a new material instance with an auto-generated ID
@@ -589,6 +604,170 @@ func (s *Store) GetAvailableByType(ctx context.Context, typeID string, limit int
 		result = []domain.MaterialInstance{}
 	}
 	return result, rows.Err()
+}
+
+func (s *Store) GetPackagingDraftsByRequestIDs(ctx context.Context, requestIDs []string) (map[string]PackagingDraft, error) {
+	if len(requestIDs) == 0 {
+		return map[string]PackagingDraft{}, nil
+	}
+
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT request_id, COALESCE(outgoing_tracking_code, ''), items_json, created_at, updated_at
+		FROM request_packaging_drafts
+		WHERE request_id = ANY($1)
+	`, pq.Array(requestIDs))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make(map[string]PackagingDraft, len(requestIDs))
+	for rows.Next() {
+		var (
+			draft     PackagingDraft
+			itemsJSON []byte
+		)
+		if err := rows.Scan(&draft.RequestID, &draft.OutgoingTrackingCode, &itemsJSON, &draft.CreatedAt, &draft.UpdatedAt); err != nil {
+			return nil, err
+		}
+		if len(itemsJSON) > 0 {
+			if err := json.Unmarshal(itemsJSON, &draft.Items); err != nil {
+				return nil, err
+			}
+		}
+		if draft.Items == nil {
+			draft.Items = []PackagingDraftItem{}
+		}
+		result[draft.RequestID] = draft
+	}
+
+	return result, rows.Err()
+}
+
+func (s *Store) SavePackagingDraft(ctx context.Context, draft PackagingDraft, desiredInstanceIDs []string) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if err := syncReservedInstancesTx(ctx, tx, draft.RequestID, desiredInstanceIDs); err != nil {
+		return err
+	}
+
+	itemsJSON, err := json.Marshal(draft.Items)
+	if err != nil {
+		return err
+	}
+
+	if _, err := tx.ExecContext(ctx, `
+		INSERT INTO request_packaging_drafts (request_id, outgoing_tracking_code, items_json, created_at, updated_at)
+		VALUES ($1, NULLIF($2, ''), $3, now(), now())
+		ON CONFLICT (request_id)
+		DO UPDATE SET
+			outgoing_tracking_code = NULLIF(EXCLUDED.outgoing_tracking_code, ''),
+			items_json = EXCLUDED.items_json,
+			updated_at = now()
+	`, draft.RequestID, draft.OutgoingTrackingCode, itemsJSON); err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+func (s *Store) SyncReservedInstancesForRequest(ctx context.Context, requestID string, desiredInstanceIDs []string) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if err := syncReservedInstancesTx(ctx, tx, requestID, desiredInstanceIDs); err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+func (s *Store) DeletePackagingDraft(ctx context.Context, requestID string) error {
+	_, err := s.db.ExecContext(ctx, `
+		DELETE FROM request_packaging_drafts
+		WHERE request_id = $1
+	`, requestID)
+	return err
+}
+
+func syncReservedInstancesTx(ctx context.Context, tx *sql.Tx, requestID string, desiredInstanceIDs []string) error {
+	desiredSet := make(map[string]struct{}, len(desiredInstanceIDs))
+	for _, instanceID := range desiredInstanceIDs {
+		instanceID = strings.TrimSpace(instanceID)
+		if instanceID == "" {
+			continue
+		}
+		desiredSet[instanceID] = struct{}{}
+	}
+
+	rows, err := tx.QueryContext(ctx, `
+		SELECT id
+		FROM material_instances
+		WHERE current_request_id = $1 AND status = $2
+	`, requestID, domain.StatusRented)
+	if err != nil {
+		return err
+	}
+
+	currentSet := make(map[string]struct{})
+	for rows.Next() {
+		var instanceID string
+		if err := rows.Scan(&instanceID); err != nil {
+			rows.Close()
+			return err
+		}
+		currentSet[instanceID] = struct{}{}
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return err
+	}
+	rows.Close()
+
+	for instanceID := range currentSet {
+		if _, keep := desiredSet[instanceID]; keep {
+			continue
+		}
+		if _, err := tx.ExecContext(ctx, `
+			UPDATE material_instances
+			SET status = $2, current_request_id = NULL
+			WHERE id = $1 AND current_request_id = $3 AND status = $4
+		`, instanceID, domain.StatusAvailable, requestID, domain.StatusRented); err != nil {
+			return err
+		}
+	}
+
+	for instanceID := range desiredSet {
+		if _, alreadyReserved := currentSet[instanceID]; alreadyReserved {
+			continue
+		}
+
+		result, err := tx.ExecContext(ctx, `
+			UPDATE material_instances
+			SET status = $2, current_request_id = $3
+			WHERE id = $1 AND (status = $4 OR current_request_id = $3)
+		`, instanceID, domain.StatusRented, requestID, domain.StatusAvailable)
+		if err != nil {
+			return err
+		}
+
+		rowsAffected, err := result.RowsAffected()
+		if err != nil {
+			return err
+		}
+		if rowsAffected == 0 {
+			return fmt.Errorf("failed to reserve material instance %s", instanceID)
+		}
+	}
+
+	return nil
 }
 
 func mapMaterialInstance(row materialInstanceRow) domain.MaterialInstance {

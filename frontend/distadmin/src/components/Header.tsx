@@ -35,48 +35,43 @@ export function Header({ currentPath }: HeaderProps) {
 
   return (
     <header className="bg-secondary font-sans text-white shadow-md flex-shrink-0 z-50">
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-4 px-6 py-4">
+      <div className="flex items-center gap-4 px-6 py-3">
         <div className="min-w-0 flex-shrink-0">
-          <a href="/" className="block">
-            <h1 className="text-[1.75rem] font-bold leading-none tracking-tight text-primary">EHALP</h1>
-            <p className="mt-1 hidden text-xs font-medium tracking-[0.08em] text-slate-300 sm:block">
+          <a href="/" className="flex items-baseline gap-2">
+            <h1 className="text-xl font-bold leading-none tracking-tight text-primary">EHALP</h1>
+            <p className="hidden text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-slate-300 xl:block">
               Distribution Admin
             </p>
           </a>
         </div>
 
-        <nav className="order-3 flex basis-full flex-wrap gap-2 md:order-2 md:basis-auto md:flex-1">
-          {navItems.map((item) => (
-            <a
-              key={item.href}
-              href={item.href}
-              className={`inline-flex h-10 items-center rounded-lg px-4 text-sm font-medium transition-colors ${
-                isActive(item.href)
-                  ? 'bg-primary text-secondary'
-                  : 'text-slate-100 hover:bg-secondary-hover'
-              }`}
-            >
-              {item.label}
-            </a>
-          ))}
-        </nav>
+        <div className="min-w-0 flex-1 overflow-x-auto">
+          <nav className="flex min-w-max flex-nowrap gap-2">
+            {navItems.map((item) => (
+              <a
+                key={item.href}
+                href={item.href}
+                className={`inline-flex h-9 items-center rounded-lg px-3.5 text-sm font-medium transition-colors ${
+                  isActive(item.href)
+                    ? 'bg-primary text-secondary'
+                    : 'text-slate-100 hover:bg-secondary-hover'
+                }`}
+              >
+                {item.label}
+              </a>
+            ))}
+          </nav>
+        </div>
 
-        <div className="ml-auto flex items-center gap-3">
+        <div className="ml-auto flex flex-shrink-0 items-center justify-end gap-2">
           {user && (
             <>
               <div className="hidden text-right lg:block">
                 <div className="text-sm font-medium text-white">{user.username}</div>
-                <div className="mt-1 flex justify-end">
-                  {user.isAdmin && (
-                    <span className="inline-flex items-center rounded-full bg-primary px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-secondary">
-                      Admin
-                    </span>
-                  )}
-                </div>
               </div>
               <button
                 onClick={logout}
-                className="inline-flex h-10 items-center rounded-lg border border-white/20 px-4 text-sm font-medium text-white transition-colors hover:bg-white/10"
+                className="inline-flex h-9 items-center rounded-lg border border-white/20 px-3.5 text-sm font-medium text-white transition-colors hover:bg-white/10"
               >
                 Abmelden
               </button>
@@ -85,7 +80,7 @@ export function Header({ currentPath }: HeaderProps) {
           <button
             onClick={toggleDark}
             title={isDark ? 'Hellmodus' : 'Dunkelmodus'}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
           >
             {isDark ? (
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

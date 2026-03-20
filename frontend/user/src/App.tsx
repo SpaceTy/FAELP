@@ -1,5 +1,6 @@
 import Router from 'preact-router';
 import type { RoutableProps } from 'preact-router';
+import { useState } from 'preact/hooks';
 import { AuthProvider } from '@/context/AuthContext';
 import { MaterialTypesProvider } from '@/context/MaterialTypesContext';
 import { ProtectedRoute } from '@/components/Auth/ProtectedRoute';
@@ -28,11 +29,13 @@ const ProtectedMyRequestsWrapper = (_props: RoutableProps) => (
 );
 
 function AppRoutes() {
+  const [currentPath, setCurrentPath] = useState(() => window.location.pathname);
+
   return (
     <div className="h-screen flex flex-col overflow-hidden">
-      <Header />
+      <Header currentPath={currentPath} />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Router>
+        <Router onChange={({ url }: { url: string }) => setCurrentPath(url.split('?')[0])}>
           <MaterialsPageWrapper path="/" />
           <MaterialsPageWrapper path="/materials" />
           <LoginPageWrapper path="/login" />

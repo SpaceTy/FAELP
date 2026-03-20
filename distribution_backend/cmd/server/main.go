@@ -148,6 +148,7 @@ func main() {
 	mux.HandleFunc("GET /api/material-types", authMiddleware.RequireAuth(inventoryHandler.GetMaterialTypes))
 	mux.HandleFunc("GET /api/requests/incoming", authMiddleware.RequireAuth(requestsHandler.ListIncomingRequests))
 	mux.HandleFunc("POST /api/requests/{id}/approve", authMiddleware.RequireAuth(requestsHandler.ApproveIncomingRequest))
+	mux.HandleFunc("POST /api/requests/{id}/packaging-draft", authMiddleware.RequireAuth(requestsHandler.SavePackagingDraft))
 	mux.HandleFunc("POST /api/requests/{id}/in-action", authMiddleware.RequireAuth(requestsHandler.MarkIncomingRequestInAction))
 	mux.HandleFunc("POST /api/requests/{id}/cancel", authMiddleware.RequireAuth(requestsHandler.CancelAssignedIncomingRequest))
 	mux.HandleFunc("POST /api/requests/{id}/archive", authMiddleware.RequireAuth(requestsHandler.ArchiveIncomingRequest))

@@ -11,7 +11,7 @@ export function UserMenu() {
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/20 px-3 text-sm font-medium text-white transition-colors hover:bg-white/10"
+        className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/20 px-3 text-sm font-medium text-white transition-colors hover:bg-white/10"
       >
         <span className="hidden max-w-40 truncate sm:inline">{customer.name}</span>
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -62,24 +63,37 @@ type incomingRequestItem struct {
 }
 
 type incomingRequest struct {
-	ID                   string                `json:"id"`
-	CustomerID           string                `json:"customerId"`
-	DeliveryDate         string                `json:"deliveryDate"`
-	PlannedReturnDate    string                `json:"plannedReturnDate,omitempty"`
-	IntendedStudents     int                   `json:"intendedStudents"`
-	Status               string                `json:"status"`
-	Archived             bool                  `json:"archived"`
-	OutgoingTrackingCode string                `json:"outgoingTrackingCode,omitempty"`
-	ShippingCustomerName string                `json:"shippingName"`
-	ShippingAddressLine1 string                `json:"addressLine1"`
-	ShippingAddressLine2 string                `json:"addressLine2"`
-	ShippingCity         string                `json:"city"`
-	ShippingZipCode      string                `json:"zipCode"`
-	Note                 string                `json:"note"`
-	CreatedAt            string                `json:"createdAt"`
-	UpdatedAt            string                `json:"updatedAt"`
-	IsFulfillable        bool                  `json:"isFulfillable"`
-	Items                []incomingRequestItem `json:"items"`
+	ID                   string                  `json:"id"`
+	CustomerID           string                  `json:"customerId"`
+	DeliveryDate         string                  `json:"deliveryDate"`
+	PlannedReturnDate    string                  `json:"plannedReturnDate,omitempty"`
+	IntendedStudents     int                     `json:"intendedStudents"`
+	Status               string                  `json:"status"`
+	Archived             bool                    `json:"archived"`
+	OutgoingTrackingCode string                  `json:"outgoingTrackingCode,omitempty"`
+	ShippingCustomerName string                  `json:"shippingName"`
+	ShippingAddressLine1 string                  `json:"addressLine1"`
+	ShippingAddressLine2 string                  `json:"addressLine2"`
+	ShippingCity         string                  `json:"city"`
+	ShippingZipCode      string                  `json:"zipCode"`
+	Note                 string                  `json:"note"`
+	CreatedAt            string                  `json:"createdAt"`
+	UpdatedAt            string                  `json:"updatedAt"`
+	IsFulfillable        bool                    `json:"isFulfillable"`
+	PackagingDraft       *incomingPackagingDraft `json:"packagingDraft,omitempty"`
+	Items                []incomingRequestItem   `json:"items"`
+}
+
+type incomingPackagingDraftItem struct {
+	MaterialTypeID string   `json:"materialTypeId"`
+	Codes          []string `json:"codes"`
+}
+
+type incomingPackagingDraft struct {
+	OutgoingTrackingCode string                       `json:"outgoingTrackingCode,omitempty"`
+	CreatedAt            string                       `json:"createdAt"`
+	UpdatedAt            string                       `json:"updatedAt"`
+	Items                []incomingPackagingDraftItem `json:"items"`
 }
 
 // ListIncomingRequests returns incoming requests from organization backend.
@@ -119,6 +133,21 @@ func (h *RequestsHandler) ListIncomingRequests(w http.ResponseWriter, r *http.Re
 			states[req.ID] = req.Archived
 		}
 		_ = h.store.UpsertRequestArchiveStates(r.Context(), states)
+	}
+
+	requestIDs := make([]string, 0, len(requests))
+	for _, req := range requests {
+		requestIDs = append(requestIDs, req.ID)
+	}
+
+	packagingDrafts := map[string]db.PackagingDraft{}
+	if h.store != nil {
+		drafts, err := h.store.GetPackagingDraftsByRequestIDs(r.Context(), requestIDs)
+		if err != nil {
+			http.Error(w, `{"error":"failed to fetch packaging drafts"}`, http.StatusInternalServerError)
+			return
+		}
+		packagingDrafts = drafts
 	}
 
 	availabilities, err := h.store.GetAvailableCountsByType(r.Context())
@@ -175,7 +204,7 @@ func (h *RequestsHandler) ListIncomingRequests(w http.ResponseWriter, r *http.Re
 			note = strings.TrimSpace(rawNote)
 		}
 
-		resp = append(resp, incomingRequest{
+		responseItem := incomingRequest{
 			ID:                   req.ID,
 			CustomerID:           req.CustomerID,
 			DeliveryDate:         req.DeliveryDate.Format("2006-01-02"),
@@ -194,7 +223,25 @@ func (h *RequestsHandler) ListIncomingRequests(w http.ResponseWriter, r *http.Re
 			UpdatedAt:            req.UpdatedAt.Format(time.RFC3339),
 			IsFulfillable:        isFulfillable,
 			Items:                items,
-		})
+		}
+
+		if draft, ok := packagingDrafts[req.ID]; ok {
+			draftItems := make([]incomingPackagingDraftItem, 0, len(draft.Items))
+			for _, draftItem := range draft.Items {
+				draftItems = append(draftItems, incomingPackagingDraftItem{
+					MaterialTypeID: draftItem.MaterialTypeID,
+					Codes:          draftItem.Codes,
+				})
+			}
+			responseItem.PackagingDraft = &incomingPackagingDraft{
+				OutgoingTrackingCode: draft.OutgoingTrackingCode,
+				CreatedAt:            draft.CreatedAt.Format(time.RFC3339),
+				UpdatedAt:            draft.UpdatedAt.Format(time.RFC3339),
+				Items:                draftItems,
+			}
+		}
+
+		resp = append(resp, responseItem)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -261,6 +308,11 @@ type markInActionBody struct {
 	Items                []packagingItem `json:"items"`
 }
 
+type savePackagingDraftBody struct {
+	OutgoingTrackingCode string          `json:"outgoingTrackingCode"`
+	Items                []packagingItem `json:"items"`
+}
+
 // MarkIncomingRequestInAction marks an approved request as inAction with outgoing tracking code.
 func (h *RequestsHandler) MarkIncomingRequestInAction(w http.ResponseWriter, r *http.Request) {
 	if h.orgClient == nil {
@@ -290,35 +342,12 @@ func (h *RequestsHandler) MarkIncomingRequestInAction(w http.ResponseWriter, r *
 		return
 	}
 
-	// Validate that all provided codes are valid for their material types
-	var instancesToAssign []domain.MaterialInstance
-	if len(body.Items) > 0 && h.store != nil {
-		for _, item := range body.Items {
-			for _, code := range item.Codes {
-				code = strings.ToUpper(strings.TrimSpace(code))
-				if code == "" {
-					continue
-				}
-
-				instance, err := h.store.GetMaterialInstanceByHumanCode(r.Context(), code)
-				if err != nil {
-					if errors.Is(err, sql.ErrNoRows) {
-						http.Error(w, fmt.Sprintf(`{"error":"invalid code '%s': material instance not found"}`, code), http.StatusBadRequest)
-						return
-					}
-					http.Error(w, `{"error":"failed to validate material codes"}`, http.StatusInternalServerError)
-					return
-				}
-
-				if instance.TypeID != item.MaterialTypeID {
-					http.Error(w, fmt.Sprintf(`{"error":"invalid code '%s': does not belong to the expected material type"}`, code), http.StatusBadRequest)
-					return
-				}
-
-				instancesToAssign = append(instancesToAssign, instance)
-			}
-		}
+	normalizedItems, instancesToAssign, err := h.resolvePackagingInstances(r.Context(), requestID, body.Items)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
+	body.Items = normalizedItems
 
 	updated, err := h.orgClient.MarkRequestInAction(r.Context(), requestID, h.distributionCenterID, body.OutgoingTrackingCode)
 	if err != nil {
@@ -327,13 +356,16 @@ func (h *RequestsHandler) MarkIncomingRequestInAction(w http.ResponseWriter, r *
 	}
 
 	// Assign material instances to this request
-	if h.store != nil {
+	if h.store != nil && len(instancesToAssign) > 0 {
+		instanceIDs := make([]string, 0, len(instancesToAssign))
 		for _, instance := range instancesToAssign {
-			if _, err := h.store.AssignToRequest(r.Context(), instance.ID, requestID); err != nil {
-				http.Error(w, fmt.Sprintf(`{"error":"failed to assign material instance '%s' to request"}`, instance.HumanCode), http.StatusInternalServerError)
-				return
-			}
+			instanceIDs = append(instanceIDs, instance.ID)
 		}
+		if err := h.store.SyncReservedInstancesForRequest(r.Context(), requestID, instanceIDs); err != nil {
+			http.Error(w, `{"error":"failed to reserve material instances for request"}`, http.StatusInternalServerError)
+			return
+		}
+		_ = h.store.DeletePackagingDraft(r.Context(), requestID)
 	}
 
 	if h.auditLogger != nil {
@@ -346,6 +378,68 @@ func (h *RequestsHandler) MarkIncomingRequestInAction(w http.ResponseWriter, r *
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(updated)
+}
+
+func (h *RequestsHandler) SavePackagingDraft(w http.ResponseWriter, r *http.Request) {
+	if h.store == nil {
+		http.Error(w, `{"error":"inventory store not configured"}`, http.StatusServiceUnavailable)
+		return
+	}
+
+	requestID := strings.TrimSpace(r.PathValue("id"))
+	if requestID == "" {
+		http.Error(w, `{"error":"request id is required"}`, http.StatusBadRequest)
+		return
+	}
+
+	var body savePackagingDraftBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, `{"error":"invalid json body"}`, http.StatusBadRequest)
+		return
+	}
+
+	normalizedItems, instances, err := h.resolvePackagingInstances(r.Context(), requestID, body.Items)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if len(normalizedItems) == 0 {
+		http.Error(w, `{"error":"at least one packaging item is required"}`, http.StatusBadRequest)
+		return
+	}
+
+	instanceIDs := make([]string, 0, len(instances))
+	for _, instance := range instances {
+		instanceIDs = append(instanceIDs, instance.ID)
+	}
+
+	draft := db.PackagingDraft{
+		RequestID:            requestID,
+		OutgoingTrackingCode: strings.TrimSpace(body.OutgoingTrackingCode),
+		Items:                make([]db.PackagingDraftItem, 0, len(normalizedItems)),
+	}
+	for _, item := range normalizedItems {
+		draft.Items = append(draft.Items, db.PackagingDraftItem{
+			MaterialTypeID: item.MaterialTypeID,
+			Codes:          item.Codes,
+		})
+	}
+
+	if err := h.store.SavePackagingDraft(r.Context(), draft, instanceIDs); err != nil {
+		http.Error(w, `{"error":"failed to save packaging draft"}`, http.StatusInternalServerError)
+		return
+	}
+
+	if h.auditLogger != nil {
+		userCtx, _ := auth.GetUserFromContext(r.Context())
+		_ = h.auditLogger.Log(r.Context(), userCtx.UserID, userCtx.Username, "request.packaging_draft", "request", requestID, map[string]interface{}{
+			"items":                len(draft.Items),
+			"outgoingTrackingCode": draft.OutgoingTrackingCode,
+		}, nil)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]string{"status": "saved"})
 }
 
 // CancelAssignedIncomingRequest reverts approved/inAction request back to pending and clears assignment/tracking.
@@ -369,6 +463,11 @@ func (h *RequestsHandler) CancelAssignedIncomingRequest(w http.ResponseWriter, r
 	if err != nil {
 		http.Error(w, `{"error":"failed to cancel request"}`, http.StatusBadGateway)
 		return
+	}
+
+	if h.store != nil {
+		_ = h.store.SyncReservedInstancesForRequest(r.Context(), requestID, nil)
+		_ = h.store.DeletePackagingDraft(r.Context(), requestID)
 	}
 
 	if h.auditLogger != nil {
@@ -555,4 +654,63 @@ func derefString(input *string) string {
 		return ""
 	}
 	return *input
+}
+
+func (h *RequestsHandler) resolvePackagingInstances(ctx context.Context, requestID string, items []packagingItem) ([]packagingItem, []domain.MaterialInstance, error) {
+	if h.store == nil {
+		return nil, nil, fmt.Errorf(`{"error":"inventory store not configured"}`)
+	}
+
+	normalizedItems := make([]packagingItem, 0, len(items))
+	instances := make([]domain.MaterialInstance, 0)
+	seenCodes := make(map[string]struct{})
+
+	for _, item := range items {
+		materialTypeID := strings.TrimSpace(item.MaterialTypeID)
+		if materialTypeID == "" {
+			continue
+		}
+
+		normalizedCodes := make([]string, 0, len(item.Codes))
+		for _, rawCode := range item.Codes {
+			code := strings.ToUpper(strings.TrimSpace(rawCode))
+			if code == "" {
+				continue
+			}
+			if _, exists := seenCodes[code]; exists {
+				return nil, nil, fmt.Errorf(`{"error":"duplicate code '%s' in packaging draft"}`, code)
+			}
+			seenCodes[code] = struct{}{}
+
+			instance, err := h.store.GetMaterialInstanceByHumanCode(ctx, code)
+			if err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					return nil, nil, fmt.Errorf(`{"error":"invalid code '%s': material instance not found"}`, code)
+				}
+				return nil, nil, fmt.Errorf(`{"error":"failed to validate material codes"}`)
+			}
+
+			if instance.TypeID != materialTypeID {
+				return nil, nil, fmt.Errorf(`{"error":"invalid code '%s': does not belong to the expected material type"}`, code)
+			}
+
+			if instance.Status != domain.StatusAvailable && !(instance.CurrentRequestID != nil && *instance.CurrentRequestID == requestID) {
+				return nil, nil, fmt.Errorf(`{"error":"invalid code '%s': material instance is no longer available"}`, code)
+			}
+
+			normalizedCodes = append(normalizedCodes, code)
+			instances = append(instances, instance)
+		}
+
+		if len(normalizedCodes) == 0 {
+			continue
+		}
+
+		normalizedItems = append(normalizedItems, packagingItem{
+			MaterialTypeID: materialTypeID,
+			Codes:          normalizedCodes,
+		})
+	}
+
+	return normalizedItems, instances, nil
 }

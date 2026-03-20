@@ -48,6 +48,23 @@ class ApiService {
     return response.json();
   }
 
+  async listAvailableMaterialInstances(typeId: string, limit = 100): Promise<MaterialInstance[]> {
+    const query = new URLSearchParams();
+    query.set('typeId', typeId);
+    query.set('limit', String(limit));
+
+    const response = await fetch(`${API_BASE}/api/inventory/available?${query.toString()}`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(error.error || 'Failed to load available material instances');
+    }
+
+    return response.json();
+  }
+
   async listIncomingRequests(status: RequestStatus | '' = 'pending', archived = false): Promise<IncomingRequest[]> {
     const query = new URLSearchParams();
     if (status) query.set('status', status);
@@ -100,6 +117,23 @@ class ApiService {
 
     const data: IncomingRequest = await response.json();
     return normalizeIncomingRequest(data);
+  }
+
+  async saveIncomingRequestPackagingDraft(
+    requestID: string,
+    outgoingTrackingCode: string,
+    items: Array<{ materialTypeId: string; codes: string[] }>
+  ): Promise<void> {
+    const response = await fetch(`${API_BASE}/api/requests/${encodeURIComponent(requestID)}/packaging-draft`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ outgoingTrackingCode, items }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(error.error || 'Failed to save packaging draft');
+    }
   }
 
   async cancelIncomingRequest(requestID: string): Promise<IncomingRequest> {
@@ -437,6 +471,18 @@ export interface IncomingRequestItem {
   isFulfillable: boolean;
 }
 
+export interface IncomingRequestPackagingDraftItem {
+  materialTypeId: string;
+  codes: string[];
+}
+
+export interface IncomingRequestPackagingDraft {
+  outgoingTrackingCode?: string;
+  createdAt: string;
+  updatedAt: string;
+  items: IncomingRequestPackagingDraftItem[];
+}
+
 export interface IncomingRequest {
   id: string;
   customerId: string;
@@ -455,5 +501,6 @@ export interface IncomingRequest {
   createdAt: string;
   updatedAt: string;
   isFulfillable: boolean;
+  packagingDraft?: IncomingRequestPackagingDraft;
   items: IncomingRequestItem[];
 }

@@ -1,5 +1,6 @@
 import Router from 'preact-router';
 import type { RoutableProps } from 'preact-router';
+import { useState } from 'preact/hooks';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Header } from '@/components/Header';
@@ -24,6 +25,7 @@ const LoginPageWrapper = (_props: RoutableProps) => <LoginPage />;
 
 function AppContent() {
   const { isAuthenticated, isLoading } = useAuth();
+  const [currentPath, setCurrentPath] = useState(() => window.location.pathname);
 
   if (isLoading) {
     return (
@@ -38,9 +40,9 @@ function AppContent() {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
-      {isAuthenticated && <Header />}
+      {isAuthenticated && <Header currentPath={currentPath} />}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Router>
+        <Router onChange={({ url }: { url: string }) => setCurrentPath(url.split('?')[0])}>
           <LoginPageWrapper path="/login" />
           <MaterialTypesPageWrapper path="/" />
           <MaterialTypesPageWrapper path="/material-types" />
