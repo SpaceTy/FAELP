@@ -10,6 +10,7 @@ export interface Request {
   plannedReturnDate?: string;
   intendedStudents: number;
   status: 'pending' | 'approved' | 'inAction' | 'returned' | 'cancelled';
+  archived: boolean;
   outgoingTrackingCode?: string;
   shippingName: string;
   addressLine1: string;

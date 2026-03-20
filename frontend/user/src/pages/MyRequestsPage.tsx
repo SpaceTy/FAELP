@@ -110,12 +110,154 @@ function MaterialCarousel({ items, materialsById }: MaterialCarouselProps) {
   );
 }
 
+interface RequestCardProps {
+  request: Request;
+  materialsById: Map<string, Material>;
+  cancellingRequestIds: Set<string>;
+  onCancelRequest: (requestId: string) => void;
+  canCancelRequest: (status: Request['status']) => boolean;
+  getStatusConfig: (status: Request['status']) => {
+    label: string;
+    className: string;
+    dotClassName: string;
+  };
+  formatDate: (dateString: string) => string;
+}
+
+function RequestCard({
+  request,
+  materialsById,
+  cancellingRequestIds,
+  onCancelRequest,
+  canCancelRequest,
+  getStatusConfig,
+  formatDate,
+}: RequestCardProps) {
+  const status = getStatusConfig(request.status);
+  const totalItems = request.items.reduce((sum, item) => sum + item.quantity, 0);
+
+  return (
+    <div className="bg-white border border-slate-200 rounded-lg hover:border-slate-300 transition-colors">
+      <div className="px-6 py-4 border-b border-slate-100">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${status.className}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${status.dotClassName}`}></span>
+              {status.label}
+            </span>
+            {request.archived && (
+              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border border-slate-200 bg-slate-50 text-slate-600">
+                Archiviert
+              </span>
+            )}
+            <span className="text-slate-400 text-sm">#{request.id.slice(0, 8)}</span>
+          </div>
+          <div className="text-right">
+            <p className="text-xs text-slate-500 mb-0.5">Eingegangen</p>
+            <p className="text-sm font-medium text-slate-900">{formatDate(request.createdAt)}</p>
+            {canCancelRequest(request.status) && !request.archived && (
+              <button
+                type="button"
+                onClick={() => onCancelRequest(request.id)}
+                disabled={cancellingRequestIds.has(request.id)}
+                className="mt-2 inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium border border-rose-200 text-rose-700 bg-rose-50 hover:bg-rose-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {cancellingRequestIds.has(request.id) ? 'Storniere...' : 'Anfrage stornieren'}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="px-6 py-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <h4 className="text-xs font-semibold text-slate-900 uppercase tracking-wider mb-3">
+              Lieferung
+            </h4>
+            <div className="space-y-2">
+              <div className="flex items-start gap-2">
+                <svg className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <div>
+                  <p className="text-xs text-slate-500">Lieferdatum</p>
+                  <p className="text-sm text-slate-900">{formatDate(request.deliveryDate)}</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <svg className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <div>
+                  <p className="text-xs text-slate-500">Geplante Rückgabe</p>
+                  <p className="text-sm text-slate-900">
+                    {request.plannedReturnDate ? formatDate(request.plannedReturnDate) : 'Nicht angegeben'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <svg className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5V4H2v16h5m10 0v-3a3 3 0 10-6 0v3m6 0H11" />
+                </svg>
+                <div>
+                  <p className="text-xs text-slate-500">Geplante Schüler:innen</p>
+                  <p className="text-sm text-slate-900">{request.intendedStudents}</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <svg className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <div>
+                  <p className="text-xs text-slate-500">Lieferadresse</p>
+                  <p className="text-sm text-slate-900">{request.shippingName}</p>
+                  <p className="text-sm text-slate-600">{request.addressLine1}</p>
+                  {request.addressLine2 && (
+                    <p className="text-sm text-slate-600">{request.addressLine2}</p>
+                  )}
+                  <p className="text-sm text-slate-600">{request.zipCode} {request.city}</p>
+                </div>
+              </div>
+              {request.outgoingTrackingCode && (
+                <div className="flex items-start gap-2">
+                  <svg className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5h6m-7 4h8m-9 4h10m-9 4h8" />
+                  </svg>
+                  <div>
+                    <p className="text-xs text-slate-500">DHL Tracking</p>
+                    <p className="text-sm text-slate-900 font-mono">{request.outgoingTrackingCode}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-xs font-semibold text-slate-900 uppercase tracking-wider">
+                Materialien
+              </h4>
+              <span className="text-xs text-slate-500">
+                {totalItems} {totalItems === 1 ? 'Artikel' : 'Artikel'}
+              </span>
+            </div>
+            <MaterialCarousel items={request.items} materialsById={materialsById} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function MyRequestsPage() {
   const [requests, setRequests] = useState<Request[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [cancellingRequestIds, setCancellingRequestIds] = useState<Set<string>>(new Set());
+  const [showArchivedRequests, setShowArchivedRequests] = useState(false);
   const { materialsById } = useMaterialTypes();
 
   const fetchRequests = useCallback(async (backgroundRefresh = false) => {
@@ -229,6 +371,9 @@ export function MyRequestsPage() {
     }
   };
 
+  const activeRequests = requests.filter((request) => !request.archived);
+  const archivedRequests = requests.filter((request) => request.archived);
+
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center p-6">
@@ -255,7 +400,7 @@ export function MyRequestsPage() {
         <div className="mb-8">
           <h1 className="text-2xl font-semibold text-slate-900 mb-1">Meine Anfragen</h1>
           <p className="text-slate-500 text-sm">
-            Übersicht über alle Ihre Materialanfragen und deren Status
+            Übersicht über Ihre aktuellen Materialanfragen und deren Status
           </p>
           {cancelError && (
             <div className="mt-3 bg-red-50 border border-red-200 rounded-lg p-3">
@@ -281,127 +426,78 @@ export function MyRequestsPage() {
             </a>
           </div>
         ) : (
-          <div className="space-y-4">
-            {requests.map((request) => {
-              const status = getStatusConfig(request.status);
-              const totalItems = request.items.reduce((sum, item) => sum + item.quantity, 0);
-
-              return (
-                <div
-                  key={request.id}
-                  className="bg-white border border-slate-200 rounded-lg hover:border-slate-300 transition-colors"
-                >
-                  {/* Header */}
-                  <div className="px-6 py-4 border-b border-slate-100">
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${status.className}`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${status.dotClassName}`}></span>
-                          {status.label}
-                        </span>
-                        <span className="text-slate-400 text-sm">#{request.id.slice(0, 8)}</span>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs text-slate-500 mb-0.5">Eingegangen</p>
-                        <p className="text-sm font-medium text-slate-900">{formatDate(request.createdAt)}</p>
-                        {canCancelRequest(request.status) && (
-                          <button
-                            type="button"
-                            onClick={() => handleCancelRequest(request.id)}
-                            disabled={cancellingRequestIds.has(request.id)}
-                            className="mt-2 inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium border border-rose-200 text-rose-700 bg-rose-50 hover:bg-rose-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {cancellingRequestIds.has(request.id) ? 'Storniere...' : 'Anfrage stornieren'}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Content */}
-                  <div className="px-6 py-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* Delivery Info */}
-                      <div>
-                        <h4 className="text-xs font-semibold text-slate-900 uppercase tracking-wider mb-3">
-                          Lieferung
-                        </h4>
-                        <div className="space-y-2">
-                          <div className="flex items-start gap-2">
-                            <svg className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                            <div>
-                              <p className="text-xs text-slate-500">Lieferdatum</p>
-                              <p className="text-sm text-slate-900">{formatDate(request.deliveryDate)}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-2">
-                            <svg className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                            <div>
-                              <p className="text-xs text-slate-500">Geplante Rückgabe</p>
-                              <p className="text-sm text-slate-900">
-                                {request.plannedReturnDate ? formatDate(request.plannedReturnDate) : 'Nicht angegeben'}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-2">
-                            <svg className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5V4H2v16h5m10 0v-3a3 3 0 10-6 0v3m6 0H11" />
-                            </svg>
-                            <div>
-                              <p className="text-xs text-slate-500">Geplante Schüler:innen</p>
-                              <p className="text-sm text-slate-900">{request.intendedStudents}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-2">
-                            <svg className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                            </svg>
-                            <div>
-                              <p className="text-xs text-slate-500">Lieferadresse</p>
-                              <p className="text-sm text-slate-900">{request.shippingName}</p>
-                              <p className="text-sm text-slate-600">{request.addressLine1}</p>
-                              {request.addressLine2 && (
-                                <p className="text-sm text-slate-600">{request.addressLine2}</p>
-                              )}
-                              <p className="text-sm text-slate-600">{request.zipCode} {request.city}</p>
-                            </div>
-                          </div>
-                          {request.outgoingTrackingCode && (
-                            <div className="flex items-start gap-2">
-                              <svg className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5h6m-7 4h8m-9 4h10m-9 4h8" />
-                              </svg>
-                              <div>
-                                <p className="text-xs text-slate-500">DHL Tracking</p>
-                                <p className="text-sm text-slate-900 font-mono">{request.outgoingTrackingCode}</p>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Materials Carousel */}
-                      <div>
-                        <div className="flex items-center justify-between mb-3">
-                          <h4 className="text-xs font-semibold text-slate-900 uppercase tracking-wider">
-                            Materialien
-                          </h4>
-                          <span className="text-xs text-slate-500">
-                            {totalItems} {totalItems === 1 ? 'Artikel' : 'Artikel'}
-                          </span>
-                        </div>
-                        <MaterialCarousel items={request.items} materialsById={materialsById} />
-                      </div>
-                    </div>
-                  </div>
+          <div className="space-y-6">
+            {activeRequests.length === 0 ? (
+              <div className="bg-white border border-slate-200 rounded-lg p-8 text-center">
+                <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
                 </div>
-              );
-            })}
+                <h3 className="text-base font-medium text-slate-900 mb-1">Keine aktiven Anfragen</h3>
+                <p className="text-slate-500 text-sm">Ihre archivierten Anfragen finden Sie weiter unten.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {activeRequests.map((request) => (
+                  <RequestCard
+                    key={request.id}
+                    request={request}
+                    materialsById={materialsById}
+                    cancellingRequestIds={cancellingRequestIds}
+                    onCancelRequest={handleCancelRequest}
+                    canCancelRequest={canCancelRequest}
+                    getStatusConfig={getStatusConfig}
+                    formatDate={formatDate}
+                  />
+                ))}
+              </div>
+            )}
+
+            {archivedRequests.length > 0 && (
+              <section className="bg-slate-50 border border-slate-200 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => setShowArchivedRequests((prev) => !prev)}
+                  className="w-full px-5 py-4 flex items-center justify-between gap-4 text-left"
+                  aria-expanded={showArchivedRequests}
+                >
+                  <div>
+                    <h2 className="text-sm font-semibold text-slate-900">Archivierte Anfragen</h2>
+                    <p className="text-xs text-slate-500 mt-1">
+                      {archivedRequests.length} {archivedRequests.length === 1 ? 'Eintrag' : 'Einträge'}
+                    </p>
+                  </div>
+                  <svg
+                    className={`w-5 h-5 text-slate-500 transition-transform ${showArchivedRequests ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {showArchivedRequests && (
+                  <div className="px-4 pb-4 border-t border-slate-200">
+                    <div className="space-y-4 pt-4">
+                      {archivedRequests.map((request) => (
+                        <RequestCard
+                          key={request.id}
+                          request={request}
+                          materialsById={materialsById}
+                          cancellingRequestIds={cancellingRequestIds}
+                          onCancelRequest={handleCancelRequest}
+                          canCancelRequest={canCancelRequest}
+                          getStatusConfig={getStatusConfig}
+                          formatDate={formatDate}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </section>
+            )}
           </div>
         )}
       </div>
