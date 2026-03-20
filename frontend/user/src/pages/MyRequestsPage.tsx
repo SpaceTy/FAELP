@@ -165,7 +165,7 @@ export function MyRequestsPage() {
         };
       case 'approved':
         return {
-          label: 'Freigegeben',
+          label: 'Angenommen',
           className: 'bg-emerald-50 text-emerald-700 border-emerald-200',
           dotClassName: 'bg-emerald-500'
         };
