@@ -3,9 +3,15 @@ import { useAuth } from '@/context/AuthContext';
 
 export function Header() {
   const { isAuthenticated, logout, customer } = useAuth();
+  const currentPath = window.location.pathname;
   const [isDark, setIsDark] = useState(
     document.documentElement.classList.contains('dark')
   );
+
+  const navItems = [
+    { href: '/', label: 'Materialtypen' },
+    { href: '/distribution-centers', label: 'Vertriebszentren' },
+  ];
 
   const toggleDark = () => {
     const next = !isDark;
@@ -14,41 +20,51 @@ export function Header() {
     localStorage.setItem('theme', next ? 'dark' : 'light');
   };
 
+  const isActive = (path: string) => {
+    if (path === '/') {
+      return currentPath === '/' || currentPath === '/material-types';
+    }
+    return currentPath === path;
+  };
+
   return (
-    <header className="bg-secondary text-white shadow-md flex-shrink-0 z-50">
-      <div className="flex items-center justify-between px-6 py-4 gap-8">
-        <div className="flex-shrink-0">
-          <a href="/" className="text-decoration-none">
-            <h1 className="text-2xl font-bold text-primary">EHALP</h1>
-            <p className="text-xs text-gray-300">Verwaltung</p>
+    <header className="bg-secondary font-sans text-white shadow-md flex-shrink-0 z-50">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-4 px-6 py-4">
+        <div className="min-w-0 flex-shrink-0">
+          <a href="/" className="block no-underline">
+            <h1 className="text-[1.75rem] font-bold leading-none tracking-tight text-primary">EHALP</h1>
+            <p className="mt-1 hidden text-xs font-medium tracking-[0.08em] text-slate-300 sm:block">
+              Verwaltung
+            </p>
           </a>
         </div>
 
-        <nav className="flex-1 flex gap-2">
-          <a
-            href="/"
-            className="px-4 py-2 rounded transition-colors hover:bg-secondary-hover"
-          >
-            Materialtypen
-          </a>
-          <a
-            href="/distribution-centers"
-            className="px-4 py-2 rounded transition-colors hover:bg-secondary-hover"
-          >
-            Vertriebszentren
-          </a>
+        <nav className="order-3 flex basis-full flex-wrap gap-2 md:order-2 md:basis-auto md:flex-1">
+          {navItems.map((item) => (
+            <a
+              key={item.href}
+              href={item.href}
+              className={`inline-flex h-10 items-center rounded-lg px-4 text-sm font-medium transition-colors ${
+                isActive(item.href)
+                  ? 'bg-primary text-secondary'
+                  : 'text-slate-100 hover:bg-secondary-hover'
+              }`}
+            >
+              {item.label}
+            </a>
+          ))}
         </nav>
 
-        <div className="flex items-center gap-4">
+        <div className="ml-auto flex items-center gap-3">
           {isAuthenticated && customer && (
-            <span className="text-sm text-gray-300">
-              {customer.name}
-            </span>
+            <div className="hidden text-right lg:block">
+              <div className="text-sm font-medium text-white">{customer.name}</div>
+            </div>
           )}
           {isAuthenticated && (
             <button
               onClick={logout}
-              className="px-4 py-2 border border-white rounded hover:bg-white/10 transition-colors"
+              className="inline-flex h-10 items-center rounded-lg border border-white/20 px-4 text-sm font-medium text-white transition-colors hover:bg-white/10"
             >
               Abmelden
             </button>
@@ -56,7 +72,7 @@ export function Header() {
           <button
             onClick={toggleDark}
             title={isDark ? 'Hellmodus' : 'Dunkelmodus'}
-            className="p-2 rounded transition-colors text-gray-400 hover:text-white hover:bg-white/10"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
           >
             {isDark ? (
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

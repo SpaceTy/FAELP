@@ -11,9 +11,9 @@ export function UserMenu() {
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center space-x-2 text-white hover:text-gray-200"
+        className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/20 px-3 text-sm font-medium text-white transition-colors hover:bg-white/10"
       >
-        <span className="hidden md:inline">{customer.name}</span>
+        <span className="hidden max-w-40 truncate sm:inline">{customer.name}</span>
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
@@ -22,8 +22,8 @@ export function UserMenu() {
       {isOpen && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
-          <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-20">
-            <div className="px-4 py-2 border-b border-gray-100">
+          <div className="absolute right-0 z-20 mt-2 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-xl">
+            <div className="border-b border-gray-100 px-4 py-2">
               <p className="text-sm font-medium text-text-primary">{customer.name}</p>
               <p className="text-xs text-text-secondary truncate">{customer.email}</p>
             </div>

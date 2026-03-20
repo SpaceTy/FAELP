@@ -11,6 +11,13 @@ export function Header({ currentPath }: HeaderProps) {
     document.documentElement.classList.contains('dark')
   );
 
+  const navItems = [
+    { href: '/requests', label: 'Incoming Requests' },
+    { href: '/packaging', label: 'Packaging' },
+    { href: '/returns', label: 'Returns' },
+    { href: '/inventory', label: 'Inventory' },
+  ];
+
   const toggleDark = () => {
     const next = !isDark;
     setIsDark(next);
@@ -26,49 +33,50 @@ export function Header({ currentPath }: HeaderProps) {
   };
 
   return (
-    <header className="header">
-      <div className="header-container">
-        <div className="logo">
-          <h1>EHALP</h1>
-          <p className="tagline">Logistics Portal</p>
+    <header className="bg-secondary font-sans text-white shadow-md flex-shrink-0 z-50">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-4 px-6 py-4">
+        <div className="min-w-0 flex-shrink-0">
+          <a href="/requests" className="block no-underline">
+            <h1 className="text-[1.75rem] font-bold leading-none tracking-tight text-primary">EHALP</h1>
+            <p className="mt-1 hidden text-xs font-medium tracking-[0.08em] text-slate-300 sm:block">
+              Logistics Portal
+            </p>
+          </a>
         </div>
-        <nav className="main-nav">
-          <a
-            href="/requests"
-            className={`nav-link ${isActive('/requests') ? 'active' : ''}`}
-          >
-            Incoming Requests
-          </a>
-          <a
-            href="/packaging"
-            className={`nav-link ${isActive('/packaging') ? 'active' : ''}`}
-          >
-            Packaging
-          </a>
-          <a
-            href="/returns"
-            className={`nav-link ${isActive('/returns') ? 'active' : ''}`}
-          >
-            Returns
-          </a>
-          <a
-            href="/inventory"
-            className={`nav-link ${isActive('/inventory') ? 'active' : ''}`}
-          >
-            Inventory
-          </a>
+
+        <nav className="order-3 flex basis-full flex-wrap gap-2 md:order-2 md:basis-auto md:flex-1">
+          {navItems.map((item) => (
+            <a
+              key={item.href}
+              href={item.href}
+              className={`inline-flex h-10 items-center rounded-lg px-4 text-sm font-medium transition-colors ${
+                isActive(item.href)
+                  ? 'bg-primary text-secondary'
+                  : 'text-slate-100 hover:bg-secondary-hover'
+              }`}
+            >
+              {item.label}
+            </a>
+          ))}
         </nav>
-        <div className="header-actions">
-          <span className="user-info">{user?.username || 'User'} (Logistics)</span>
-          <button className="btn-secondary" onClick={logout}>
+
+        <div className="ml-auto flex items-center gap-3">
+          <div className="hidden text-right lg:block">
+            <div className="text-sm font-medium text-white">{user?.username || 'User'}</div>
+            <div className="mt-1 text-xs font-medium tracking-[0.08em] text-slate-300">
+              Logistics
+            </div>
+          </div>
+          <button
+            className="inline-flex h-10 items-center rounded-lg border border-white/20 px-4 text-sm font-medium text-white transition-colors hover:bg-white/10"
+            onClick={logout}
+          >
             Logout
           </button>
           <button
             onClick={toggleDark}
             title={isDark ? 'Light mode' : 'Dark mode'}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.5rem', color: '#a0aec0', display: 'flex', alignItems: 'center' }}
-            onMouseEnter={e => (e.currentTarget.style.color = '#fff')}
-            onMouseLeave={e => (e.currentTarget.style.color = '#a0aec0')}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
           >
             {isDark ? (
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
