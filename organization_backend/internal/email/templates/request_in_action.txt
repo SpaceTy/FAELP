@@ -1,9 +1,11 @@
-Dear {{.CustomerName}},
+Hallo {{.CustomerName}},
 
-Good news! Your material request (#{{.RequestID}}) has been shipped and is now in action.
+Ihre Materialanfrage (#{{.RequestID}}) wurde vom Verteilzentrum bearbeitet und an Sie versendet.
 
-Tracking Code: {{.TrackingCode}}
+Sie können die Sendung mit der DHL-Sendungsnummer oder Link verfolgen.
 
-Track your package: {{.TrackingURL}}
+DHL-Sendungsnummer: {{.TrackingCode}}
 
-Thank you for using FAELP.
+Sendung verfolgen: {{.TrackingURL}}
+
+Vielen Dank, dass Sie die Erste Hilfe Ausbildungslogistik Platform nutzen.

@@ -4,11 +4,12 @@
   <meta charset="utf-8">
 </head>
 <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <h2 style="color: #333;">Your Material Request is Being Processed</h2>
-  <p>Dear {{.CustomerName}},</p>
-  <p>Good news! Your material request (#{{.RequestID}}) has been shipped and is now in action.</p>
-  <p><strong>Tracking Code:</strong> {{.TrackingCode}}</p>
-  <p>Track your package: <a href="{{.TrackingURL}}">{{.TrackingURL}}</a></p>
-  <p>Thank you for using FAELP.</p>
+  <h2 style="color: #333;">Ihre Materialanfrage wurde versendet</h2>
+  <p>Hallo {{.CustomerName}},</p>
+  <p>Ihre Materialanfrage (<strong>#{{.RequestID}}</strong>) wurde vom Verteilzentrum bearbeitet und an Sie versendet.</p>
+  <p>Sie können die Sendung mit der DHL-Sendungsnummer oder Link verfolgen.</p>
+  <p><strong>DHL-Sendungsnummer:</strong> {{.TrackingCode}}</p>
+  <p>Sendung verfolgen: <a href="{{.TrackingURL}}">{{.TrackingURL}}</a></p>
+  <p>Vielen Dank, dass Sie die Erste Hilfe Ausbildungslogistik Platform nutzen.</p>
 </body>
 </html>

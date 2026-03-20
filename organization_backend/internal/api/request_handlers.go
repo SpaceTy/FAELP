@@ -446,12 +446,6 @@ func (h *RequestHandler) CancelAssignedRequestForDistribution(w http.ResponseWri
 		return
 	}
 
-	previousStatus := ""
-	statusRow := h.Store.GetRequestStatus(r.Context(), requestID)
-	if statusRow != "" {
-		previousStatus = statusRow
-	}
-
 	updated, err := h.Store.CancelAssignedRequest(r.Context(), requestID, req.DistributionCenterID)
 	if err != nil {
 		switch {
@@ -465,10 +459,6 @@ func (h *RequestHandler) CancelAssignedRequestForDistribution(w http.ResponseWri
 			writeError(w, http.StatusInternalServerError, "update_failed", "Failed to cancel request")
 		}
 		return
-	}
-
-	if h.EmailService != nil && updated.CustomerID != "" && previousStatus == "inAction" {
-		h.sendStatusNotificationAsync(updated, previousStatus, "pending", "")
 	}
 
 	writeJSON(w, http.StatusOK, updated)
@@ -506,6 +496,10 @@ func (h *RequestHandler) ArchiveRequestForDistribution(w http.ResponseWriter, r 
 			writeError(w, http.StatusInternalServerError, "update_failed", "Failed to archive request")
 		}
 		return
+	}
+
+	if h.EmailService != nil && updated.CustomerID != "" && updated.Status != "inAction" {
+		h.sendStatusNotificationAsync(updated, updated.Status, "cancelled", "")
 	}
 
 	writeJSON(w, http.StatusOK, updated)

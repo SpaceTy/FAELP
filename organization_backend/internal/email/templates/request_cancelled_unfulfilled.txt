@@ -1,0 +1,9 @@
+Hallo {{.CustomerName}},
+
+Ihre Materialanfrage (#{{.RequestID}}) konnte leider nicht erfüllt werden.
+
+Die Anfrage wurde deshalb storniert und wird nicht weiter bearbeitet.
+
+Falls Sie die Materialien weiterhin benötigen, stellen Sie bitte eine neue Anfrage.
+
+Vielen Dank, dass Sie die Erste Hilfe Ausbildungslogistik Platform nutzen.
