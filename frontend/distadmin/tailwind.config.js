@@ -8,8 +8,8 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: '#48bb78',
-        'primary-hover': '#38a169',
+        primary: 'rgb(var(--accent-primary) / <alpha-value>)',
+        'primary-hover': 'rgb(var(--accent-primary-hover) / <alpha-value>)',
         secondary: '#1a365d',
         'secondary-hover': '#2d4a77',
         background: '#f0f2f5',
@@ -17,8 +17,8 @@ export default {
         'text-secondary': '#4a5568',
         // Logistics aliases
         'logistics-header': '#1a365d',
-        'logistics-accent': '#48bb78',
-        'logistics-accent-hover': '#38a169',
+        'logistics-accent': 'rgb(var(--accent-primary) / <alpha-value>)',
+        'logistics-accent-hover': 'rgb(var(--accent-primary-hover) / <alpha-value>)',
         'logistics-secondary': '#2d4a77',
       }
     },

@@ -8,11 +8,11 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: '#48bb78',
-        'primary-hover': '#38a169',
-        secondary: '#1a365d',
-        'secondary-hover': '#2d4a77',
-        background: '#f0f2f5',
+        primary: 'rgb(var(--accent-primary) / <alpha-value>)',
+        'primary-hover': 'rgb(var(--accent-primary-hover) / <alpha-value>)',
+        secondary: '#232f3e',
+        'secondary-hover': '#37475a',
+        background: '#f5f5f5',
         'text-primary': '#1f2937',
         'text-secondary': '#4a5568',
       }

@@ -8,8 +8,8 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: '#48bb78',
-        'primary-hover': '#38a169',
+        primary: 'rgb(var(--accent-primary) / <alpha-value>)',
+        'primary-hover': 'rgb(var(--accent-primary-hover) / <alpha-value>)',
         secondary: '#1a365d',
         'secondary-hover': '#2d4a77',
         background: '#f0f2f5',
