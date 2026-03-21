@@ -32,9 +32,6 @@ export function UserMenu() {
                 </p>
               )}
             </div>
-            <a href="/profile" className="block px-4 py-2 text-sm text-text-primary hover:bg-gray-100">
-              Profil
-            </a>
             <button
               onClick={() => { logout(); window.location.href = '/'; }}
               className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
