@@ -63,6 +63,7 @@ func Routes(handler *Handler, authHandler *AuthHandler, userHandler *UserHandler
 			r.Get("/", userHandler.ListUsers)
 			r.Post("/import", userHandler.ImportVerifiedUsers)
 			r.Post("/{id}/verify", userHandler.VerifyUser)
+			r.Post("/{id}/unverify", userHandler.UnverifyUser)
 		})
 
 		// Requests routes (verified users)

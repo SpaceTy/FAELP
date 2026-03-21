@@ -32,7 +32,7 @@ export function UsersPage() {
   const [importText, setImportText] = useState('');
   const [importFile, setImportFile] = useState<File | null>(null);
   const [isImporting, setIsImporting] = useState(false);
-  const [verifyingUserId, setVerifyingUserId] = useState<string | null>(null);
+  const [mutatingUserId, setMutatingUserId] = useState<string | null>(null);
 
   const loadUsers = async () => {
     setIsLoading(true);
@@ -52,7 +52,7 @@ export function UsersPage() {
   }, []);
 
   const handleVerify = async (userId: string) => {
-    setVerifyingUserId(userId);
+    setMutatingUserId(userId);
     setError('');
     setSuccess('');
     try {
@@ -62,7 +62,22 @@ export function UsersPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Benutzer konnte nicht verifiziert werden');
     } finally {
-      setVerifyingUserId(null);
+      setMutatingUserId(null);
+    }
+  };
+
+  const handleUnverify = async (userId: string) => {
+    setMutatingUserId(userId);
+    setError('');
+    setSuccess('');
+    try {
+      const updatedUser = await userService.unverifyUser(userId);
+      setUsers((prev) => prev.map((user) => (user.id === userId ? updatedUser : user)));
+      setSuccess(`Benutzer ${updatedUser.email} wurde auf unverifiziert gesetzt.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Benutzer konnte nicht auf unverifiziert gesetzt werden');
+    } finally {
+      setMutatingUserId(null);
     }
   };
 
@@ -260,13 +275,23 @@ export function UsersPage() {
                       {formatDate(user.createdAt)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button
-                        onClick={() => handleVerify(user.id)}
-                        disabled={user.emailVerified || verifyingUserId === user.id}
-                        className="text-primary hover:text-primary-hover disabled:text-gray-400"
-                      >
-                        {verifyingUserId === user.id ? 'Verifiziere...' : 'Verifizieren'}
-                      </button>
+                      {user.emailVerified ? (
+                        <button
+                          onClick={() => handleUnverify(user.id)}
+                          disabled={mutatingUserId === user.id}
+                          className="text-amber-600 hover:text-amber-700 disabled:text-gray-400"
+                        >
+                          {mutatingUserId === user.id ? 'Aktualisiere...' : 'Unverify'}
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleVerify(user.id)}
+                          disabled={mutatingUserId === user.id}
+                          className="text-primary hover:text-primary-hover disabled:text-gray-400"
+                        >
+                          {mutatingUserId === user.id ? 'Aktualisiere...' : 'Verifizieren'}
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}

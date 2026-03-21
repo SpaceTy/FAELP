@@ -299,6 +299,45 @@ func (s *Store) VerifyUserByID(ctx context.Context, id string) (domain.Customer,
 	return existing, !wasVerified, nil
 }
 
+func (s *Store) UnverifyUserByID(ctx context.Context, id string) (domain.Customer, bool, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return domain.Customer{}, false, err
+	}
+	defer tx.Rollback()
+
+	var existing domain.Customer
+	err = scanCustomer(tx.QueryRowContext(ctx, `
+		SELECT id, email, name, token, workos_user_id, email_verified, is_admin, created_at
+		FROM users
+		WHERE id = $1
+	`, id), &existing)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return domain.Customer{}, false, ErrUserNotFound
+		}
+		return domain.Customer{}, false, err
+	}
+
+	wasVerified := existing.EmailVerified
+	if existing.EmailVerified {
+		err = scanCustomer(tx.QueryRowContext(ctx, `
+			UPDATE users
+			SET email_verified = false
+			WHERE id = $1
+			RETURNING id, email, name, token, workos_user_id, email_verified, is_admin, created_at
+		`, id), &existing)
+		if err != nil {
+			return domain.Customer{}, false, err
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return domain.Customer{}, false, err
+	}
+	return existing, wasVerified, nil
+}
+
 func (s *Store) BulkVerifyUsers(ctx context.Context, emails []string) (BulkVerifyUsersResult, error) {
 	seen := make(map[string]struct{}, len(emails))
 	normalizedEmails := make([]string, 0, len(emails))

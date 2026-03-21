@@ -59,6 +59,30 @@ func (h *UserHandler) VerifyUser(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (h *UserHandler) UnverifyUser(w http.ResponseWriter, r *http.Request) {
+	userID := chi.URLParam(r, "id")
+	if strings.TrimSpace(userID) == "" {
+		writeError(w, http.StatusBadRequest, "missing_user_id", "User ID is required")
+		return
+	}
+
+	user, changed, err := h.Store.UnverifyUserByID(r.Context(), userID)
+	if err != nil {
+		switch err {
+		case db.ErrUserNotFound:
+			writeError(w, http.StatusNotFound, "user_not_found", "User not found")
+		default:
+			writeError(w, http.StatusInternalServerError, "unverify_failed", "Failed to unverify user")
+		}
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"user":    user,
+		"changed": changed,
+	})
+}
+
 func (h *UserHandler) ImportVerifiedUsers(w http.ResponseWriter, r *http.Request) {
 	emails, err := extractImportedEmails(r)
 	if err != nil {

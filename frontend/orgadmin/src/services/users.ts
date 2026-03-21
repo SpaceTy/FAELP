@@ -40,6 +40,19 @@ class UserService {
     return data.user;
   }
 
+  async unverifyUser(userId: string): Promise<UserRecord> {
+    const response = await fetch(`${API_BASE}/users/${userId}/unverify`, {
+      method: 'POST',
+      headers: getAuthHeaders(false),
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+      throw new Error(error.message || 'Failed to unverify user');
+    }
+    const data = await response.json();
+    return data.user;
+  }
+
   async importUsers(input: { emailsText?: string; file?: File | null }): Promise<UserImportResult> {
     let response: Response;
 
