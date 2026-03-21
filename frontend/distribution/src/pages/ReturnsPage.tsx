@@ -647,7 +647,7 @@ export function ReturnsPage() {
                       const inspectedInGroup = group.units.filter((unit) => inspectionState[unit.unitKey]?.isInspected).length;
 
                       return (
-                        <section key={group.materialTypeId} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                        <section key={group.materialTypeId} className="returns-group-card">
                           <div className="flex items-start gap-4">
                             {group.materialImageUrl ? (
                               <img

@@ -442,7 +442,7 @@ export function PackagingPage() {
                         {isDraft ? (
                           <div className="flex flex-col gap-1">
                             <span className="status-badge status-in-progress">Draft saved</span>
-                            <span className={draftHasTracking ? 'text-xs text-emerald-700' : 'text-xs text-amber-700'}>
+                            <span className={`packaging-draft-note ${draftHasTracking ? 'is-complete' : 'is-missing'}`}>
                               {draftHasTracking ? 'Tracking added' : 'Tracking missing'}
                             </span>
                           </div>
@@ -561,7 +561,7 @@ export function PackagingPage() {
                   const isComplete = enteredCount === item.quantity;
 
                   return (
-                    <section key={item.materialTypeId} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                    <section key={item.materialTypeId} className="packaging-group-card">
                       <div className="flex items-start gap-4">
                         <div className="packaging-check-image shrink-0">
                           {item.materialImageUrl ? (
@@ -592,7 +592,7 @@ export function PackagingPage() {
                               const isValidating = validatingCodes[fieldKey];
 
                               return (
-                                <div key={fieldKey} className="rounded-md border border-slate-200 bg-white px-3 py-2">
+                                <div key={fieldKey} className="packaging-code-row">
                                   <div className="flex items-center gap-2">
                                     <span className="w-16 text-xs font-semibold uppercase tracking-wide text-text-secondary">
                                       Item {index + 1}
@@ -602,13 +602,13 @@ export function PackagingPage() {
                                       value={codes[index] ?? ''}
                                       onInput={(e) => updateCodeValue(item.materialTypeId, index, (e.target as HTMLInputElement).value)}
                                       onBlur={(e) => validateCodeField(item.materialTypeId, index, (e.target as HTMLInputElement).value)}
-                                      className="min-w-0 flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm uppercase tracking-[0.2em]"
+                                      className="code-input packaging-code-input min-w-0 flex-1 text-sm uppercase tracking-[0.2em]"
                                       placeholder="Enter code"
                                       maxLength={5}
                                     />
                                     <button
                                       type="button"
-                                      className="rounded-md px-2 py-1 text-xs text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+                                      className="packaging-code-action"
                                       onClick={() => handleRandomFill(item.materialTypeId, item.materialName, index)}
                                       title="Pick a random in-stock code"
                                     >
@@ -640,7 +640,7 @@ export function PackagingPage() {
                   type="text"
                   value={outgoingTrackingCode}
                   onInput={(e) => setOutgoingTrackingCode((e.target as HTMLInputElement).value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-md"
+                  className="code-input packaging-tracking-input"
                   placeholder="Enter DHL tracking code"
                 />
                 <p className="text-text-secondary mt-1 text-sm">

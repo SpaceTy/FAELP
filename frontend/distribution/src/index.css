@@ -1250,6 +1250,56 @@ body {
   gap: 0.1rem;
 }
 
+.packaging-group-card,
+.returns-group-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  background-color: #f8fafc;
+  padding: 1rem;
+}
+
+.packaging-code-row {
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  background-color: #ffffff;
+  padding: 0.5rem 0.75rem;
+}
+
+.packaging-code-input,
+.packaging-tracking-input {
+  padding: 0.5rem 0.75rem;
+}
+
+.packaging-code-action {
+  border: none;
+  border-radius: 0.375rem;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.35rem 0.5rem;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.packaging-code-action:hover {
+  background-color: #e2e8f0;
+  color: #334155;
+}
+
+.packaging-draft-note {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.packaging-draft-note.is-complete {
+  color: #047857;
+}
+
+.packaging-draft-note.is-missing {
+  color: #b45309;
+}
+
 .material-codes-input {
   flex: 1;
   min-width: 200px;
@@ -2258,6 +2308,8 @@ body {
   color: #e2e8f0;
 }
 .dark .data-table tbody tr:hover { background-color: #253352; }
+.dark .inventory-table-compact th,
+.dark .inventory-table-compact td { border-right-color: #334155; }
 
 /* Copy ID button */
 .dark .copy-id-btn {
@@ -2317,6 +2369,22 @@ body {
 .dark .tracking-info { color: #94a3b8; }
 .dark .progress-bar { background-color: #334155; }
 .dark .progress-text { color: #f1f5f9; }
+.dark .packaging-group-card,
+.dark .returns-group-card {
+  background-color: #162032;
+  border-color: #334155;
+}
+.dark .packaging-code-row {
+  background-color: #1e293b;
+  border-color: #334155;
+}
+.dark .packaging-code-action { color: #94a3b8; }
+.dark .packaging-code-action:hover {
+  background-color: #253352;
+  color: #f1f5f9;
+}
+.dark .packaging-draft-note.is-complete { color: #86efac; }
+.dark .packaging-draft-note.is-missing { color: #fcd34d; }
 
 /* Returns cards */
 .dark .return-id { color: #f1f5f9; }
