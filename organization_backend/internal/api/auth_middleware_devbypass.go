@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"organization_backend/internal/auth"
+	"organization_backend/internal/db"
 )
 
 type contextKey string
@@ -83,6 +84,15 @@ func APIKeyMiddleware() func(http.Handler) http.Handler {
 
 // AdminMiddleware passes all requests through when dev bypass is enabled.
 func AdminMiddleware() func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+// VerifiedUserMiddleware passes all requests through when dev bypass is enabled.
+func VerifiedUserMiddleware(_ *db.Store) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			next.ServeHTTP(w, r)

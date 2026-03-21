@@ -9,7 +9,7 @@ interface HeaderProps {
 
 export function Header({ currentPath }: HeaderProps) {
   const itemCount = getItemCount();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, customer } = useAuth();
   const [isFlashing, setIsFlashing] = useState(false);
   const prevCountRef = useRef(itemCount);
   const [isDark, setIsDark] = useState(
@@ -90,6 +90,11 @@ export function Header({ currentPath }: HeaderProps) {
             Warenkorb ({itemCount})
           </a>
           {isAuthenticated && <UserMenu />}
+          {isAuthenticated && customer && !customer.emailVerified && (
+            <span className="hidden xl:inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
+              Nicht verifiziert
+            </span>
+          )}
           <button
             onClick={toggleDark}
             title={isDark ? 'Hellmodus' : 'Dunkelmodus'}

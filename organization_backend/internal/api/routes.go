@@ -7,7 +7,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func Routes(handler *Handler, authHandler *AuthHandler, materialTypeHandler *MaterialTypeHandler, uploadHandler *UploadHandler, dcHandler *DistributionCenterHandler, requestHandler *RequestHandler, jwtSecret string) chi.Router {
+func Routes(handler *Handler, authHandler *AuthHandler, userHandler *UserHandler, materialTypeHandler *MaterialTypeHandler, uploadHandler *UploadHandler, dcHandler *DistributionCenterHandler, requestHandler *RequestHandler, jwtSecret string) chi.Router {
 	r := chi.NewRouter()
 
 	// Recovery must be first to catch all panics
@@ -57,9 +57,18 @@ func Routes(handler *Handler, authHandler *AuthHandler, materialTypeHandler *Mat
 			r.Delete("/{id}", dcHandler.DeleteDistributionCenter)
 		})
 
-		// Requests routes (authenticated users)
+		r.Route("/users", func(r chi.Router) {
+			r.Use(AuthMiddleware(jwtSecret))
+			r.Use(AdminMiddleware())
+			r.Get("/", userHandler.ListUsers)
+			r.Post("/import", userHandler.ImportVerifiedUsers)
+			r.Post("/{id}/verify", userHandler.VerifyUser)
+		})
+
+		// Requests routes (verified users)
 		r.Route("/requests", func(r chi.Router) {
 			r.Use(AuthMiddleware(jwtSecret))
+			r.Use(VerifiedUserMiddleware(requestHandler.Store))
 			r.Post("/", requestHandler.CreateRequest)
 			r.Get("/my", requestHandler.ListMyRequests)
 			r.Get("/subscribe", requestHandler.SubscribeMyRequests)

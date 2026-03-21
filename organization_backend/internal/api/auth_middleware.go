@@ -4,11 +4,13 @@ package api
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net/http"
 	"strings"
 
 	"organization_backend/internal/auth"
+	"organization_backend/internal/db"
 )
 
 type contextKey string
@@ -141,6 +143,36 @@ func AdminMiddleware() func(http.Handler) http.Handler {
 
 			if !claims.IsAdmin {
 				writeError(w, http.StatusForbidden, "forbidden", "Admin access required")
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+// VerifiedUserMiddleware checks if the authenticated user has been approved to place requests.
+func VerifiedUserMiddleware(store *db.Store) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			claims := GetClaimsFromContext(r.Context())
+			if claims == nil {
+				writeError(w, http.StatusUnauthorized, "unauthorized", "Authentication required")
+				return
+			}
+
+			user, err := store.GetUserByID(r.Context(), claims.CustomerID)
+			if err != nil {
+				if errors.Is(err, db.ErrUserNotFound) {
+					writeError(w, http.StatusUnauthorized, "unauthorized", "User not found")
+					return
+				}
+				writeError(w, http.StatusInternalServerError, "fetch_error", "Failed to fetch user")
+				return
+			}
+
+			if !user.EmailVerified {
+				writeError(w, http.StatusForbidden, "account_unverified", "Account is not verified")
 				return
 			}
 

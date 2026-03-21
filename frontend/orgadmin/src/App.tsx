@@ -7,6 +7,7 @@ import { Header } from '@/components/Header';
 import { LoginPage } from '@/pages/LoginPage';
 import { MaterialTypesPage } from '@/pages/MaterialTypesPage';
 import { DistributionCentersPage } from '@/pages/DistributionCentersPage';
+import { UsersPage } from '@/pages/UsersPage';
 
 // Wrapper component to handle RoutableProps
 const MaterialTypesPageWrapper = (_props: RoutableProps) => (
@@ -22,6 +23,12 @@ const DistributionCentersPageWrapper = (_props: RoutableProps) => (
 );
 
 const LoginPageWrapper = (_props: RoutableProps) => <LoginPage />;
+
+const UsersPageWrapper = (_props: RoutableProps) => (
+  <ProtectedRoute>
+    <UsersPage />
+  </ProtectedRoute>
+);
 
 function AppContent() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -47,6 +54,7 @@ function AppContent() {
           <MaterialTypesPageWrapper path="/" />
           <MaterialTypesPageWrapper path="/material-types" />
           <DistributionCentersPageWrapper path="/distribution-centers" />
+          <UsersPageWrapper path="/users" />
         </Router>
       </div>
     </div>

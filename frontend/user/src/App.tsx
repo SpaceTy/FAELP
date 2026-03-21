@@ -3,7 +3,8 @@ import type { RoutableProps } from 'preact-router';
 import { useState } from 'preact/hooks';
 import { AuthProvider } from '@/context/AuthContext';
 import { MaterialTypesProvider } from '@/context/MaterialTypesContext';
-import { ProtectedRoute } from '@/components/Auth/ProtectedRoute';
+import { useAuth } from '@/context/AuthContext';
+import { VerifiedRoute } from '@/components/Auth/VerifiedRoute';
 import { LoginPage } from '@/components/Auth/LoginPage';
 import { CallbackPage } from '@/components/Auth/CallbackPage';
 import { MaterialsPage } from '@/pages/MaterialsPage';
@@ -20,13 +21,37 @@ const CallbackPageWrapper = (props: { code?: string } & RoutableProps) => (
   <CallbackPage code={props.code} />
 );
 const ProtectedCartWrapper = (_props: RoutableProps) => (
-  <ProtectedRoute><CartPage /></ProtectedRoute>
+  <VerifiedRoute><CartPage /></VerifiedRoute>
 );
 const HilfePageWrapper = (_props: RoutableProps) => <HilfePage />;
 const NotFoundPageWrapper = (_props: RoutableProps) => <NotFoundPage />;
 const ProtectedMyRequestsWrapper = (_props: RoutableProps) => (
-  <ProtectedRoute><MyRequestsPage /></ProtectedRoute>
+  <VerifiedRoute><MyRequestsPage /></VerifiedRoute>
 );
+
+function VerificationBanner() {
+  const { isAuthenticated, customer } = useAuth();
+
+  if (!isAuthenticated || customer?.emailVerified) {
+    return null;
+  }
+
+  return (
+    <div className="bg-amber-100 border-b border-amber-200 px-6 py-4">
+      <div className="mx-auto flex max-w-7xl items-start gap-3">
+        <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-full bg-amber-200 text-amber-900 font-bold">
+          !
+        </div>
+        <div>
+          <p className="font-semibold text-amber-900">Konto noch nicht verifiziert</p>
+          <p className="text-sm text-amber-900/90">
+            Sie koennen sich anmelden und die Plattform ansehen, aber erst nach Freischaltung durch einen Administrator Materialanfragen stellen.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function AppRoutes() {
   const [currentPath, setCurrentPath] = useState(() => window.location.pathname);
@@ -34,6 +59,7 @@ function AppRoutes() {
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       <Header currentPath={currentPath} />
+      <VerificationBanner />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Router onChange={({ url }: { url: string }) => setCurrentPath(url.split('?')[0])}>
           <MaterialsPageWrapper path="/" />

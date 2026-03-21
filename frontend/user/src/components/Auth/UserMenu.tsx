@@ -26,6 +26,11 @@ export function UserMenu() {
             <div className="border-b border-gray-100 px-4 py-2">
               <p className="text-sm font-medium text-text-primary">{customer.name}</p>
               <p className="text-xs text-text-secondary truncate">{customer.email}</p>
+              {!customer.emailVerified && (
+                <p className="mt-2 inline-flex rounded-full bg-amber-100 px-2 py-1 text-[11px] font-medium text-amber-800">
+                  Konto nicht verifiziert
+                </p>
+              )}
             </div>
             <a href="/profile" className="block px-4 py-2 text-sm text-text-primary hover:bg-gray-100">
               Profil

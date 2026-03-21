@@ -14,6 +14,7 @@ export function Header({ currentPath }: HeaderProps) {
   const navItems = [
     { href: '/', label: 'Materialtypen' },
     { href: '/distribution-centers', label: 'Vertriebszentren' },
+    { href: '/users', label: 'Benutzer' },
   ];
 
   const toggleDark = () => {
