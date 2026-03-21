@@ -29,6 +29,7 @@ type ListMaterialInstancesParams struct {
 	Location  string
 	HumanCode string
 	Query     string
+	Sort      string
 	Limit     int
 	Offset    int
 }
@@ -258,14 +259,22 @@ func (s *Store) ListMaterialInstances(ctx context.Context, params ListMaterialIn
 		offset = 0
 	}
 
+	orderBy := "updated_at DESC"
+	switch params.Sort {
+	case "useCountAsc":
+		orderBy = "use_count ASC, updated_at ASC"
+	case "useCountDesc":
+		orderBy = "use_count DESC, updated_at DESC"
+	}
+
 	args = append(args, limit, offset)
 	query := fmt.Sprintf(`
 		SELECT id, human_code, type_id, description, status, use_count, location, current_request_id, created_at, updated_at
 		FROM material_instances
 		WHERE %s
-		ORDER BY updated_at DESC
+		ORDER BY %s
 		LIMIT $%d OFFSET $%d
-	`, strings.Join(where, " AND "), len(args)-1, len(args))
+	`, strings.Join(where, " AND "), orderBy, len(args)-1, len(args))
 
 	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -413,13 +422,18 @@ func (s *Store) UpsertMaterialInstances(ctx context.Context, inputs []UpsertMate
 
 // UpdateMaterialInstance updates a material instance
 func (s *Store) UpdateMaterialInstance(ctx context.Context, id string, input domain.UpdateMaterialInstanceInput) (domain.MaterialInstance, error) {
+	useCount := 0
+	if input.UseCount != nil {
+		useCount = *input.UseCount
+	}
+
 	var row materialInstanceRow
 	err := s.db.QueryRowContext(ctx, `
 		UPDATE material_instances
-		SET status = $2, location = $3
+		SET status = $2, location = $3, use_count = $4
 		WHERE id = $1
 		RETURNING id, human_code, type_id, description, status, use_count, location, current_request_id, created_at, updated_at
-	`, id, input.Status, input.Location).Scan(
+	`, id, input.Status, input.Location, useCount).Scan(
 		&row.ID, &row.HumanCode, &row.TypeID, &row.Description, &row.Status, &row.UseCount, &row.Location,
 		&row.CurrentRequestID, &row.CreatedAt, &row.UpdatedAt,
 	)

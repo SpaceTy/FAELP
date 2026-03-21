@@ -3,10 +3,19 @@ import { Modal } from './Modal';
 import { inventoryService } from '@/services/inventory';
 import type { MaterialInstance, MaterialStatus, MaterialType } from '@/types/inventory';
 
+export interface InventoryFormValues {
+  humanCode?: string;
+  typeId?: string;
+  description?: string;
+  location: string;
+  status?: MaterialStatus;
+  useCount?: number;
+}
+
 interface InventoryFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: Record<string, string>) => Promise<void>;
+  onSubmit: (data: InventoryFormValues) => Promise<void>;
   instance?: MaterialInstance | null;
   materialTypes?: MaterialType[];
 }
@@ -27,6 +36,7 @@ export function InventoryFormModal({ isOpen, onClose, onSubmit, instance, materi
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
   const [status, setStatus] = useState<MaterialStatus>('available');
+  const [useCount, setUseCount] = useState('0');
   const [isLoading, setIsLoading] = useState(false);
   const [isGeneratingCode, setIsGeneratingCode] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -68,6 +78,7 @@ export function InventoryFormModal({ isOpen, onClose, onSubmit, instance, materi
         setDescription(instance.description || '');
         setLocation(instance.location);
         setStatus(instance.status);
+        setUseCount(instance.useCount.toString());
       } else {
         setTypeId('');
         setCustomTypeId('');
@@ -75,6 +86,7 @@ export function InventoryFormModal({ isOpen, onClose, onSubmit, instance, materi
         setDescription('');
         setLocation('');
         setStatus('available');
+        setUseCount('0');
         setGeneratedCode('');
         setIsCodeConfirmed(false);
         loadGeneratedCode();
@@ -94,7 +106,11 @@ export function InventoryFormModal({ isOpen, onClose, onSubmit, instance, materi
       const finalTypeId = isCustomType ? customTypeId.trim() : typeId.trim();
 
       if (isEditing && instance) {
-        await onSubmit({ status, location: location.trim() });
+        const parsedUseCount = Number.parseInt(useCount, 10);
+        if (!Number.isInteger(parsedUseCount) || parsedUseCount < 0) {
+          throw new Error('Die Nutzungszahl muss eine ganze Zahl ab 0 sein.');
+        }
+        await onSubmit({ status, location: location.trim(), useCount: parsedUseCount });
       } else {
         if (!generatedCode || !isCodeConfirmed) {
           throw new Error('Bitte schreiben Sie den Material-Code auf das Material und bestätigen Sie dies.');
@@ -131,6 +147,8 @@ export function InventoryFormModal({ isOpen, onClose, onSubmit, instance, materi
     const mt = materialTypes.find((m) => m.id === typeId);
     return mt ? `${mt.name} (${mt.id})` : typeId;
   };
+  const parsedUseCount = Number.parseInt(useCount, 10);
+  const hasValidUseCount = useCount.trim() !== '' && Number.isInteger(parsedUseCount) && parsedUseCount >= 0;
 
   return (
     <Modal
@@ -155,6 +173,7 @@ export function InventoryFormModal({ isOpen, onClose, onSubmit, instance, materi
               isLoading ||
               (!isEditing && (isGeneratingCode || !generatedCode || !isCodeConfirmed)) ||
               !location.trim() ||
+              (isEditing && !hasValidUseCount) ||
               (!isEditing && !(isCustomType ? customTypeId.trim() : typeId.trim()))
             }
             className="btn-logistics btn-logistics-primary"
@@ -416,6 +435,25 @@ export function InventoryFormModal({ isOpen, onClose, onSubmit, instance, materi
             required
           />
         </div>
+
+        {isEditing && (
+          <div>
+            <label className="logistics-label" htmlFor="useCount">
+              Nutzungszahl *
+            </label>
+            <input
+              type="number"
+              id="useCount"
+              value={useCount}
+              onInput={(e) => setUseCount((e.target as HTMLInputElement).value)}
+              className="logistics-input"
+              min="0"
+              step="1"
+              required
+            />
+            <p className="mt-1 text-xs text-gray-500">Kann manuell korrigiert werden, falls der Zähler angepasst werden muss.</p>
+          </div>
+        )}
 
         {/* Status (only when editing) */}
         {isEditing && (

@@ -131,6 +131,12 @@ type importInventoryResponse struct {
 
 var humanCodePattern = regexp.MustCompile(`^[A-Z]{5}$`)
 
+var validInventorySorts = map[string]struct{}{
+	"":             {},
+	"useCountAsc":  {},
+	"useCountDesc": {},
+}
+
 // GenerateMaterialCode returns a unique human-readable inventory code.
 func (h *InventoryHandler) GenerateMaterialCode(w http.ResponseWriter, r *http.Request) {
 	code, err := h.store.GenerateMaterialHumanCode(r.Context())
@@ -348,6 +354,7 @@ func (h *InventoryHandler) ListMaterialInstances(w http.ResponseWriter, r *http.
 		Location:  r.URL.Query().Get("location"),
 		HumanCode: strings.ToUpper(strings.TrimSpace(r.URL.Query().Get("humanCode"))),
 		Query:     strings.TrimSpace(r.URL.Query().Get("query")),
+		Sort:      strings.TrimSpace(r.URL.Query().Get("sort")),
 		Limit:     limit,
 		Offset:    offset,
 	}
@@ -358,6 +365,10 @@ func (h *InventoryHandler) ListMaterialInstances(w http.ResponseWriter, r *http.
 	}
 	if params.HumanCode != "" && !humanCodePattern.MatchString(params.HumanCode) {
 		http.Error(w, `{"error":"humanCode must be exactly 5 uppercase letters"}`, http.StatusBadRequest)
+		return
+	}
+	if _, ok := validInventorySorts[params.Sort]; !ok {
+		http.Error(w, `{"error":"invalid sort"}`, http.StatusBadRequest)
 		return
 	}
 
@@ -617,7 +628,7 @@ func (h *InventoryHandler) ImportInventoryCSV(w http.ResponseWriter, r *http.Req
 	})
 }
 
-// UpdateMaterialInstance updates status/location for an inventory item.
+// UpdateMaterialInstance updates editable fields for an inventory item.
 func (h *InventoryHandler) UpdateMaterialInstance(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
@@ -650,6 +661,16 @@ func (h *InventoryHandler) UpdateMaterialInstance(w http.ResponseWriter, r *http
 		return
 	}
 
+	useCount := existing.UseCount
+	if req.UseCount != nil {
+		if *req.UseCount < 0 {
+			http.Error(w, `{"error":"useCount must be non-negative"}`, http.StatusBadRequest)
+			return
+		}
+		useCount = *req.UseCount
+	}
+	req.UseCount = &useCount
+
 	instance, err := h.store.UpdateMaterialInstance(r.Context(), id, req)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -673,6 +694,7 @@ func (h *InventoryHandler) UpdateMaterialInstance(w http.ResponseWriter, r *http
 		newState := map[string]interface{}{
 			"status":   instance.Status,
 			"location": instance.Location,
+			"useCount": instance.UseCount,
 		}
 		_ = h.auditLogger.Log(r.Context(), userCtx.UserID, userCtx.Username, "inventory.update", "material_instance", instance.ID, newState, previousState)
 	}
