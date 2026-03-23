@@ -7,11 +7,19 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"sync"
+	"time"
 
 	"organization_backend/internal/domain"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/lib/pq"
+)
+
+const (
+	defaultMaterialTypeCacheTTL   = 30 * time.Second
+	materialTypeCacheRetryBackoff = 5 * time.Second
+	materialTypeCacheRefreshLimit = 10 * time.Second
 )
 
 // MaterialTypeHandler handles material type related requests
@@ -20,6 +28,14 @@ type MaterialTypeHandler struct {
 	UploadPath string
 	DistClient DistClientInterface
 	SocketPath string
+	CacheTTL   time.Duration
+
+	cacheMu           sync.Mutex
+	cacheCond         *sync.Cond
+	cachedMaterials   []domain.MaterialType
+	cacheRefreshAfter time.Time
+	cacheRefreshing   bool
+	now               func() time.Time
 }
 
 // StoreInterface defines the methods needed from Store
@@ -46,22 +62,65 @@ type DistClientInterface interface {
 	GetAvailableMaterials(ctx context.Context) (map[string]int, error)
 }
 
-// ListMaterialTypes returns all material types with availability counts from dist backend (public)
-func (h *MaterialTypeHandler) ListMaterialTypes(w http.ResponseWriter, r *http.Request) {
-	// Fetch availability from distribution backend if configured
+func (h *MaterialTypeHandler) cacheNow() time.Time {
+	if h.now != nil {
+		return h.now()
+	}
+	return time.Now()
+}
+
+func (h *MaterialTypeHandler) materialTypeCacheTTL() time.Duration {
+	if h.CacheTTL > 0 {
+		return h.CacheTTL
+	}
+	return defaultMaterialTypeCacheTTL
+}
+
+func (h *MaterialTypeHandler) materialTypeCacheCond() *sync.Cond {
+	if h.cacheCond == nil {
+		h.cacheCond = sync.NewCond(&h.cacheMu)
+	}
+	return h.cacheCond
+}
+
+func cloneMaterialTypes(materials []domain.MaterialType) []domain.MaterialType {
+	if materials == nil {
+		return nil
+	}
+	cloned := make([]domain.MaterialType, len(materials))
+	copy(cloned, materials)
+	return cloned
+}
+
+func (h *MaterialTypeHandler) finishMaterialTypeRefresh(materialTypes []domain.MaterialType, err error) {
+	h.cacheMu.Lock()
+	defer h.cacheMu.Unlock()
+
+	if err == nil {
+		h.cachedMaterials = cloneMaterialTypes(materialTypes)
+		h.cacheRefreshAfter = h.cacheNow().Add(h.materialTypeCacheTTL())
+	} else if len(h.cachedMaterials) > 0 {
+		h.cacheRefreshAfter = h.cacheNow().Add(materialTypeCacheRetryBackoff)
+	}
+
+	h.cacheRefreshing = false
+	h.materialTypeCacheCond().Broadcast()
+}
+
+func (h *MaterialTypeHandler) refreshMaterialTypes(ctx context.Context) ([]domain.MaterialType, error) {
+	// Fetch availability from distribution backend if configured.
 	if h.DistClient != nil && h.SocketPath != "" {
-		availabilityMap, err := h.DistClient.GetAvailableMaterials(r.Context())
+		availabilityMap, err := h.DistClient.GetAvailableMaterials(ctx)
 		if err != nil {
 			// Log error but don't fail; we'll return the last known DB-backed availability below.
 			log.Printf("Warning: failed to fetch availability from dist backend: %v", err)
 		} else {
-			// Look up distribution center ID from database based on socket path
-			dc, err := h.Store.GetDistributionCenterBySocketPath(r.Context(), h.SocketPath)
+			// Look up distribution center ID from database based on socket path.
+			dc, err := h.Store.GetDistributionCenterBySocketPath(ctx, h.SocketPath)
 			if err != nil {
 				log.Printf("Warning: failed to find distribution center for socket %s: %v", h.SocketPath, err)
 			} else {
-				// Store the availability in the database
-				if err := h.Store.UpdateMaterialAvailability(r.Context(), dc.ID, availabilityMap); err != nil {
+				if err := h.Store.UpdateMaterialAvailability(ctx, dc.ID, availabilityMap); err != nil {
 					log.Printf("Warning: failed to store availability in database: %v", err)
 				}
 			}
@@ -69,12 +128,65 @@ func (h *MaterialTypeHandler) ListMaterialTypes(w http.ResponseWriter, r *http.R
 	}
 
 	// Always return DB-computed availability so reserved quantities are subtracted.
-	materialTypes, err := h.Store.ListMaterialTypesWithAvailability(r.Context())
+	return h.Store.ListMaterialTypesWithAvailability(ctx)
+}
+
+func (h *MaterialTypeHandler) refreshMaterialTypesAsync() {
+	ctx, cancel := context.WithTimeout(context.Background(), materialTypeCacheRefreshLimit)
+	defer cancel()
+
+	materialTypes, err := h.refreshMaterialTypes(ctx)
 	if err != nil {
+		log.Printf("Warning: failed to refresh material type cache: %v", err)
+	}
+	h.finishMaterialTypeRefresh(materialTypes, err)
+}
+
+func (h *MaterialTypeHandler) invalidateMaterialTypesCache() {
+	h.cacheMu.Lock()
+	defer h.cacheMu.Unlock()
+
+	h.cachedMaterials = nil
+	h.cacheRefreshAfter = time.Time{}
+}
+
+// ListMaterialTypes returns all material types with availability counts from dist backend (public)
+func (h *MaterialTypeHandler) ListMaterialTypes(w http.ResponseWriter, r *http.Request) {
+	now := h.cacheNow()
+
+	h.cacheMu.Lock()
+	cacheCond := h.materialTypeCacheCond()
+	for len(h.cachedMaterials) == 0 && h.cacheRefreshing {
+		cacheCond.Wait()
+	}
+
+	if len(h.cachedMaterials) > 0 {
+		materialTypes := cloneMaterialTypes(h.cachedMaterials)
+		shouldRefresh := !h.cacheRefreshing && !now.Before(h.cacheRefreshAfter)
+		if shouldRefresh {
+			h.cacheRefreshing = true
+		}
+		h.cacheMu.Unlock()
+
+		if shouldRefresh {
+			go h.refreshMaterialTypesAsync()
+		}
+
+		writeJSON(w, http.StatusOK, materialTypes)
+		return
+	}
+
+	h.cacheRefreshing = true
+	h.cacheMu.Unlock()
+
+	materialTypes, err := h.refreshMaterialTypes(r.Context())
+	if err != nil {
+		h.finishMaterialTypeRefresh(nil, err)
 		writeError(w, http.StatusInternalServerError, "list_failed", "Failed to fetch material types")
 		return
 	}
 
+	h.finishMaterialTypeRefresh(materialTypes, nil)
 	writeJSON(w, http.StatusOK, materialTypes)
 }
 
@@ -143,6 +255,7 @@ func (h *MaterialTypeHandler) CreateMaterialType(w http.ResponseWriter, r *http.
 		return
 	}
 
+	h.invalidateMaterialTypesCache()
 	writeJSON(w, http.StatusCreated, mt)
 }
 
@@ -187,6 +300,7 @@ func (h *MaterialTypeHandler) UpdateMaterialType(w http.ResponseWriter, r *http.
 		return
 	}
 
+	h.invalidateMaterialTypesCache()
 	writeJSON(w, http.StatusOK, mt)
 }
 
@@ -199,6 +313,7 @@ func (h *MaterialTypeHandler) DeleteMaterialType(w http.ResponseWriter, r *http.
 		return
 	}
 
+	h.invalidateMaterialTypesCache()
 	writeJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
 }
 
