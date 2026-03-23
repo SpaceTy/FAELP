@@ -5,6 +5,7 @@ import { CATEGORY_LABELS, type MaterialCategory } from '@/types/material';
 
 export function MaterialsPage() {
   const { materials, isLoading, error } = useMaterialTypes();
+  const showCategorySidebar = false;
   const [selectedCategories, setSelectedCategories] = useState<MaterialCategory[]>([
     'Reanimation',
     'Wundversorgung&Trauma',
@@ -33,25 +34,27 @@ export function MaterialsPage() {
 
   return (
     <main className="flex-1 flex overflow-hidden">
-        {/* Sidebar Filters */}
-        <aside className="w-64 bg-white p-6 overflow-y-auto shadow-sm">
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold text-secondary mb-4">Kategorien</h3>
-            <div className="space-y-3">
-              {(Object.keys(CATEGORY_LABELS) as MaterialCategory[]).map(category => (
-                <label key={category} className="flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={selectedCategories.includes(category)}
-                    onChange={() => toggleCategory(category)}
-                    className="w-4 h-4 mr-3 text-primary rounded focus:ring-primary"
-                  />
-                  <span className="text-text-primary">{CATEGORY_LABELS[category]}</span>
-                </label>
-              ))}
+        {showCategorySidebar && (
+          /* Sidebar Filters kept in place for future reuse */
+          <aside className="w-64 bg-white p-6 overflow-y-auto shadow-sm">
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-secondary mb-4">Kategorien</h3>
+              <div className="space-y-3">
+                {(Object.keys(CATEGORY_LABELS) as MaterialCategory[]).map(category => (
+                  <label key={category} className="flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedCategories.includes(category)}
+                      onChange={() => toggleCategory(category)}
+                      className="w-4 h-4 mr-3 text-primary rounded focus:ring-primary"
+                    />
+                    <span className="text-text-primary">{CATEGORY_LABELS[category]}</span>
+                  </label>
+                ))}
+              </div>
             </div>
-          </div>
-        </aside>
+          </aside>
+        )}
 
         {/* Main Content */}
         <section className="flex-1 p-6 overflow-y-auto">
