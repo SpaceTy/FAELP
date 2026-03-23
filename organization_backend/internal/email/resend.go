@@ -139,18 +139,14 @@ func (s *Service) SendRequestStatusNotification(ctx context.Context, params Requ
 
 	switch params.NewStatus {
 	case "inAction":
-		subject = "Your material request is now being processed"
+		subject = "Ihre Materialanfrage wurde versendet"
 		htmlTemplate = "request_in_action.html"
 		textTemplate = "request_in_action.txt"
 
-	case "pending":
-		if params.PreviousStatus == "inAction" {
-			subject = "Your material request status has changed"
-			htmlTemplate = "request_pending_from_in_action.html"
-			textTemplate = "request_pending_from_in_action.txt"
-		} else {
-			return nil
-		}
+	case "cancelled":
+		subject = "Ihre Materialanfrage wurde storniert"
+		htmlTemplate = "request_cancelled_unfulfilled.html"
+		textTemplate = "request_cancelled_unfulfilled.txt"
 
 	default:
 		return nil

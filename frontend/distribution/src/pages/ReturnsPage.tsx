@@ -155,6 +155,97 @@ function ItemCarousel({ items }: { items: ReturnRecord['items'] }) {
   );
 }
 
+type InspectionItemState = {
+  condition: ItemCondition;
+  destination: ItemDestination;
+  humanCode: string;
+  location: string;
+  error: string | null;
+  isInspected: boolean;
+};
+
+type ReturnUnit = {
+  unitKey: string;
+  materialTypeId: string;
+  materialName: string;
+  materialImageUrl?: string;
+  originalItemIndex: number;
+  unitIndex: number;
+  defaultCondition: ItemCondition;
+  defaultDestination: ItemDestination;
+  defaultLocation: string;
+};
+
+type ReturnUnitGroup = {
+  materialTypeId: string;
+  materialName: string;
+  materialImageUrl?: string;
+  units: ReturnUnit[];
+};
+
+function buildReturnUnits(items: ReturnRecord['items']): ReturnUnit[] {
+  const units: ReturnUnit[] = [];
+
+  items.forEach((item, itemIndex) => {
+    for (let unitIndex = 0; unitIndex < item.quantity; unitIndex += 1) {
+      units.push({
+        unitKey: `${item.materialTypeId}-${itemIndex}-${unitIndex}`,
+        materialTypeId: item.materialTypeId,
+        materialName: item.materialName,
+        materialImageUrl: item.materialImageUrl,
+        originalItemIndex: itemIndex,
+        unitIndex,
+        defaultCondition: item.condition,
+        defaultDestination: item.destination,
+        defaultLocation: item.location || '',
+      });
+    }
+  });
+
+  return units;
+}
+
+function groupReturnUnits(units: ReturnUnit[]): ReturnUnitGroup[] {
+  const byType = new Map<string, ReturnUnitGroup>();
+
+  units.forEach((unit) => {
+    const existing = byType.get(unit.materialTypeId);
+    if (existing) {
+      existing.units.push(unit);
+      return;
+    }
+
+    byType.set(unit.materialTypeId, {
+      materialTypeId: unit.materialTypeId,
+      materialName: unit.materialName,
+      materialImageUrl: unit.materialImageUrl,
+      units: [unit],
+    });
+  });
+
+  return Array.from(byType.values());
+}
+
+function getDuplicateInspectionKeys(inspectionState: Record<string, InspectionItemState>): Set<string> {
+  const fieldKeysByCode = new Map<string, string[]>();
+
+  Object.entries(inspectionState).forEach(([unitKey, state]) => {
+    const code = state.humanCode.trim().toUpperCase();
+    if (!code) return;
+    const existing = fieldKeysByCode.get(code) ?? [];
+    existing.push(unitKey);
+    fieldKeysByCode.set(code, existing);
+  });
+
+  const duplicates = new Set<string>();
+  fieldKeysByCode.forEach((unitKeys) => {
+    if (unitKeys.length < 2) return;
+    unitKeys.forEach((unitKey) => duplicates.add(unitKey));
+  });
+
+  return duplicates;
+}
+
 export function ReturnsPage() {
   const [returns, setReturns] = useState<ReturnRecord[]>([]);
   const [stats, setStats] = useState<ReturnStats>({ inAction: 0, returned: 0, unpacked: 0 });
@@ -166,7 +257,7 @@ export function ReturnsPage() {
   const [statusFilter, setStatusFilter] = useState<ReturnStatus | ''>('');
 
   // Inspection state
-  const [inspectionState, setInspectionState] = useState<Record<number, { condition: ItemCondition; destination: ItemDestination; humanCode: string; location: string; error: string | null }>>({});
+  const [inspectionState, setInspectionState] = useState<Record<string, InspectionItemState>>({});
 
   const loadData = async () => {
     setIsLoading(true);
@@ -204,14 +295,16 @@ export function ReturnsPage() {
   useEffect(() => {
     if (!selectedReturn) return;
 
-    const initialState: Record<number, { condition: ItemCondition; destination: ItemDestination; humanCode: string; location: string; error: string | null }> = {};
-    selectedReturn.items.forEach((item, idx) => {
-      initialState[idx] = {
-        condition: item.condition,
-        destination: item.destination,
+    const initialState: Record<string, InspectionItemState> = {};
+    const returnUnits = buildReturnUnits(selectedReturn.items);
+    returnUnits.forEach((unit) => {
+      initialState[unit.unitKey] = {
+        condition: unit.defaultCondition,
+        destination: unit.defaultDestination,
         humanCode: '',
-        location: item.location || '',
+        location: unit.defaultLocation,
         error: null,
+        isInspected: false,
       };
     });
     setInspectionState(initialState);
@@ -229,14 +322,14 @@ export function ReturnsPage() {
       const usedCount = new Map<string, number>();
       setInspectionState((prev) => {
         const next = { ...prev };
-        selectedReturn.items.forEach((item, idx) => {
-          if (next[idx]?.humanCode) return; // already has a code
-          const codes = byType.get(item.materialTypeId);
+        returnUnits.forEach((unit) => {
+          if (next[unit.unitKey]?.humanCode) return;
+          const codes = byType.get(unit.materialTypeId);
           if (!codes) return;
-          const used = usedCount.get(item.materialTypeId) ?? 0;
+          const used = usedCount.get(unit.materialTypeId) ?? 0;
           if (used < codes.length) {
-            next[idx] = { ...next[idx], humanCode: codes[used] };
-            usedCount.set(item.materialTypeId, used + 1);
+            next[unit.unitKey] = { ...next[unit.unitKey], humanCode: codes[used] };
+            usedCount.set(unit.materialTypeId, used + 1);
           }
         });
         return next;
@@ -244,36 +337,47 @@ export function ReturnsPage() {
     }).catch(() => { /* silently ignore — codes can be entered manually */ });
   }, [selectedReturn]);
 
-  const handleInspectItem = async (returnId: string, itemIndex: number) => {
-    const state = inspectionState[itemIndex];
+  const handleInspectItem = async (returnId: string, unit: ReturnUnit) => {
+    const state = inspectionState[unit.unitKey];
     if (!state) return;
     if (!state.humanCode.trim()) {
       setInspectionState((prev) => ({
         ...prev,
-        [itemIndex]: { ...prev[itemIndex], error: 'Enter the item code before marking as inspected' },
+        [unit.unitKey]: { ...prev[unit.unitKey], error: 'Enter the item code before marking as inspected' },
       }));
       return;
     }
-    setInspectionState((prev) => ({ ...prev, [itemIndex]: { ...prev[itemIndex], error: null } }));
+
+    const normalizedCode = state.humanCode.trim().toUpperCase();
+    const duplicateEntry = Object.entries(inspectionState).find(([unitKey, currentState]) => (
+      unitKey !== unit.unitKey && currentState.humanCode.trim().toUpperCase() === normalizedCode
+    ));
+    if (duplicateEntry) {
+      setInspectionState((prev) => ({
+        ...prev,
+        [unit.unitKey]: { ...prev[unit.unitKey], error: 'This code is already entered for another item in this return.' },
+      }));
+      return;
+    }
+
+    setInspectionState((prev) => ({ ...prev, [unit.unitKey]: { ...prev[unit.unitKey], error: null } }));
     try {
       await api.inspectReturnItem(returnId, {
-        itemIndex,
-        humanCode: state.humanCode.trim(),
+        itemIndex: unit.originalItemIndex,
+        humanCode: normalizedCode,
         condition: state.condition,
         destination: state.destination,
         returnToInventory: state.destination === 'inventory',
         location: state.location,
       });
-      setSelectedReturn((prev) => {
-        if (!prev) return prev;
-        const items = [...prev.items];
-        items[itemIndex] = { ...items[itemIndex], isInspected: true };
-        return { ...prev, items };
-      });
+      setInspectionState((prev) => ({
+        ...prev,
+        [unit.unitKey]: { ...prev[unit.unitKey], humanCode: normalizedCode, isInspected: true, error: null },
+      }));
     } catch (err) {
       setInspectionState((prev) => ({
         ...prev,
-        [itemIndex]: { ...prev[itemIndex], error: err instanceof Error ? err.message : 'Failed to mark item as inspected' },
+        [unit.unitKey]: { ...prev[unit.unitKey], error: err instanceof Error ? err.message : 'Failed to mark item as inspected' },
       }));
     }
   };
@@ -298,15 +402,22 @@ export function ReturnsPage() {
     }
   }
 
+  const selectedReturnUnits = useMemo(() => (
+    selectedReturn ? buildReturnUnits(selectedReturn.items) : []
+  ), [selectedReturn]);
+
+  const groupedReturnUnits = useMemo(() => groupReturnUnits(selectedReturnUnits), [selectedReturnUnits]);
+
+  const duplicateInspectionKeys = useMemo(() => getDuplicateInspectionKeys(inspectionState), [inspectionState]);
+
   const inspectedCount = useMemo(() => {
-    if (!selectedReturn) return 0;
-    return selectedReturn.items.filter((i) => i.isInspected).length;
-  }, [selectedReturn]);
+    return Object.values(inspectionState).filter((item) => item.isInspected).length;
+  }, [inspectionState]);
 
   const progressPercent = useMemo(() => {
-    if (!selectedReturn || selectedReturn.items.length === 0) return 0;
-    return Math.round((inspectedCount / selectedReturn.items.length) * 100);
-  }, [inspectedCount, selectedReturn]);
+    if (selectedReturnUnits.length === 0) return 0;
+    return Math.round((inspectedCount / selectedReturnUnits.length) * 100);
+  }, [inspectedCount, selectedReturnUnits]);
 
   return (
     <main className="main-content">
@@ -522,7 +633,7 @@ export function ReturnsPage() {
                 <div className="flex justify-between items-center mb-2">
                   <h4 className="font-semibold">Returned Items Inspection</h4>
                   <span className="text-sm text-text-secondary">
-                    {inspectedCount} of {selectedReturn.items.length} items inspected
+                    {inspectedCount} of {selectedReturnUnits.length} items inspected
                   </span>
                 </div>
                 <div className="progress-bar mb-4">
@@ -531,142 +642,178 @@ export function ReturnsPage() {
                 </div>
 
                 <div className="inspection-checklist">
-                  {selectedReturn.items.map((item, idx) => {
-                    const state = inspectionState[idx] || {
-                      condition: item.condition,
-                      destination: item.destination,
-                      humanCode: '',
-                      location: item.location || '',
-                      error: null,
-                    };
-                    const isInspected = item.isInspected;
+                  <div className="space-y-4 p-4">
+                    {groupedReturnUnits.map((group) => {
+                      const inspectedInGroup = group.units.filter((unit) => inspectionState[unit.unitKey]?.isInspected).length;
 
-                    return (
-                      <div
-                        key={idx}
-                        className={`inspection-item ${isInspected ? 'inspected' : ''} ${state.condition}`}
-                      >
-                        {item.materialImageUrl ? (
-                          <img
-                            className="material-thumb"
-                            src={item.materialImageUrl}
-                            alt={item.materialName}
-                            style={{ width: '2.5rem', height: '2.5rem', objectFit: 'cover', borderRadius: '4px', flexShrink: 0 }}
-                          />
-                        ) : (
-                          <span
-                            className="material-thumb-placeholder"
-                            style={{ width: '2.5rem', height: '2.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, borderRadius: '4px', background: 'var(--color-background, #f0f2f5)', fontSize: '1.2rem' }}
-                          >
-                            ?
-                          </span>
-                        )}
-                        <div className="item-details">
-                          <h5>{item.materialName}</h5>
-                          {isInspected ? (
-                            <p className="text-sm font-mono font-semibold">{state.humanCode}</p>
-                          ) : (
-                            <>
-                              <input
-                                type="text"
-                                className={`code-input${state.error ? ' input-error' : ''}`}
-                                placeholder="Scan or enter item code"
-                                value={state.humanCode}
-                                style={{ fontFamily: 'monospace', textTransform: 'uppercase', width: '100%', marginTop: '0.25rem' }}
-                                onChange={(e) =>
-                                  setInspectionState((prev) => ({
-                                    ...prev,
-                                    [idx]: { ...state, humanCode: (e.target as HTMLInputElement).value.toUpperCase(), error: null },
-                                  }))
-                                }
+                      return (
+                        <section key={group.materialTypeId} className="returns-group-card">
+                          <div className="flex items-start gap-4">
+                            {group.materialImageUrl ? (
+                              <img
+                                className="material-thumb"
+                                src={group.materialImageUrl}
+                                alt={group.materialName}
+                                style={{ width: '3rem', height: '3rem', objectFit: 'cover', borderRadius: '6px', flexShrink: 0 }}
                               />
-                              {state.error && (
-                                <p className="text-xs" style={{ color: '#e53e3e', marginTop: '0.2rem' }}>{state.error}</p>
-                              )}
-                            </>
-                          )}
-                        </div>
-                        <div className="item-quantity">
-                          <span className="qty-label">Qty</span>
-                          <span className="qty-value">{item.quantity}</span>
-                        </div>
-                        <div className="item-condition">
-                          <span className="condition-label">Condition</span>
-                          <select
-                            className={`condition-select ${state.condition}`}
-                            value={state.condition}
-                            disabled={isInspected}
-                            onChange={(e) => {
-                              const newCondition = (e.target as HTMLSelectElement).value as ItemCondition;
-                              setInspectionState((prev) => ({
-                                ...prev,
-                                [idx]: { ...state, condition: newCondition, destination: destinationForCondition(newCondition) },
-                              }));
-                            }}
-                          >
-                            {CONDITION_OPTIONS.map((c) => (
-                              <option key={c} value={c}>
-                                {c.charAt(0).toUpperCase() + c.slice(1)}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="item-destination">
-                          <span className="dest-label">Destination</span>
-                          <select
-                            className="destination-select"
-                            value={state.destination}
-                            disabled={isInspected}
-                            onChange={(e) =>
-                              setInspectionState((prev) => ({
-                                ...prev,
-                                [idx]: { ...state, destination: (e.target as HTMLSelectElement).value as ItemDestination },
-                              }))
-                            }
-                          >
-                            {DESTINATION_OPTIONS.map((d) => (
-                              <option key={d} value={d}>
-                                {d.charAt(0).toUpperCase() + d.slice(1)}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="item-location">
-                          <span className="dest-label">Location</span>
-                          {isInspected ? (
-                            <span className="text-sm">{state.location || '—'}</span>
-                          ) : (
-                            <input
-                              type="text"
-                              className="location-input"
-                              placeholder="Storage location"
-                              value={state.location}
-                              onChange={(e) =>
-                                setInspectionState((prev) => ({
-                                  ...prev,
-                                  [idx]: { ...state, location: (e.target as HTMLInputElement).value },
-                                }))
-                              }
-                            />
-                          )}
-                        </div>
-                        <div className="item-status-badge">
-                          {isInspected ? (
-                            <span className={`inspected-badge ${state.condition}`}>
-                              {conditionLabel(state.condition)}
-                            </span>
-                          ) : (
-                            <button
-                              className="btn-mark-inspected"
-                              onClick={() => handleInspectItem(selectedReturn.id, idx)}
-                            >
-                              Inspect
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
+                            ) : (
+                              <span
+                                className="material-thumb-placeholder"
+                                style={{ width: '3rem', height: '3rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, borderRadius: '6px', background: 'var(--color-background, #f0f2f5)', fontSize: '1.2rem' }}
+                              >
+                                ?
+                              </span>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <h5 className="font-semibold">{group.materialName}</h5>
+                                <span className={inspectedInGroup === group.units.length ? 'status-badge status-approved' : 'status-badge status-pending'}>
+                                  {inspectedInGroup}/{group.units.length} inspected
+                                </span>
+                              </div>
+
+                              <div className="mt-4 space-y-2">
+                                {group.units.map((unit) => {
+                                  const state = inspectionState[unit.unitKey] || {
+                                    condition: unit.defaultCondition,
+                                    destination: unit.defaultDestination,
+                                    humanCode: '',
+                                    location: unit.defaultLocation,
+                                    error: null,
+                                    isInspected: false,
+                                  };
+                                  const isInspected = state.isInspected;
+                                  const duplicateError = duplicateInspectionKeys.has(unit.unitKey)
+                                    ? 'This code is already entered for another item in this return.'
+                                    : null;
+                                  const fieldError = state.error || duplicateError;
+
+                                  return (
+                                    <div
+                                      key={unit.unitKey}
+                                      className={`inspection-item ${isInspected ? 'inspected' : ''} ${state.condition}`}
+                                      style={{ gridTemplateColumns: 'minmax(0, 1.4fr) auto auto auto auto' }}
+                                    >
+                                      <div className="item-details">
+                                        <div className="flex items-center gap-2">
+                                          <h5>{group.materialName}</h5>
+                                          <span className="text-xs text-text-secondary">Item {unit.unitIndex + 1}</span>
+                                        </div>
+                                        {isInspected ? (
+                                          <p className="text-sm font-mono font-semibold">{state.humanCode}</p>
+                                        ) : (
+                                          <>
+                                            <input
+                                              type="text"
+                                              className={`code-input${fieldError ? ' input-error' : ''}`}
+                                              placeholder="Scan or enter item code"
+                                              value={state.humanCode}
+                                              style={{ fontFamily: 'monospace', textTransform: 'uppercase', width: '100%', marginTop: '0.25rem' }}
+                                              onChange={(e) =>
+                                                setInspectionState((prev) => ({
+                                                  ...prev,
+                                                  [unit.unitKey]: {
+                                                    ...state,
+                                                    humanCode: (e.target as HTMLInputElement).value.toUpperCase(),
+                                                    error: null,
+                                                  },
+                                                }))
+                                              }
+                                            />
+                                            {fieldError && (
+                                              <p className="text-xs" style={{ color: '#e53e3e', marginTop: '0.2rem' }}>{fieldError}</p>
+                                            )}
+                                          </>
+                                        )}
+                                      </div>
+                                      <div className="item-condition">
+                                        <span className="condition-label">Condition</span>
+                                        <select
+                                          className={`condition-select ${state.condition}`}
+                                          value={state.condition}
+                                          disabled={isInspected}
+                                          onChange={(e) => {
+                                            const newCondition = (e.target as HTMLSelectElement).value as ItemCondition;
+                                            setInspectionState((prev) => ({
+                                              ...prev,
+                                              [unit.unitKey]: {
+                                                ...state,
+                                                condition: newCondition,
+                                                destination: destinationForCondition(newCondition),
+                                              },
+                                            }));
+                                          }}
+                                        >
+                                          {CONDITION_OPTIONS.map((c) => (
+                                            <option key={c} value={c}>
+                                              {c.charAt(0).toUpperCase() + c.slice(1)}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      </div>
+                                      <div className="item-destination">
+                                        <span className="dest-label">Destination</span>
+                                        <select
+                                          className="destination-select"
+                                          value={state.destination}
+                                          disabled={isInspected}
+                                          onChange={(e) =>
+                                            setInspectionState((prev) => ({
+                                              ...prev,
+                                              [unit.unitKey]: { ...state, destination: (e.target as HTMLSelectElement).value as ItemDestination },
+                                            }))
+                                          }
+                                        >
+                                          {DESTINATION_OPTIONS.map((d) => (
+                                            <option key={d} value={d}>
+                                              {d.charAt(0).toUpperCase() + d.slice(1)}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      </div>
+                                      <div className="item-location">
+                                        <span className="dest-label">Location</span>
+                                        {isInspected ? (
+                                          <span className="text-sm">{state.location || '—'}</span>
+                                        ) : (
+                                          <input
+                                            type="text"
+                                            className="location-input"
+                                            placeholder="Storage location"
+                                            value={state.location}
+                                            onChange={(e) =>
+                                              setInspectionState((prev) => ({
+                                                ...prev,
+                                                [unit.unitKey]: { ...state, location: (e.target as HTMLInputElement).value },
+                                              }))
+                                            }
+                                          />
+                                        )}
+                                      </div>
+                                      <div className="item-status-badge">
+                                        {isInspected ? (
+                                          <span className={`inspected-badge ${state.condition}`}>
+                                            {conditionLabel(state.condition)}
+                                          </span>
+                                        ) : (
+                                          <button
+                                            className="btn-mark-inspected"
+                                            onClick={() => handleInspectItem(selectedReturn.id, unit)}
+                                          >
+                                            Inspect
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
+                        </section>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
 

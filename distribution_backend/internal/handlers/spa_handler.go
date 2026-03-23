@@ -42,7 +42,7 @@ func (h *SPAHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Check if file exists and is not a directory
 	info, err := os.Stat(fullPath)
 	if err == nil && !info.IsDir() {
-		// File exists, serve it
+		h.setCacheHeaders(w, path)
 		http.ServeFile(w, r, fullPath)
 		return
 	}
@@ -52,6 +52,7 @@ func (h *SPAHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		htmlPath := fullPath + ".html"
 		info, err = os.Stat(htmlPath)
 		if err == nil && !info.IsDir() {
+			h.setCacheHeaders(w, path+".html")
 			http.ServeFile(w, r, htmlPath)
 			return
 		}
@@ -70,6 +71,27 @@ func (h *SPAHandler) serveIndex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Serve index.html
+	h.setNoCacheHeaders(w)
 	http.ServeFile(w, r, h.indexPath)
+}
+
+func (h *SPAHandler) setCacheHeaders(w http.ResponseWriter, path string) {
+	cleanPath := strings.TrimPrefix(filepath.ToSlash(path), "/")
+
+	switch {
+	case strings.EqualFold(filepath.Base(cleanPath), "index.html"):
+		h.setNoCacheHeaders(w)
+	case strings.HasSuffix(strings.ToLower(cleanPath), ".html"):
+		h.setNoCacheHeaders(w)
+	case strings.HasPrefix(cleanPath, "assets/"):
+		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+	default:
+		w.Header().Set("Cache-Control", "no-cache")
+	}
+}
+
+func (h *SPAHandler) setNoCacheHeaders(w http.ResponseWriter) {
+	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+	w.Header().Set("Pragma", "no-cache")
+	w.Header().Set("Expires", "0")
 }

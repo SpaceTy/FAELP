@@ -39,6 +39,7 @@ class InventoryService {
     status?: string;
     location?: string;
     humanCode?: string;
+    sort?: 'updatedAtDesc' | 'useCountAsc' | 'useCountDesc';
     limit?: number;
     offset?: number;
   }): Promise<MaterialInstance[]> {
@@ -47,6 +48,7 @@ class InventoryService {
     if (filters?.status) params.append('status', filters.status);
     if (filters?.location) params.append('location', filters.location);
     if (filters?.humanCode) params.append('humanCode', filters.humanCode);
+    if (filters?.sort && filters.sort !== 'updatedAtDesc') params.append('sort', filters.sort);
     if (filters?.limit) params.append('limit', filters.limit.toString());
     if (filters?.offset) params.append('offset', filters.offset.toString());
 

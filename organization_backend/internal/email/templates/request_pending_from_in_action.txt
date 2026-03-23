@@ -1,9 +1,0 @@
-Dear {{.CustomerName}},
-
-Your material request (#{{.RequestID}}) has been cancelled and returned to pending status.
-
-The distribution center is no longer able to fulfill this request. Your request will be available for other distribution centers to claim.
-
-If you have any questions, please contact support.
-
-Thank you for your understanding.

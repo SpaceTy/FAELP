@@ -3,7 +3,7 @@ import { inventoryService } from '@/services/inventory';
 import { materialTypesService } from '@/services/materialTypes';
 import { authSignal } from '@/context/AuthContext';
 import type { MaterialInstance, MaterialStatus, InventorySummary, MaterialType } from '@/types/inventory';
-import { InventoryFormModal } from '@/components/InventoryFormModal';
+import { InventoryFormModal, type InventoryFormValues } from '@/components/InventoryFormModal';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { Modal } from '@/components/Modal';
 
@@ -14,6 +14,14 @@ const STATUS_OPTIONS: { value: MaterialStatus | ''; label: string; color: string
   { value: 'returned', label: 'Zurückgegeben', color: 'text-gray-700', bgColor: 'bg-gray-200' },
   { value: 'archived', label: 'Archiviert', color: 'text-gray-700', bgColor: 'bg-gray-300' },
 ];
+
+const SORT_OPTIONS = [
+  { value: 'updatedAtDesc', label: 'Zuletzt geändert' },
+  { value: 'useCountAsc', label: 'Nutzungszahl aufsteigend' },
+  { value: 'useCountDesc', label: 'Nutzungszahl absteigend' },
+] as const;
+
+type InventorySortOption = typeof SORT_OPTIONS[number]['value'];
 
 function formatDate(dateString: string): string {
   const date = new Date(dateString);
@@ -54,6 +62,7 @@ export function InventoryPage() {
   const [locationFilter, setLocationFilter] = useState('');
   const [typeIdFilter, setTypeIdFilter] = useState('');
   const [humanCodeFilter, setHumanCodeFilter] = useState('');
+  const [sortOption, setSortOption] = useState<InventorySortOption>('updatedAtDesc');
   const [typeFilterDropdownOpen, setTypeFilterDropdownOpen] = useState(false);
 
   // Modal state
@@ -90,6 +99,7 @@ export function InventoryPage() {
           location: locationFilter || undefined,
           typeId: typeIdFilter || undefined,
           humanCode: humanCodeFilter || undefined,
+          sort: sortOption,
         }),
         inventoryService.getInventorySummary(),
       ]);
@@ -100,7 +110,7 @@ export function InventoryPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [statusFilter, locationFilter, typeIdFilter, humanCodeFilter]);
+  }, [statusFilter, locationFilter, typeIdFilter, humanCodeFilter, sortOption]);
 
   // Load material types once on mount
   const loadMaterialTypes = useCallback(async () => {
@@ -142,18 +152,17 @@ export function InventoryPage() {
   }, [summary]);
 
   // Actions
-  const handleFormSubmit = async (data: Record<string, string>) => {
+  const handleFormSubmit = async (data: InventoryFormValues) => {
     if (editingInstance) {
-      // Update case
       await inventoryService.updateMaterialInstance(editingInstance.id, {
-        status: data.status as MaterialStatus,
+        status: (data.status || editingInstance.status) as MaterialStatus,
         location: data.location,
+        useCount: data.useCount ?? editingInstance.useCount,
       });
     } else {
-      // Create case
       await inventoryService.createMaterialInstance({
-        humanCode: data.humanCode,
-        typeId: data.typeId,
+        humanCode: data.humanCode || '',
+        typeId: data.typeId || '',
         description: data.description || undefined,
         location: data.location,
       });
@@ -283,6 +292,21 @@ export function InventoryPage() {
             placeholder="Filter nach Standort..."
             className="logistics-input text-sm"
           />
+        </div>
+
+        <div className="filter-section">
+          <h3>Sortierung</h3>
+          <select
+            value={sortOption}
+            onChange={(e) => setSortOption((e.target as HTMLSelectElement).value as InventorySortOption)}
+            className="logistics-input text-sm"
+          >
+            {SORT_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="filter-section">

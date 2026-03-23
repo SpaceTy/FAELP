@@ -31,6 +31,7 @@ export interface CreateMaterialInstanceInput {
 export interface UpdateMaterialInstanceInput {
   status: MaterialStatus;
   location: string;
+  useCount: number;
 }
 
 export interface AssignMaterialInstanceInput {

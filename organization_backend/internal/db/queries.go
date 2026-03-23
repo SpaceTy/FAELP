@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/mail"
 	"strings"
 	"time"
 
@@ -24,10 +25,74 @@ var (
 	ErrRequestNotFound        = errors.New("request not found")
 	ErrRequestAlreadyApproved = errors.New("request already approved by another distribution center")
 	ErrInvalidRequestStatus   = errors.New("request status does not allow this operation")
+	ErrUserNotFound           = errors.New("user not found")
 )
 
 func NewStore(db *sql.DB) *Store {
 	return &Store{db: db}
+}
+
+type rowScanner interface {
+	Scan(dest ...any) error
+}
+
+type BulkVerifyUsersResult struct {
+	Users                []domain.Customer `json:"users"`
+	NewlyVerifiedUsers   []domain.Customer `json:"newlyVerifiedUsers"`
+	CreatedCount         int               `json:"createdCount"`
+	VerifiedCount        int               `json:"verifiedCount"`
+	AlreadyVerifiedCount int               `json:"alreadyVerifiedCount"`
+	InvalidEmails        []string          `json:"invalidEmails"`
+}
+
+func normalizeEmail(email string) string {
+	parsed, err := mail.ParseAddress(strings.TrimSpace(email))
+	if err == nil {
+		return strings.ToLower(strings.TrimSpace(parsed.Address))
+	}
+	return strings.ToLower(strings.TrimSpace(email))
+}
+
+func scanUserRow(scanner rowScanner, user *userRow) error {
+	var workOSUserID sql.NullString
+	err := scanner.Scan(
+		&user.ID,
+		&user.Email,
+		&user.Name,
+		&user.Token,
+		&workOSUserID,
+		&user.EmailVerified,
+		&user.IsAdmin,
+		&user.CreatedAt,
+	)
+	if err != nil {
+		return err
+	}
+	if workOSUserID.Valid {
+		user.WorkOSUserID = workOSUserID.String
+	}
+	return nil
+}
+
+func scanCustomer(scanner rowScanner, user *domain.Customer) error {
+	var workOSUserID sql.NullString
+	err := scanner.Scan(
+		&user.ID,
+		&user.Email,
+		&user.Name,
+		&user.Token,
+		&workOSUserID,
+		&user.EmailVerified,
+		&user.IsAdmin,
+		&user.CreatedAt,
+	)
+	if err != nil {
+		return err
+	}
+	if workOSUserID.Valid {
+		user.WorkOSUserID = workOSUserID.String
+	}
+	return nil
 }
 
 func (s *Store) ensureUser(ctx context.Context, tx *sql.Tx, input CreateRequestInput) (userRow, error) {
@@ -39,7 +104,9 @@ func (s *Store) ensureUser(ctx context.Context, tx *sql.Tx, input CreateRequestI
 		return userRow{}, errors.New("customer email required")
 	}
 
-	user, err := s.getUserByEmail(ctx, tx, input.CustomerEmail)
+	normalizedEmail := normalizeEmail(input.CustomerEmail)
+
+	user, err := s.getUserByEmail(ctx, tx, normalizedEmail)
 	if err == nil {
 		return user, nil
 	}
@@ -51,14 +118,11 @@ func (s *Store) ensureUser(ctx context.Context, tx *sql.Tx, input CreateRequestI
 		input.CustomerToken = uuid.NewString()
 	}
 	var created userRow
-	err = tx.QueryRowContext(ctx, `
+	if err := scanUserRow(tx.QueryRowContext(ctx, `
 		INSERT INTO users (email, name, token)
 		VALUES ($1,$2,$3)
-		RETURNING id, email, name, token, is_admin, created_at
-	`, input.CustomerEmail, input.CustomerName, input.CustomerToken).Scan(
-		&created.ID, &created.Email, &created.Name, &created.Token, &created.IsAdmin, &created.CreatedAt,
-	)
-	if err != nil {
+		RETURNING id, email, name, token, workos_user_id, email_verified, is_admin, created_at
+	`, normalizedEmail, input.CustomerName, input.CustomerToken), &created); err != nil {
 		return userRow{}, err
 	}
 	return created, nil
@@ -66,72 +130,98 @@ func (s *Store) ensureUser(ctx context.Context, tx *sql.Tx, input CreateRequestI
 
 func (s *Store) getUserByID(ctx context.Context, tx *sql.Tx, id string) (userRow, error) {
 	var row userRow
-	err := tx.QueryRowContext(ctx, `
-		SELECT id, email, name, token, is_admin, created_at
+	err := scanUserRow(tx.QueryRowContext(ctx, `
+		SELECT id, email, name, token, workos_user_id, email_verified, is_admin, created_at
 		FROM users WHERE id = $1
-	`, id).Scan(&row.ID, &row.Email, &row.Name, &row.Token, &row.IsAdmin, &row.CreatedAt)
+	`, id), &row)
 	return row, err
 }
 
 func (s *Store) getUserByEmail(ctx context.Context, tx *sql.Tx, email string) (userRow, error) {
 	var row userRow
-	err := tx.QueryRowContext(ctx, `
-		SELECT id, email, name, token, is_admin, created_at
-		FROM users WHERE email = $1
-	`, email).Scan(&row.ID, &row.Email, &row.Name, &row.Token, &row.IsAdmin, &row.CreatedAt)
+	err := scanUserRow(tx.QueryRowContext(ctx, `
+		SELECT id, email, name, token, workos_user_id, email_verified, is_admin, created_at
+		FROM users WHERE LOWER(email) = LOWER($1)
+	`, normalizeEmail(email)), &row)
 	return row, err
 }
 
 func (s *Store) GetOrCreateUserByWorkOSUser(ctx context.Context, workosUser *usermanagement.User) (domain.Customer, error) {
-	var user domain.Customer
-	err := s.db.QueryRowContext(ctx, `
-		SELECT id, email, name, token, workos_user_id, email_verified, is_admin, created_at
-		FROM users WHERE workos_user_id = $1
-	`, workosUser.ID).Scan(
-		&user.ID, &user.Email, &user.Name, &user.Token,
-		&user.WorkOSUserID, &user.EmailVerified, &user.IsAdmin, &user.CreatedAt,
-	)
-
-	if err == nil {
-		return user, nil
+	if workosUser == nil {
+		return domain.Customer{}, errors.New("workos user required")
 	}
 
+	email := normalizeEmail(workosUser.Email)
+	name := strings.TrimSpace(workosUser.FirstName + " " + workosUser.LastName)
+	if name == "" {
+		name = email
+	}
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return domain.Customer{}, err
+	}
+	defer tx.Rollback()
+
+	var user domain.Customer
+	err = scanCustomer(tx.QueryRowContext(ctx, `
+		SELECT id, email, name, token, workos_user_id, email_verified, is_admin, created_at
+		FROM users WHERE workos_user_id = $1
+	`, workosUser.ID), &user)
+	if err == nil {
+		if commitErr := tx.Commit(); commitErr != nil {
+			return domain.Customer{}, commitErr
+		}
+		return user, nil
+	}
 	if !errors.Is(err, sql.ErrNoRows) {
 		return domain.Customer{}, err
 	}
 
-	name := strings.TrimSpace(workosUser.FirstName + " " + workosUser.LastName)
-	if name == "" {
-		name = workosUser.Email
+	existing, err := s.getUserByEmail(ctx, tx, email)
+	if err == nil {
+		err = scanCustomer(tx.QueryRowContext(ctx, `
+			UPDATE users
+			SET name = $2, workos_user_id = $3
+			WHERE id = $1
+			RETURNING id, email, name, token, workos_user_id, email_verified, is_admin, created_at
+		`, existing.ID, name, workosUser.ID), &user)
+		if err != nil {
+			return domain.Customer{}, err
+		}
+		if commitErr := tx.Commit(); commitErr != nil {
+			return domain.Customer{}, commitErr
+		}
+		return user, nil
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return domain.Customer{}, err
 	}
 
-	err = s.db.QueryRowContext(ctx, `
+	err = scanCustomer(tx.QueryRowContext(ctx, `
 		INSERT INTO users (email, name, token, workos_user_id, email_verified)
 		VALUES ($1, $2, $3, $4, $5)
 		RETURNING id, email, name, token, workos_user_id, email_verified, is_admin, created_at
-	`,
-		workosUser.Email,
-		name,
-		uuid.NewString(),
-		workosUser.ID,
-		true,
-	).Scan(
-		&user.ID, &user.Email, &user.Name, &user.Token,
-		&user.WorkOSUserID, &user.EmailVerified, &user.IsAdmin, &user.CreatedAt,
-	)
+	`, email, name, uuid.NewString(), workosUser.ID, false), &user)
+	if err != nil {
+		return domain.Customer{}, err
+	}
 
-	return user, err
+	if err := tx.Commit(); err != nil {
+		return domain.Customer{}, err
+	}
+	return user, nil
 }
 
 func (s *Store) GetUserByID(ctx context.Context, id string) (domain.Customer, error) {
 	var user domain.Customer
-	err := s.db.QueryRowContext(ctx, `
+	err := scanCustomer(s.db.QueryRowContext(ctx, `
 		SELECT id, email, name, token, workos_user_id, email_verified, is_admin, created_at
 		FROM users WHERE id = $1
-	`, id).Scan(
-		&user.ID, &user.Email, &user.Name, &user.Token,
-		&user.WorkOSUserID, &user.EmailVerified, &user.IsAdmin, &user.CreatedAt,
-	)
+	`, id), &user)
+	if errors.Is(err, sql.ErrNoRows) {
+		return domain.Customer{}, ErrUserNotFound
+	}
 	return user, err
 }
 
@@ -145,12 +235,204 @@ func (s *Store) GetOrCreateCustomerByWorkOSUser(ctx context.Context, workosUser 
 	return s.GetOrCreateUserByWorkOSUser(ctx, workosUser)
 }
 
+func (s *Store) ListUsers(ctx context.Context) ([]domain.Customer, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT id, email, name, token, workos_user_id, email_verified, is_admin, created_at
+		FROM users
+		ORDER BY email_verified ASC, created_at DESC, email ASC
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []domain.Customer
+	for rows.Next() {
+		var user domain.Customer
+		if err := scanCustomer(rows, &user); err != nil {
+			return nil, err
+		}
+		users = append(users, user)
+	}
+	if users == nil {
+		users = []domain.Customer{}
+	}
+	return users, rows.Err()
+}
+
+func (s *Store) VerifyUserByID(ctx context.Context, id string) (domain.Customer, bool, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return domain.Customer{}, false, err
+	}
+	defer tx.Rollback()
+
+	var existing domain.Customer
+	err = scanCustomer(tx.QueryRowContext(ctx, `
+		SELECT id, email, name, token, workos_user_id, email_verified, is_admin, created_at
+		FROM users
+		WHERE id = $1
+	`, id), &existing)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return domain.Customer{}, false, ErrUserNotFound
+		}
+		return domain.Customer{}, false, err
+	}
+
+	wasVerified := existing.EmailVerified
+	if !existing.EmailVerified {
+		err = scanCustomer(tx.QueryRowContext(ctx, `
+			UPDATE users
+			SET email_verified = true
+			WHERE id = $1
+			RETURNING id, email, name, token, workos_user_id, email_verified, is_admin, created_at
+		`, id), &existing)
+		if err != nil {
+			return domain.Customer{}, false, err
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return domain.Customer{}, false, err
+	}
+	return existing, !wasVerified, nil
+}
+
+func (s *Store) UnverifyUserByID(ctx context.Context, id string) (domain.Customer, bool, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return domain.Customer{}, false, err
+	}
+	defer tx.Rollback()
+
+	var existing domain.Customer
+	err = scanCustomer(tx.QueryRowContext(ctx, `
+		SELECT id, email, name, token, workos_user_id, email_verified, is_admin, created_at
+		FROM users
+		WHERE id = $1
+	`, id), &existing)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return domain.Customer{}, false, ErrUserNotFound
+		}
+		return domain.Customer{}, false, err
+	}
+
+	wasVerified := existing.EmailVerified
+	if existing.EmailVerified {
+		err = scanCustomer(tx.QueryRowContext(ctx, `
+			UPDATE users
+			SET email_verified = false
+			WHERE id = $1
+			RETURNING id, email, name, token, workos_user_id, email_verified, is_admin, created_at
+		`, id), &existing)
+		if err != nil {
+			return domain.Customer{}, false, err
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return domain.Customer{}, false, err
+	}
+	return existing, wasVerified, nil
+}
+
+func (s *Store) BulkVerifyUsers(ctx context.Context, emails []string) (BulkVerifyUsersResult, error) {
+	seen := make(map[string]struct{}, len(emails))
+	normalizedEmails := make([]string, 0, len(emails))
+	invalidEmails := make([]string, 0)
+
+	for _, raw := range emails {
+		normalized := normalizeEmail(raw)
+		if normalized == "" {
+			continue
+		}
+
+		parsed, err := mail.ParseAddress(normalized)
+		if err != nil || parsed.Address == "" {
+			invalidEmails = append(invalidEmails, strings.TrimSpace(raw))
+			continue
+		}
+
+		if _, ok := seen[normalized]; ok {
+			continue
+		}
+		seen[normalized] = struct{}{}
+		normalizedEmails = append(normalizedEmails, normalized)
+	}
+
+	result := BulkVerifyUsersResult{
+		Users:              []domain.Customer{},
+		NewlyVerifiedUsers: []domain.Customer{},
+		InvalidEmails:      invalidEmails,
+	}
+	if len(normalizedEmails) == 0 {
+		return result, nil
+	}
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return BulkVerifyUsersResult{}, err
+	}
+	defer tx.Rollback()
+
+	for _, email := range normalizedEmails {
+		existing, err := s.getUserByEmail(ctx, tx, email)
+		switch {
+		case err == nil:
+			wasVerified := existing.EmailVerified
+			if wasVerified {
+				result.AlreadyVerifiedCount++
+			} else {
+				result.VerifiedCount++
+			}
+
+			var user domain.Customer
+			err = scanCustomer(tx.QueryRowContext(ctx, `
+				UPDATE users
+				SET email = $2, email_verified = true
+				WHERE id = $1
+				RETURNING id, email, name, token, workos_user_id, email_verified, is_admin, created_at
+			`, existing.ID, email), &user)
+			if err != nil {
+				return BulkVerifyUsersResult{}, err
+			}
+			result.Users = append(result.Users, user)
+			if !wasVerified {
+				result.NewlyVerifiedUsers = append(result.NewlyVerifiedUsers, user)
+			}
+
+		case errors.Is(err, sql.ErrNoRows):
+			var user domain.Customer
+			err = scanCustomer(tx.QueryRowContext(ctx, `
+				INSERT INTO users (email, name, token, email_verified)
+				VALUES ($1, $2, $3, true)
+				RETURNING id, email, name, token, workos_user_id, email_verified, is_admin, created_at
+			`, email, email, uuid.NewString()), &user)
+			if err != nil {
+				return BulkVerifyUsersResult{}, err
+			}
+			result.CreatedCount++
+			result.Users = append(result.Users, user)
+
+		default:
+			return BulkVerifyUsersResult{}, err
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return BulkVerifyUsersResult{}, err
+	}
+	return result, nil
+}
+
 // Material Type CRUD operations
 
 // ListMaterialTypes returns all material types ordered by name
 func (s *Store) ListMaterialTypes(ctx context.Context) ([]domain.MaterialType, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT id, name, description, image_url
+		SELECT id, name, description, image_url, category
 		FROM material_types
 		ORDER BY name ASC
 	`)
@@ -162,7 +444,7 @@ func (s *Store) ListMaterialTypes(ctx context.Context) ([]domain.MaterialType, e
 	var result []domain.MaterialType
 	for rows.Next() {
 		var mt domain.MaterialType
-		if err := rows.Scan(&mt.ID, &mt.Name, &mt.Description, &mt.ImageURL); err != nil {
+		if err := rows.Scan(&mt.ID, &mt.Name, &mt.Description, &mt.ImageURL, &mt.Category); err != nil {
 			return nil, err
 		}
 		result = append(result, mt)
@@ -182,6 +464,7 @@ func (s *Store) ListMaterialTypesWithAvailability(ctx context.Context) ([]domain
 			mt.name, 
 			mt.description, 
 			mt.image_url,
+			mt.category,
 			COALESCE(ma_totals.total_amount, 0) - COALESCE(reserved_totals.reserved_amount, 0) as available_count
 		FROM material_types mt
 		LEFT JOIN (
@@ -206,7 +489,7 @@ func (s *Store) ListMaterialTypesWithAvailability(ctx context.Context) ([]domain
 	var result []domain.MaterialType
 	for rows.Next() {
 		var mt domain.MaterialType
-		if err := rows.Scan(&mt.ID, &mt.Name, &mt.Description, &mt.ImageURL, &mt.AvailableCount); err != nil {
+		if err := rows.Scan(&mt.ID, &mt.Name, &mt.Description, &mt.ImageURL, &mt.Category, &mt.AvailableCount); err != nil {
 			return nil, err
 		}
 		result = append(result, mt)
@@ -221,10 +504,10 @@ func (s *Store) ListMaterialTypesWithAvailability(ctx context.Context) ([]domain
 func (s *Store) GetMaterialTypeByID(ctx context.Context, id string) (domain.MaterialType, error) {
 	var mt domain.MaterialType
 	err := s.db.QueryRowContext(ctx, `
-		SELECT id, name, description, image_url
+		SELECT id, name, description, image_url, category
 		FROM material_types
 		WHERE id = $1
-	`, id).Scan(&mt.ID, &mt.Name, &mt.Description, &mt.ImageURL)
+	`, id).Scan(&mt.ID, &mt.Name, &mt.Description, &mt.ImageURL, &mt.Category)
 	if err != nil {
 		return domain.MaterialType{}, err
 	}
@@ -232,13 +515,13 @@ func (s *Store) GetMaterialTypeByID(ctx context.Context, id string) (domain.Mate
 }
 
 // CreateMaterialType creates a new material type
-func (s *Store) CreateMaterialType(ctx context.Context, id, name, description, imageURL string) (domain.MaterialType, error) {
+func (s *Store) CreateMaterialType(ctx context.Context, id, name, description, imageURL string, category domain.MaterialCategory) (domain.MaterialType, error) {
 	var mt domain.MaterialType
 	err := s.db.QueryRowContext(ctx, `
-		INSERT INTO material_types (id, name, description, image_url)
-		VALUES ($1, $2, $3, $4)
-		RETURNING id, name, description, image_url
-	`, id, name, description, imageURL).Scan(&mt.ID, &mt.Name, &mt.Description, &mt.ImageURL)
+		INSERT INTO material_types (id, name, description, image_url, category)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING id, name, description, image_url, category
+	`, id, name, description, imageURL, category).Scan(&mt.ID, &mt.Name, &mt.Description, &mt.ImageURL, &mt.Category)
 	if err != nil {
 		return domain.MaterialType{}, err
 	}
@@ -246,14 +529,14 @@ func (s *Store) CreateMaterialType(ctx context.Context, id, name, description, i
 }
 
 // UpdateMaterialType updates an existing material type
-func (s *Store) UpdateMaterialType(ctx context.Context, id, name, description string) (domain.MaterialType, error) {
+func (s *Store) UpdateMaterialType(ctx context.Context, id, name, description string, category domain.MaterialCategory) (domain.MaterialType, error) {
 	var mt domain.MaterialType
 	err := s.db.QueryRowContext(ctx, `
 		UPDATE material_types
-		SET name = $2, description = $3
+		SET name = $2, description = $3, category = $4
 		WHERE id = $1
-		RETURNING id, name, description, image_url
-	`, id, name, description).Scan(&mt.ID, &mt.Name, &mt.Description, &mt.ImageURL)
+		RETURNING id, name, description, image_url, category
+	`, id, name, description, category).Scan(&mt.ID, &mt.Name, &mt.Description, &mt.ImageURL, &mt.Category)
 	if err != nil {
 		return domain.MaterialType{}, err
 	}

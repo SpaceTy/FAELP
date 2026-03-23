@@ -1,7 +1,64 @@
 import { useState, useMemo } from 'preact/hooks';
 import { MaterialCard } from '@/components/Material/MaterialCard';
 import { useMaterialTypes } from '@/context/MaterialTypesContext';
-import { CATEGORY_LABELS, type MaterialCategory } from '@/types/material';
+import { CATEGORY_LABELS, type Material, type MaterialCategory } from '@/types/material';
+
+type MaterialSortOption = 'relevance' | 'name-asc' | 'category';
+
+function compareByName(a: Material, b: Material) {
+  return a.name.localeCompare(b.name, 'de', { sensitivity: 'base' });
+}
+
+function compareByCategory(a: Material, b: Material) {
+  const categoryComparison = CATEGORY_LABELS[a.category].localeCompare(
+    CATEGORY_LABELS[b.category],
+    'de',
+    { sensitivity: 'base' }
+  );
+
+  if (categoryComparison !== 0) {
+    return categoryComparison;
+  }
+
+  return compareByName(a, b);
+}
+
+function compareByAvailability(a: Material, b: Material) {
+  return b.availableCount - a.availableCount;
+}
+
+function getRelevanceRank(material: Material, normalizedQuery: string) {
+  if (normalizedQuery === '') {
+    return Number.MAX_SAFE_INTEGER;
+  }
+
+  const name = material.name.toLowerCase();
+  const description = material.description.toLowerCase();
+
+  if (name === normalizedQuery) {
+    return 0;
+  }
+
+  if (name.startsWith(normalizedQuery)) {
+    return 1;
+  }
+
+  const nameIndex = name.indexOf(normalizedQuery);
+  if (nameIndex >= 0) {
+    return 10 + nameIndex;
+  }
+
+  if (description.startsWith(normalizedQuery)) {
+    return 100;
+  }
+
+  const descriptionIndex = description.indexOf(normalizedQuery);
+  if (descriptionIndex >= 0) {
+    return 200 + descriptionIndex;
+  }
+
+  return Number.MAX_SAFE_INTEGER;
+}
 
 export function MaterialsPage() {
   const { materials, isLoading, error } = useMaterialTypes();
@@ -12,6 +69,7 @@ export function MaterialsPage() {
     'Zubehoer'
   ]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortOption, setSortOption] = useState<MaterialSortOption>('relevance');
 
   const filteredMaterials = useMemo(() => {
     if (!materials) return [];
@@ -23,6 +81,35 @@ export function MaterialsPage() {
       return matchesCategory && matchesSearch;
     });
   }, [materials, selectedCategories, searchQuery]);
+
+  const sortedMaterials = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+
+    return [...filteredMaterials].sort((a, b) => {
+      switch (sortOption) {
+        case 'name-asc':
+          return compareByName(a, b);
+        case 'category':
+          return compareByCategory(a, b);
+        case 'relevance':
+        default: {
+          const relevanceDifference =
+            getRelevanceRank(a, normalizedQuery) - getRelevanceRank(b, normalizedQuery);
+
+          if (relevanceDifference !== 0) {
+            return relevanceDifference;
+          }
+
+          const availabilityDifference = compareByAvailability(a, b);
+          if (availabilityDifference !== 0) {
+            return availabilityDifference;
+          }
+
+          return compareByName(a, b);
+        }
+      }
+    });
+  }, [filteredMaterials, searchQuery, sortOption]);
 
   const toggleCategory = (category: MaterialCategory) => {
     setSelectedCategories(prev => 
@@ -65,12 +152,16 @@ export function MaterialsPage() {
               </h2>
               <div className="flex items-center gap-4">
                 <span className="text-text-secondary">
-                  {filteredMaterials.length} Materialien
+                  {sortedMaterials.length} Materialien
                 </span>
-                <select className="px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary">
-                  <option>Sortieren nach: Relevanz</option>
-                  <option>Name (A-Z)</option>
-                  <option>Kategorie</option>
+                <select
+                  value={sortOption}
+                  onChange={(e) => setSortOption((e.target as HTMLSelectElement).value as MaterialSortOption)}
+                  className="px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="relevance">Sortieren nach: Relevanz</option>
+                  <option value="name-asc">Name (A-Z)</option>
+                  <option value="category">Kategorie</option>
                 </select>
               </div>
             </div>
@@ -101,12 +192,12 @@ export function MaterialsPage() {
           {!isLoading && !error && (
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {filteredMaterials.map(material => (
+                {sortedMaterials.map(material => (
                   <MaterialCard key={material.id} material={material} />
                 ))}
               </div>
 
-              {filteredMaterials.length === 0 && (
+              {sortedMaterials.length === 0 && (
                 <div className="text-center py-12">
                   <p className="text-text-secondary text-lg">
                     Keine Materialien gefunden.

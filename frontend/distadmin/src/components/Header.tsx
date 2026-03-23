@@ -11,6 +11,14 @@ export function Header({ currentPath }: HeaderProps) {
     document.documentElement.classList.contains('dark')
   );
 
+  const navItems = [
+    { href: '/', label: 'Inventar' },
+    ...(user?.isAdmin ? [
+      { href: '/accounts', label: 'Accounts' },
+      { href: '/audit', label: 'Audit-Log' },
+    ] : []),
+  ];
+
   const toggleDark = () => {
     const next = !isDark;
     setIsDark(next);
@@ -26,73 +34,44 @@ export function Header({ currentPath }: HeaderProps) {
   };
 
   return (
-    <header className="bg-logistics-header text-white shadow-md flex-shrink-0 z-50">
-      <div className="flex items-center justify-between px-6 py-3 gap-8">
-        {/* Logo */}
-        <div className="flex-shrink-0">
-          <a href="/" className="block">
-            <h1 className="text-2xl font-bold text-logistics-accent">EHALP</h1>
-            <p className="text-xs text-gray-400">Distribution Admin</p>
+    <header className="bg-secondary font-sans text-white shadow-md flex-shrink-0 z-50">
+      <div className="flex items-center gap-4 px-6 py-3">
+        <div className="min-w-0 flex-shrink-0">
+          <a href="/" className="flex items-baseline gap-2">
+            <h1 className="text-xl font-bold leading-none tracking-tight text-primary">EHALP</h1>
+            <p className="hidden text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-slate-300 xl:block">
+              Distribution Admin
+            </p>
           </a>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 flex gap-2">
-          <a
-            href="/"
-            className={`px-4 py-2 rounded transition-colors text-sm font-medium ${
-              isActive('/')
-                ? 'bg-logistics-secondary text-white'
-                : 'text-gray-300 hover:bg-logistics-secondary hover:text-white'
-            }`}
-          >
-            Inventar
-          </a>
-          {user?.isAdmin && (
-            <>
+        <div className="min-w-0 flex-1 overflow-x-auto">
+          <nav className="flex min-w-max flex-nowrap gap-2">
+            {navItems.map((item) => (
               <a
-                href="/accounts"
-                className={`px-4 py-2 rounded transition-colors text-sm font-medium ${
-                  isActive('/accounts')
-                    ? 'bg-logistics-secondary text-white'
-                    : 'text-gray-300 hover:bg-logistics-secondary hover:text-white'
+                key={item.href}
+                href={item.href}
+                className={`inline-flex h-9 items-center rounded-lg px-3.5 text-sm font-medium transition-colors ${
+                  isActive(item.href)
+                    ? 'bg-primary text-secondary'
+                    : 'text-slate-100 hover:bg-secondary-hover'
                 }`}
               >
-                Accounts
+                {item.label}
               </a>
-              <a
-                href="/audit"
-                className={`px-4 py-2 rounded transition-colors text-sm font-medium ${
-                  isActive('/audit')
-                    ? 'bg-logistics-secondary text-white'
-                    : 'text-gray-300 hover:bg-logistics-secondary hover:text-white'
-                }`}
-              >
-                Audit-Log
-              </a>
-            </>
-          )}
-        </nav>
+            ))}
+          </nav>
+        </div>
 
-        {/* User Actions */}
-        <div className="flex items-center gap-4">
+        <div className="ml-auto flex flex-shrink-0 items-center justify-end gap-2">
           {user && (
             <>
-              <div className="flex items-center gap-3">
-                <div className="text-right">
-                  <div className="text-sm font-medium text-white">{user.username}</div>
-                  <div className="flex items-center gap-2">
-                    {user.isAdmin && (
-                      <span className="text-xs bg-logistics-accent text-white px-2 py-0.5 rounded-full">
-                        Admin
-                      </span>
-                    )}
-                  </div>
-                </div>
+              <div className="hidden text-right lg:block">
+                <div className="text-sm font-medium text-white">{user.username}</div>
               </div>
               <button
                 onClick={logout}
-                className="btn-logistics btn-logistics-secondary text-sm"
+                className="inline-flex h-9 items-center rounded-lg border border-white/20 px-3.5 text-sm font-medium text-white transition-colors hover:bg-white/10"
               >
                 Abmelden
               </button>
@@ -101,7 +80,7 @@ export function Header({ currentPath }: HeaderProps) {
           <button
             onClick={toggleDark}
             title={isDark ? 'Hellmodus' : 'Dunkelmodus'}
-            className="p-2 rounded transition-colors text-gray-400 hover:text-white hover:bg-white/10"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
           >
             {isDark ? (
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

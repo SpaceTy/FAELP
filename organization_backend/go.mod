@@ -14,4 +14,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 )
 
-require github.com/google/go-querystring v1.2.0 // indirect
+require (
+	github.com/adrium/goheif v0.0.0-20230113233934-ca402e77a786 // indirect
+	github.com/google/go-querystring v1.2.0 // indirect
+)

@@ -1,4 +1,4 @@
-FROM debian:bookworm-slim
+FROM debian:trixie-slim
 
 WORKDIR /app
 
@@ -6,6 +6,7 @@ RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
       postgresql-client \
       ca-certificates \
+      libheif1 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY app /app

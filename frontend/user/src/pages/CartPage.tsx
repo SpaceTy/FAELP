@@ -41,10 +41,10 @@ export function CartPage() {
             Ihre Anfrage wurde erfolgreich übermittelt. Sie erhalten eine Bestätigung per E-Mail.
           </p>
           <a
-            href="/materials"
+            href="/my-requests"
             className="inline-block px-6 py-2 bg-primary text-white font-medium rounded hover:bg-primary-hover transition-colors"
           >
-            Weiter stöbern
+            Zu meinen Anfragen
           </a>
         </div>
       </main>

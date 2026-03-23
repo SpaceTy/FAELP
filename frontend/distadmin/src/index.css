@@ -2,6 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --accent-primary: 72 187 120;
+  --accent-primary-hover: 56 161 105;
+}
+
+.dark {
+  --accent-primary: 72 187 120;
+  --accent-primary-hover: 56 161 105;
+}
+
 /* Logistics Theme Custom Styles */
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -38,19 +48,19 @@ body {
   }
   
   .bg-logistics-accent {
-    background-color: #48bb78;
+    background-color: rgb(var(--accent-primary));
   }
   
   .bg-logistics-accent-hover {
-    background-color: #38a169;
+    background-color: rgb(var(--accent-primary-hover));
   }
   
   .text-logistics-accent {
-    color: #48bb78;
+    color: rgb(var(--accent-primary));
   }
   
   .border-logistics-accent {
-    border-color: #48bb78;
+    border-color: rgb(var(--accent-primary));
   }
   
   .bg-logistics-secondary {
@@ -91,12 +101,12 @@ body {
 }
 
 .btn-logistics-primary {
-  background-color: #48bb78;
+  background-color: rgb(var(--accent-primary));
   color: white;
 }
 
 .btn-logistics-primary:hover {
-  background-color: #38a169;
+  background-color: rgb(var(--accent-primary-hover));
 }
 
 .btn-logistics-secondary {
@@ -150,8 +160,8 @@ body {
 
 .logistics-input:focus {
   outline: none;
-  border-color: #48bb78;
-  box-shadow: 0 0 0 3px rgba(72, 187, 120, 0.1);
+  border-color: rgb(var(--accent-primary));
+  box-shadow: 0 0 0 3px rgb(var(--accent-primary) / 0.1);
 }
 
 .logistics-label {
@@ -227,7 +237,7 @@ body {
   width: 16px;
   height: 16px;
   cursor: pointer;
-  accent-color: #48bb78;
+  accent-color: rgb(var(--accent-primary));
 }
 
 .checkbox-label:hover {
@@ -380,8 +390,8 @@ body {
   color: #f1f5f9;
 }
 .dark .logistics-input:focus {
-  border-color: #48bb78;
-  box-shadow: 0 0 0 3px rgba(72, 187, 120, 0.2);
+  border-color: rgb(var(--accent-primary));
+  box-shadow: 0 0 0 3px rgb(var(--accent-primary) / 0.2);
 }
 .dark .logistics-label { color: #e2e8f0; }
 

@@ -95,13 +95,18 @@ func main() {
 		log.Printf("email service disabled: RESEND_API_KEY not set")
 	}
 
+	userHandler := &api.UserHandler{
+		Store:        store,
+		EmailService: emailService,
+	}
+
 	requestHandler := &api.RequestHandler{
 		Store:           store,
 		EmailService:    emailService,
 		RequestNotifier: requestNotifier,
 	}
 
-	router := api.Routes(handler, authHandler, materialTypeHandler, uploadHandler, dcHandler, requestHandler, cfg.JWTSecret)
+	router := api.Routes(handler, authHandler, userHandler, materialTypeHandler, uploadHandler, dcHandler, requestHandler, cfg.JWTSecret)
 
 	// Mount user frontend at root if enabled (must be after API routes)
 	if cfg.Frontend.User.Enabled && cfg.Frontend.User.Path != "" {

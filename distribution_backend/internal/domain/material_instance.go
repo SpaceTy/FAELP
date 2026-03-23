@@ -45,4 +45,5 @@ type BulkCreateMaterialInstancesInput struct {
 type UpdateMaterialInstanceInput struct {
 	Status   string `json:"status"`
 	Location string `json:"location"`
+	UseCount *int   `json:"useCount,omitempty"`
 }

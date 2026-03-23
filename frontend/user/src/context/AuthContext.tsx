@@ -9,6 +9,7 @@ interface AuthContextType {
   userId: string | null;
   customer: Customer | null;
   isAuthenticated: boolean;
+  isVerified: boolean;
   isLoading: boolean;
   login: (email: string) => Promise<void>;
   verifyCode: (code: string, email?: string) => Promise<void>;
@@ -95,6 +96,7 @@ export function AuthProvider({ children }: { children: ComponentChildren }) {
     userId: authSignal.value?.userId || null,
     customer: authSignal.value?.customer || null,
     isAuthenticated: !!authSignal.value,
+    isVerified: !!authSignal.value?.customer?.emailVerified,
     isLoading,
     login,
     verifyCode,

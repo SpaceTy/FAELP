@@ -3,14 +3,23 @@ import { cartSignal, getItemCount } from '@/hooks/useCart';
 import { useAuth } from '@/context/AuthContext';
 import { UserMenu } from '@/components/Auth/UserMenu';
 
-export function Header() {
+interface HeaderProps {
+  currentPath: string;
+}
+
+export function Header({ currentPath }: HeaderProps) {
   const itemCount = getItemCount();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, customer } = useAuth();
   const [isFlashing, setIsFlashing] = useState(false);
   const prevCountRef = useRef(itemCount);
   const [isDark, setIsDark] = useState(
     document.documentElement.classList.contains('dark')
   );
+
+  const navItems = [
+    { href: '/materials', label: 'Materialien durchsuchen' },
+    { href: '/my-requests', label: 'Meine Anfragen' },
+  ];
 
   useEffect(() => {
     const currentCount = getItemCount();
@@ -28,51 +37,68 @@ export function Header() {
     localStorage.setItem('theme', next ? 'dark' : 'light');
   };
 
+  const isActive = (path: string) => {
+    if (path === '/materials') {
+      return currentPath === '/' || currentPath === '/materials';
+    }
+    return currentPath === path;
+  };
+
   return (
-    <header className="bg-secondary text-white shadow-md flex-shrink-0 z-50">
-      <div className="flex items-center justify-between px-6 py-4 gap-8">
-        <div className="flex-shrink-0">
-          <a href="/" className="text-decoration-none">
-            <h1 className="text-2xl font-bold text-primary">EHALP</h1>
-            <p className="text-xs text-gray-300">Erste-Hilfe-Ausbildungslogistikplattform</p>
+    <header className="bg-secondary font-sans text-white shadow-md flex-shrink-0 z-50">
+      <div className="flex items-center gap-4 px-6 py-3">
+        <div className="min-w-0 flex-shrink-0">
+          <a href="/" className="flex items-baseline gap-2 no-underline">
+            <h1 className="text-xl font-bold leading-none tracking-tight text-primary">EHALP</h1>
+            <p className="hidden text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-slate-300 xl:block">
+              Ausbildungslogistik
+            </p>
           </a>
         </div>
 
-        <nav className="flex-1 flex gap-2">
-          <a
-            href="/materials"
-            className="px-4 py-2 rounded transition-colors hover:bg-secondary-hover"
-          >
-            Materialien durchsuchen
-          </a>
-          <a
-            href="/my-requests"
-            className="px-4 py-2 rounded transition-colors hover:bg-secondary-hover"
-          >
-            Meine Anfragen
-          </a>
-        </nav>
+        <div className="min-w-0 flex-1 overflow-x-auto">
+          <nav className="flex min-w-max flex-nowrap gap-2">
+            {navItems.map((item) => (
+              <a
+                key={item.href}
+                href={item.href}
+                className={`inline-flex h-9 items-center rounded-lg px-3.5 text-sm font-medium transition-colors ${
+                  isActive(item.href)
+                    ? 'bg-primary text-secondary'
+                    : 'text-slate-100 hover:bg-secondary-hover'
+                }`}
+              >
+                {item.label}
+              </a>
+            ))}
+          </nav>
+        </div>
 
-        <div className="flex items-center gap-4">
+        <div className="ml-auto flex flex-shrink-0 items-center justify-end gap-2">
           <a
             href="/hilfe"
-            className="px-4 py-2 border border-white rounded hover:bg-white/10 transition-colors"
+            className="inline-flex h-9 items-center rounded-lg border border-white/20 px-3.5 text-sm font-medium text-white transition-colors hover:bg-white/10"
           >
             Hilfe
           </a>
           <a
             href="/cart"
-            className={`px-4 py-2 bg-primary text-secondary font-medium rounded hover:bg-primary-hover transition-all ${
+            className={`inline-flex h-9 items-center rounded-lg bg-primary px-3.5 text-sm font-semibold text-secondary transition-all hover:bg-primary-hover ${
               isFlashing ? 'animate-cart-flash scale-110' : ''
             }`}
           >
             Warenkorb ({itemCount})
           </a>
           {isAuthenticated && <UserMenu />}
+          {isAuthenticated && customer && !customer.emailVerified && (
+            <span className="hidden xl:inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
+              Nicht verifiziert
+            </span>
+          )}
           <button
             onClick={toggleDark}
             title={isDark ? 'Hellmodus' : 'Dunkelmodus'}
-            className="p-2 rounded transition-colors text-gray-400 hover:text-white hover:bg-white/10"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
           >
             {isDark ? (
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

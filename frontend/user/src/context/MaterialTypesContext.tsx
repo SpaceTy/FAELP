@@ -1,7 +1,7 @@
 import { createContext, ComponentChildren } from 'preact';
 import { useContext, useEffect, useState } from 'preact/hooks';
 import { api } from '@/services/api';
-import type { Material, MaterialCategory } from '@/types/material';
+import { isMaterialCategory, type Material, type MaterialCategory } from '@/types/material';
 
 interface MaterialTypesContextValue {
   materials: Material[];
@@ -13,41 +13,15 @@ interface MaterialTypesContextValue {
 
 const MaterialTypesContext = createContext<MaterialTypesContextValue | null>(null);
 
-// Helper to determine category from material ID (based on image path or ID patterns)
-function determineCategory(material: Material): MaterialCategory {
-  // If the material already has a valid category, return it
-  if (material.category) {
-    return material.category;
-  }
-  
-  // Determine category based on ID patterns
-  const id = material.id.toLowerCase();
-  
-  // Wundversorgung & Trauma items
-  if (id.includes('dreieckstuch') || 
-      id.includes('fixierbinde') || 
-      id.includes('rettungsdecke') || 
-      id.includes('kompressen') || 
-      id.includes('tourniquet')) {
-    return 'Wundversorgung&Trauma';
-  }
-  
-  // Zubehoer items
-  if (id.includes('airway') || 
-      id.includes('matte') || 
-      id.includes('apollo')) {
-    return 'Zubehoer';
-  }
-  
-  // Default to Reanimation
-  return 'Reanimation';
+function normalizeCategory(category: string | undefined): MaterialCategory {
+  return isMaterialCategory(category) ? category : 'Reanimation';
 }
 
 // Helper to ensure image URL is properly formatted
 function ensureImageUrl(material: Material): string {
   if (!material.imageUrl) {
     // Generate default image path based on category and ID
-    const category = determineCategory(material);
+    const category = normalizeCategory(material.category);
     return `/assets/material/${category}/${material.id}.webp`;
   }
   return material.imageUrl;
@@ -67,7 +41,7 @@ export function MaterialTypesProvider({ children }: { children: ComponentChildre
       const data = await api.listMaterialTypes();
       const enrichedMaterials = (data || []).map(m => ({
         ...m,
-        category: determineCategory(m),
+        category: normalizeCategory(m.category),
         imageUrl: ensureImageUrl(m)
       }));
       setMaterials(enrichedMaterials);
@@ -88,13 +62,13 @@ export function MaterialTypesProvider({ children }: { children: ComponentChildre
       if (data.type === 'snapshot') {
         const enriched = (data.materials || []).map((m: Material) => ({
           ...m,
-          category: determineCategory(m),
+          category: normalizeCategory(m.category),
           imageUrl: ensureImageUrl(m),
         }));
         setMaterials(enriched);
       } else if (data.type === 'update' && data.material) {
         const m = data.material as Material;
-        const enriched = { ...m, category: determineCategory(m), imageUrl: ensureImageUrl(m) };
+        const enriched = { ...m, category: normalizeCategory(m.category), imageUrl: ensureImageUrl(m) };
         setMaterials(prev => prev.map(existing => existing.id === enriched.id ? enriched : existing));
       }
     });
