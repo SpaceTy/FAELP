@@ -353,7 +353,9 @@ export function MyRequestsPage() {
                             </svg>
                             <div>
                               <p className="text-xs text-slate-500">Geplante Schüler:innen</p>
-                              <p className="text-sm text-slate-900">{request.intendedStudents}</p>
+                              <p className="text-sm text-slate-900">
+                                {request.intendedStudents > 0 ? request.intendedStudents : 'Nicht übermittelt'}
+                              </p>
                             </div>
                           </div>
                           <div className="flex items-start gap-2">

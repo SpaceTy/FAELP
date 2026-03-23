@@ -498,6 +498,8 @@ func (s *Store) CreateRequest(ctx context.Context, input domain.CreateRequestInp
 	slog.Info("store_create_request_transaction_begun")
 
 	metadata := make(map[string]any)
+	metadata["dataProcessingConsent"] = input.DataProcessingConsent
+	metadata["shareIntendedStudents"] = input.ShareIntendedStudents
 	if input.Note != "" {
 		metadata["note"] = input.Note
 	}

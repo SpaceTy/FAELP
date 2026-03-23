@@ -26,6 +26,8 @@ export interface CreateRequestInput {
   deliveryDate: string;
   plannedReturnDate: string;
   intendedStudents: number;
+  dataProcessingConsent: boolean;
+  shareIntendedStudents: boolean;
   shippingName: string;
   addressLine1: string;
   addressLine2?: string;

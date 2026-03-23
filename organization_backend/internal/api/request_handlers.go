@@ -23,16 +23,18 @@ type RequestHandler struct {
 }
 
 type createRequestRequest struct {
-	DeliveryDate         string `json:"deliveryDate"`
-	PlannedReturnDate    string `json:"plannedReturnDate"`
-	IntendedStudents     int    `json:"intendedStudents"`
-	ShippingCustomerName string `json:"shippingName"`
-	ShippingAddressLine1 string `json:"addressLine1"`
-	ShippingAddressLine2 string `json:"addressLine2"`
-	ShippingCity         string `json:"city"`
-	ShippingZipCode      string `json:"zipCode"`
-	Note                 string `json:"note"`
-	Items                []struct {
+	DeliveryDate          string `json:"deliveryDate"`
+	PlannedReturnDate     string `json:"plannedReturnDate"`
+	IntendedStudents      int    `json:"intendedStudents"`
+	DataProcessingConsent bool   `json:"dataProcessingConsent"`
+	ShareIntendedStudents bool   `json:"shareIntendedStudents"`
+	ShippingCustomerName  string `json:"shippingName"`
+	ShippingAddressLine1  string `json:"addressLine1"`
+	ShippingAddressLine2  string `json:"addressLine2"`
+	ShippingCity          string `json:"city"`
+	ShippingZipCode       string `json:"zipCode"`
+	Note                  string `json:"note"`
+	Items                 []struct {
 		MaterialTypeID string `json:"materialTypeId"`
 		Quantity       int    `json:"quantity"`
 	} `json:"items"`
@@ -101,9 +103,14 @@ func (h *RequestHandler) CreateRequest(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "validation_error", "Planned return date is required")
 		return
 	}
-	if req.IntendedStudents <= 0 {
-		slog.Info("create_request_validation_failed", "field", "intended_students", "reason", "not_positive", "value", req.IntendedStudents)
-		writeError(w, http.StatusBadRequest, "validation_error", "Intended students must be greater than 0")
+	if req.IntendedStudents < 0 {
+		slog.Info("create_request_validation_failed", "field", "intended_students", "reason", "negative", "value", req.IntendedStudents)
+		writeError(w, http.StatusBadRequest, "validation_error", "Intended students must be 0 or greater")
+		return
+	}
+	if !req.DataProcessingConsent {
+		slog.Info("create_request_validation_failed", "field", "data_processing_consent", "reason", "missing")
+		writeError(w, http.StatusBadRequest, "validation_error", "Data processing consent is required")
 		return
 	}
 	if len(req.Items) == 0 {
@@ -192,17 +199,19 @@ func (h *RequestHandler) CreateRequest(w http.ResponseWriter, r *http.Request) {
 	slog.Info("create_request_items_validated", "item_count", len(items))
 
 	input := domain.CreateRequestInput{
-		CustomerID:           claims.CustomerID,
-		DeliveryDate:         deliveryDate,
-		PlannedReturnDate:    plannedReturnDate,
-		IntendedStudents:     req.IntendedStudents,
-		ShippingCustomerName: strings.TrimSpace(req.ShippingCustomerName),
-		ShippingAddressLine1: strings.TrimSpace(req.ShippingAddressLine1),
-		ShippingAddressLine2: strings.TrimSpace(req.ShippingAddressLine2),
-		ShippingCity:         strings.TrimSpace(req.ShippingCity),
-		ShippingZipCode:      strings.TrimSpace(req.ShippingZipCode),
-		Note:                 strings.TrimSpace(req.Note),
-		Items:                items,
+		CustomerID:            claims.CustomerID,
+		DeliveryDate:          deliveryDate,
+		PlannedReturnDate:     plannedReturnDate,
+		IntendedStudents:      req.IntendedStudents,
+		DataProcessingConsent: req.DataProcessingConsent,
+		ShareIntendedStudents: req.ShareIntendedStudents,
+		ShippingCustomerName:  strings.TrimSpace(req.ShippingCustomerName),
+		ShippingAddressLine1:  strings.TrimSpace(req.ShippingAddressLine1),
+		ShippingAddressLine2:  strings.TrimSpace(req.ShippingAddressLine2),
+		ShippingCity:          strings.TrimSpace(req.ShippingCity),
+		ShippingZipCode:       strings.TrimSpace(req.ShippingZipCode),
+		Note:                  strings.TrimSpace(req.Note),
+		Items:                 items,
 	}
 
 	slog.Info("create_request_calling_store",
