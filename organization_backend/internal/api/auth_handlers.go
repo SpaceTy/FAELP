@@ -1,17 +1,92 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"log"
+	"math"
 	"net/http"
+	"net/mail"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
 
 	"organization_backend/internal/auth"
 	"organization_backend/internal/db"
 )
 
+const defaultMagicLinkCooldown = 15 * time.Second
+
 type AuthHandler struct {
-	Store     *db.Store
-	JWTSecret string
+	Store             *db.Store
+	JWTSecret         string
+	MagicLinkCooldown time.Duration
+
+	magicLinkMu       sync.Mutex
+	magicLinkLastSent map[string]time.Time
+	now               func() time.Time
+	createMagicLink   func(context.Context, string) error
+}
+
+func normalizeAuthEmail(email string) string {
+	parsed, err := mail.ParseAddress(strings.TrimSpace(email))
+	if err == nil {
+		return strings.ToLower(strings.TrimSpace(parsed.Address))
+	}
+	return strings.ToLower(strings.TrimSpace(email))
+}
+
+func (h *AuthHandler) authNow() time.Time {
+	if h.now != nil {
+		return h.now()
+	}
+	return time.Now()
+}
+
+func (h *AuthHandler) magicLinkCooldown() time.Duration {
+	if h.MagicLinkCooldown > 0 {
+		return h.MagicLinkCooldown
+	}
+	return defaultMagicLinkCooldown
+}
+
+func (h *AuthHandler) magicLinkSender() func(context.Context, string) error {
+	if h.createMagicLink != nil {
+		return h.createMagicLink
+	}
+	return auth.CreateMagicLink
+}
+
+func (h *AuthHandler) reserveMagicLinkSend(email string, now time.Time) (time.Duration, bool) {
+	h.magicLinkMu.Lock()
+	defer h.magicLinkMu.Unlock()
+
+	if h.magicLinkLastSent == nil {
+		h.magicLinkLastSent = make(map[string]time.Time)
+	}
+
+	cooldown := h.magicLinkCooldown()
+	if lastSent, ok := h.magicLinkLastSent[email]; ok {
+		if nextAllowed := lastSent.Add(cooldown); now.Before(nextAllowed) {
+			return nextAllowed.Sub(now), false
+		}
+	}
+
+	h.magicLinkLastSent[email] = now
+	return 0, true
+}
+
+func (h *AuthHandler) releaseMagicLinkReservation(email string, reservedAt time.Time) {
+	h.magicLinkMu.Lock()
+	defer h.magicLinkMu.Unlock()
+
+	if h.magicLinkLastSent == nil {
+		return
+	}
+	if current, ok := h.magicLinkLastSent[email]; ok && current.Equal(reservedAt) {
+		delete(h.magicLinkLastSent, email)
+	}
 }
 
 func (h *AuthHandler) RequestMagicLink(w http.ResponseWriter, r *http.Request) {
@@ -24,15 +99,29 @@ func (h *AuthHandler) RequestMagicLink(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid_json", "Invalid JSON body")
 		return
 	}
-	log.Printf("[AUTH] RequestMagicLink: requesting magic link for email=%s", req.Email)
+	email := normalizeAuthEmail(req.Email)
+	log.Printf("[AUTH] RequestMagicLink: requesting magic link for email=%s", email)
 
-	if err := auth.CreateMagicLink(r.Context(), req.Email); err != nil {
-		log.Printf("[AUTH] RequestMagicLink: CreateMagicLink failed for email=%s: %v", req.Email, err)
+	now := h.authNow()
+	retryAfter, allowed := h.reserveMagicLinkSend(email, now)
+	if !allowed {
+		seconds := int(math.Ceil(retryAfter.Seconds()))
+		if seconds < 1 {
+			seconds = 1
+		}
+		w.Header().Set("Retry-After", strconv.Itoa(seconds))
+		writeError(w, http.StatusTooManyRequests, "magic_link_cooldown", "Please wait before requesting another magic link")
+		return
+	}
+
+	if err := h.magicLinkSender()(r.Context(), email); err != nil {
+		h.releaseMagicLinkReservation(email, now)
+		log.Printf("[AUTH] RequestMagicLink: CreateMagicLink failed for email=%s: %v", email, err)
 		writeError(w, http.StatusInternalServerError, "magic_link_failed", "Failed to create magic link")
 		return
 	}
 
-	log.Printf("[AUTH] RequestMagicLink: magic link sent successfully for email=%s", req.Email)
+	log.Printf("[AUTH] RequestMagicLink: magic link sent successfully for email=%s", email)
 	writeJSON(w, http.StatusOK, map[string]string{"status": "sent"})
 }
 
