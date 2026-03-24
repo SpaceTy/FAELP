@@ -42,6 +42,11 @@ export function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow">
         <div>
+          <img
+            src="/logo.jpg"
+            alt="EHALP Logo"
+            className="mx-auto mb-4 h-20 w-auto rounded-lg object-contain"
+          />
           <h2 className="text-3xl font-bold text-center text-secondary">
             EHALP Verwaltung
           </h2>

@@ -35,13 +35,13 @@ export function VerifiedRoute({ children }: VerifiedRouteProps) {
           </h1>
           <p className="text-text-secondary mb-6">
             Ihr Konto ist bereits angelegt, wurde aber noch nicht von einem Administrator freigeschaltet.
-            Bis dahin koennen Sie die Materialien nur durchsuchen.
+            Bis dahin können Sie die Materialien nur durchsuchen.
           </p>
           <a
             href="/materials"
             className="inline-flex items-center rounded-lg bg-primary px-5 py-3 font-semibold text-secondary hover:bg-primary-hover transition-colors"
           >
-            Zur Materialuebersicht
+            Zur Materialübersicht
           </a>
         </div>
       </main>

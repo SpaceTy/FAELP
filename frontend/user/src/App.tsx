@@ -45,7 +45,7 @@ function VerificationBanner() {
         <div>
           <p className="font-semibold text-amber-900">Konto noch nicht verifiziert</p>
           <p className="text-sm text-amber-900/90">
-            Sie koennen sich anmelden und die Plattform ansehen, aber erst nach Freischaltung durch einen Administrator Materialanfragen stellen.
+            Sie können sich anmelden und die Plattform ansehen, aber erst nach Freischaltung durch einen Administrator Materialanfragen stellen.
           </p>
         </div>
       </div>

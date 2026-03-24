@@ -48,11 +48,18 @@ export function Header({ currentPath }: HeaderProps) {
     <header className="bg-secondary font-sans text-white shadow-md flex-shrink-0 z-50">
       <div className="flex items-center gap-4 px-6 py-3">
         <div className="min-w-0 flex-shrink-0">
-          <a href="/" className="flex items-baseline gap-2 no-underline">
-            <h1 className="text-xl font-bold leading-none tracking-tight text-primary">EHALP</h1>
-            <p className="hidden text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-slate-300 xl:block">
-              Ausbildungslogistik
-            </p>
+          <a href="/" className="flex items-center gap-3 no-underline">
+            <img
+              src="/logo.jpg"
+              alt="EHALP Logo"
+              className="h-10 w-auto rounded-md object-contain"
+            />
+            <div className="min-w-0">
+              <h1 className="text-xl font-bold leading-none tracking-tight text-primary">EHALP</h1>
+              <p className="hidden text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-slate-300 xl:block">
+                Ausbildungslogistik
+              </p>
+            </div>
           </a>
         </div>
 
