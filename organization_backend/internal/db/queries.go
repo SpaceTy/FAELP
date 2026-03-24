@@ -26,6 +26,7 @@ var (
 	ErrRequestAlreadyApproved = errors.New("request already approved by another distribution center")
 	ErrInvalidRequestStatus   = errors.New("request status does not allow this operation")
 	ErrUserNotFound           = errors.New("user not found")
+	ErrDonationFormCooldown   = errors.New("donation bank transfer form cooldown active")
 )
 
 func NewStore(db *sql.DB) *Store {
@@ -93,6 +94,81 @@ func scanCustomer(scanner rowScanner, user *domain.Customer) error {
 		user.WorkOSUserID = workOSUserID.String
 	}
 	return nil
+}
+
+func scanDonationBankTransferForm(scanner rowScanner, form *domain.DonationBankTransferForm) error {
+	return scanner.Scan(
+		&form.ID,
+		&form.Name,
+		&form.Address,
+		&form.Email,
+		&form.PhoneNumber,
+		&form.SubmittedIP,
+		&form.PrivacyConsentAccepted,
+		&form.PrivacyConsentText,
+		&form.PrivacyConsentAt,
+		&form.CreatedAt,
+	)
+}
+
+func (s *Store) CreateDonationBankTransferForm(ctx context.Context, input domain.CreateDonationBankTransferFormInput) (domain.DonationBankTransferForm, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return domain.DonationBankTransferForm{}, err
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtext($1))`, input.SubmittedIP); err != nil {
+		return domain.DonationBankTransferForm{}, fmt.Errorf("lock donation form cooldown: %w", err)
+	}
+
+	var latestCreatedAt time.Time
+	err = tx.QueryRowContext(ctx, `
+		SELECT created_at
+		FROM donation_bank_transfer_forms
+		WHERE submitted_ip = $1
+		ORDER BY created_at DESC
+		LIMIT 1
+	`, input.SubmittedIP).Scan(&latestCreatedAt)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return domain.DonationBankTransferForm{}, fmt.Errorf("check donation form cooldown: %w", err)
+	}
+	if err == nil && time.Since(latestCreatedAt) < 60*time.Second {
+		return domain.DonationBankTransferForm{}, ErrDonationFormCooldown
+	}
+
+	var created domain.DonationBankTransferForm
+	if err := scanDonationBankTransferForm(tx.QueryRowContext(ctx, `
+		INSERT INTO donation_bank_transfer_forms (
+			name,
+			address,
+			email,
+			phone_number,
+			submitted_ip,
+			privacy_consent_accepted,
+			privacy_consent_text,
+			privacy_consent_at
+		)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+		RETURNING id, name, address, email, phone_number, submitted_ip::text, privacy_consent_accepted, privacy_consent_text, privacy_consent_at, created_at
+	`,
+		input.Name,
+		input.Address,
+		input.Email,
+		input.PhoneNumber,
+		input.SubmittedIP,
+		input.PrivacyConsentAccepted,
+		input.PrivacyConsentText,
+		input.PrivacyConsentAt,
+	), &created); err != nil {
+		return domain.DonationBankTransferForm{}, fmt.Errorf("insert donation form: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return domain.DonationBankTransferForm{}, err
+	}
+
+	return created, nil
 }
 
 func (s *Store) ensureUser(ctx context.Context, tx *sql.Tx, input CreateRequestInput) (userRow, error) {

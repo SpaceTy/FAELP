@@ -7,7 +7,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func Routes(handler *Handler, authHandler *AuthHandler, userHandler *UserHandler, materialTypeHandler *MaterialTypeHandler, uploadHandler *UploadHandler, dcHandler *DistributionCenterHandler, requestHandler *RequestHandler, jwtSecret string) chi.Router {
+func Routes(handler *Handler, authHandler *AuthHandler, userHandler *UserHandler, materialTypeHandler *MaterialTypeHandler, uploadHandler *UploadHandler, dcHandler *DistributionCenterHandler, requestHandler *RequestHandler, donationBankTransferHandler *DonationBankTransferHandler, jwtSecret string) chi.Router {
 	r := chi.NewRouter()
 
 	// Recovery must be first to catch all panics
@@ -75,6 +75,8 @@ func Routes(handler *Handler, authHandler *AuthHandler, userHandler *UserHandler
 			r.Get("/subscribe", requestHandler.SubscribeMyRequests)
 			r.Post("/{id}/cancel", requestHandler.CancelMyRequest)
 		})
+
+		r.Post("/donation-bank-transfer-forms", donationBankTransferHandler.CreateDonationBankTransferForm)
 	})
 
 	// Internal endpoints (not part of /api prefix - Unix socket only)
