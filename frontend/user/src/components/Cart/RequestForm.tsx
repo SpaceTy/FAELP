@@ -19,6 +19,8 @@ export function RequestForm({ items, onSuccess }: RequestFormProps) {
   const [deliveryDate, setDeliveryDate] = useState('');
   const [plannedReturnDate, setPlannedReturnDate] = useState('');
   const [intendedStudents, setIntendedStudents] = useState('1');
+  const [shareIntendedStudents, setShareIntendedStudents] = useState(true);
+  const [dataProcessingConsent, setDataProcessingConsent] = useState(false);
   const [shippingName, setShippingName] = useState('');
   const [addressLine1, setAddressLine1] = useState('');
   const [addressLine2, setAddressLine2] = useState('');
@@ -44,7 +46,15 @@ export function RequestForm({ items, onSuccess }: RequestFormProps) {
       setIsSubmitting(false);
       return;
     }
-    if (!Number.isFinite(parsedIntendedStudents) || parsedIntendedStudents <= 0) {
+    if (!dataProcessingConsent) {
+      setError('Bitte bestätigen Sie die Verarbeitung Ihrer Angaben zur Bearbeitung der Anfrage.');
+      setIsSubmitting(false);
+      return;
+    }
+    if (
+      shareIntendedStudents &&
+      (!Number.isFinite(parsedIntendedStudents) || parsedIntendedStudents <= 0)
+    ) {
       setError('Bitte geben Sie eine gültige Anzahl geplanter Schüler:innen an.');
       setIsSubmitting(false);
       return;
@@ -56,10 +66,13 @@ export function RequestForm({ items, onSuccess }: RequestFormProps) {
     }
 
     try {
+      const intendedStudentsForRequest = shareIntendedStudents ? parsedIntendedStudents : 0;
       const input: CreateRequestInput = {
         deliveryDate,
         plannedReturnDate,
-        intendedStudents: parsedIntendedStudents,
+        intendedStudents: intendedStudentsForRequest,
+        dataProcessingConsent,
+        shareIntendedStudents,
         shippingName,
         addressLine1,
         addressLine2: addressLine2 || undefined,
@@ -116,15 +129,53 @@ export function RequestForm({ items, onSuccess }: RequestFormProps) {
         <label className="block text-sm font-medium text-text-primary mb-1">
           Geplante Anzahl Schüler:innen
         </label>
+        <p className="text-sm text-text-secondary mb-3">
+          Diese Angabe ist freiwillig. Sie hilft bei der bedarfsgerechten Bearbeitung Ihrer Anfrage.
+        </p>
+        <div className="space-y-3 rounded-md border border-gray-300 p-3 mb-3">
+          <label className="flex items-start gap-3">
+            <input
+              type="radio"
+              name="student-count-consent"
+              checked={shareIntendedStudents}
+              onChange={() => setShareIntendedStudents(true)}
+              className="mt-1 h-4 w-4 text-primary focus:ring-primary"
+            />
+            <span className="text-sm text-text-primary">
+              Ich willige ein, dass die geplante Anzahl der Schüler:innen zur Bearbeitung meiner Anfrage
+              übermittelt wird.
+            </span>
+          </label>
+          <label className="flex items-start gap-3">
+            <input
+              type="radio"
+              name="student-count-consent"
+              checked={!shareIntendedStudents}
+              onChange={() => setShareIntendedStudents(false)}
+              className="mt-1 h-4 w-4 text-primary focus:ring-primary"
+            />
+            <span className="text-sm text-text-primary">
+              Ich möchte die geplante Anzahl der Schüler:innen nicht übermitteln. In diesem Fall wird der
+              Wert <span className="font-semibold">0</span> gesendet.
+            </span>
+          </label>
+        </div>
         <input
           type="number"
           value={intendedStudents}
           onInput={(e) => setIntendedStudents(e.currentTarget.value)}
           min="1"
           step="1"
-          required
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+          required={shareIntendedStudents}
+          disabled={!shareIntendedStudents}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500"
         />
+        {!shareIntendedStudents && (
+          <p className="text-sm text-text-secondary mt-2">
+            Die Schülerzahl wird in diesem Fall nicht verwendet und mit <span className="font-semibold">0</span>{' '}
+            übermittelt.
+          </p>
+        )}
       </div>
 
       <div>
@@ -215,6 +266,29 @@ export function RequestForm({ items, onSuccess }: RequestFormProps) {
           {error}
         </div>
       )}
+
+      <div className="rounded-md border border-gray-300 bg-gray-50 p-4 space-y-3">
+        <div>
+          <h3 className="text-sm font-semibold text-text-primary">Datenschutzbestätigung</h3>
+          <p className="text-sm text-text-secondary mt-1">
+            Mit dem Absenden Ihrer Anfrage werden Ihre im Formular angegebenen personenbezogenen Daten zum Zweck
+            der Prüfung, Bearbeitung, Durchführung und Dokumentation Ihrer Anfrage verarbeitet. Dazu gehören
+            insbesondere Kontakt-, Liefer- und Anfragedaten.
+          </p>
+        </div>
+        <label className="flex items-start gap-3">
+          <input
+            type="checkbox"
+            checked={dataProcessingConsent}
+            onChange={(e) => setDataProcessingConsent(e.currentTarget.checked)}
+            className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+          />
+          <span className="text-sm text-text-primary">
+            Ich bestätige, dass meine Angaben zu diesen Zwecken verarbeitet werden dürfen, damit meine Anfrage
+            bearbeitet und abgewickelt werden kann.
+          </span>
+        </label>
+      </div>
 
       <button
         type="submit"

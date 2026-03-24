@@ -857,6 +857,8 @@ func (s *Store) CreateRequest(ctx context.Context, input domain.CreateRequestInp
 	slog.Info("store_create_request_transaction_begun")
 
 	metadata := make(map[string]any)
+	metadata["dataProcessingConsent"] = input.DataProcessingConsent
+	metadata["shareIntendedStudents"] = input.ShareIntendedStudents
 	if input.Note != "" {
 		metadata["note"] = input.Note
 	}
@@ -1055,7 +1057,7 @@ func (s *Store) ListRequestsByCustomerID(ctx context.Context, customerID string)
 	return requests, nil
 }
 
-// CancelRequestByCustomer marks a customer's own pending/approved request as cancelled.
+// CancelRequestByCustomer marks a customer's own pending/approved request as cancelled and archived.
 func (s *Store) CancelRequestByCustomer(ctx context.Context, requestID, customerID string) (domain.Request, error) {
 	var req domain.Request
 	var approvedDistributionCenterID sql.NullString
@@ -1065,7 +1067,7 @@ func (s *Store) CancelRequestByCustomer(ctx context.Context, requestID, customer
 
 	err := s.db.QueryRowContext(ctx, `
 		UPDATE requests
-		SET status = 'cancelled', approved_distribution_center_id = NULL, "outgoingTrackingCode" = NULL
+		SET status = 'cancelled', archived = TRUE, approved_distribution_center_id = NULL, "outgoingTrackingCode" = NULL
 		WHERE id = $1 AND customer_id = $2 AND status IN ('pending', 'approved') AND archived = FALSE
 		RETURNING id, customer_id, delivery_date, planned_return_date, intended_students, status, archived, approved_distribution_center_id, "outgoingTrackingCode", shipping_customer_name,
 		          shipping_address_line1, shipping_address_line2, shipping_city, shipping_zip_code, metadata, created_at, updated_at

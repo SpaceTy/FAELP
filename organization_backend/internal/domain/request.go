@@ -29,15 +29,17 @@ type RequestItem struct {
 }
 
 type CreateRequestInput struct {
-	CustomerID           string
-	DeliveryDate         time.Time
-	PlannedReturnDate    time.Time
-	IntendedStudents     int
-	ShippingCustomerName string
-	ShippingAddressLine1 string
-	ShippingAddressLine2 string
-	ShippingCity         string
-	ShippingZipCode      string
-	Note                 string
-	Items                []RequestItem
+	CustomerID            string
+	DeliveryDate          time.Time
+	PlannedReturnDate     time.Time
+	IntendedStudents      int
+	DataProcessingConsent bool
+	ShareIntendedStudents bool
+	ShippingCustomerName  string
+	ShippingAddressLine1  string
+	ShippingAddressLine2  string
+	ShippingCity          string
+	ShippingZipCode       string
+	Note                  string
+	Items                 []RequestItem
 }

@@ -134,7 +134,7 @@ interface RequestCardProps {
   request: Request;
   materialsById: Map<string, Material>;
   cancellingRequestIds: Set<string>;
-  onCancelRequest: (requestId: string) => void;
+  onCancelRequest: (request: Request) => void;
   canCancelRequest: (status: Request["status"]) => boolean;
   getStatusConfig: (status: Request["status"]) => {
     label: string;
@@ -189,7 +189,7 @@ function RequestCard({
             {canCancelRequest(request.status) && !request.archived && (
               <button
                 type="button"
-                onClick={() => onCancelRequest(request.id)}
+                onClick={() => onCancelRequest(request)}
                 disabled={cancellingRequestIds.has(request.id)}
                 className="mt-2 inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium border border-rose-200 text-rose-700 bg-rose-50 hover:bg-rose-100 disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -360,6 +360,90 @@ function RequestCard({
   );
 }
 
+interface CancelRequestDialogProps {
+  request: Request | null;
+  isCancelling: boolean;
+  formatDate: (dateString: string) => string;
+  onClose: () => void;
+  onConfirm: () => void;
+}
+
+function CancelRequestDialog({
+  request,
+  isCancelling,
+  formatDate,
+  onClose,
+  onConfirm,
+}: CancelRequestDialogProps) {
+  if (!request) {
+    return null;
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <button
+        type="button"
+        aria-label="Dialog schließen"
+        className="absolute inset-0 bg-slate-900/45"
+        onClick={isCancelling ? undefined : onClose}
+      />
+      <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+        <div className="bg-rose-50 px-6 py-4 border-b border-rose-100">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-rose-700">
+            Anfrage stornieren
+          </p>
+          <h2 className="mt-1 text-lg font-semibold text-slate-900">
+            Wirklich stornieren?
+          </h2>
+        </div>
+
+        <div className="px-6 py-5">
+          <p className="text-sm leading-6 text-slate-600">
+            Die Anfrage <span className="font-medium text-slate-900">#{request.id.slice(0, 8)}</span> mit Lieferdatum{" "}
+            <span className="font-medium text-slate-900">{formatDate(request.deliveryDate)}</span> wird
+            danach als archiviert markiert.
+          </p>
+
+          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
+              Lieferadresse
+            </p>
+            <p className="mt-2 text-sm font-medium text-slate-900">
+              {request.shippingName}
+            </p>
+            <p className="text-sm text-slate-600">{request.addressLine1}</p>
+            {request.addressLine2 && (
+              <p className="text-sm text-slate-600">{request.addressLine2}</p>
+            )}
+            <p className="text-sm text-slate-600">
+              {request.zipCode} {request.city}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-3 border-t border-slate-100 px-6 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isCancelling}
+            className="inline-flex items-center rounded-md border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Zurück
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={isCancelling}
+            className="inline-flex items-center rounded-md border border-rose-700 bg-rose-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-rose-800 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isCancelling ? "Storniere..." : "Jetzt stornieren"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function MyRequestsPage() {
   const [requests, setRequests] = useState<Request[]>([]);
   const [loading, setLoading] = useState(true);
@@ -368,6 +452,8 @@ export function MyRequestsPage() {
   const [cancellingRequestIds, setCancellingRequestIds] = useState<Set<string>>(
     new Set(),
   );
+  const [requestPendingCancellation, setRequestPendingCancellation] =
+    useState<Request | null>(null);
   const [showArchivedRequests, setShowArchivedRequests] = useState(false);
   const { materialsById } = useMaterialTypes();
 
@@ -459,19 +545,18 @@ export function MyRequestsPage() {
   const canCancelRequest = (status: Request["status"]) =>
     status === "pending" || status === "approved";
 
-  const handleCancelRequest = async (requestId: string) => {
+  const handleCancelRequest = (request: Request) => {
+    setCancelError(null);
+    setRequestPendingCancellation(request);
+  };
+
+  const confirmCancelRequest = async () => {
     const token = authSignal.value?.token;
-    if (!token) {
+    if (!token || !requestPendingCancellation) {
       return;
     }
 
-    const confirmed = window.confirm(
-      "Möchten Sie diese Anfrage wirklich stornieren?",
-    );
-    if (!confirmed) {
-      return;
-    }
-
+    const requestId = requestPendingCancellation.id;
     setCancelError(null);
     setCancellingRequestIds((prev) => new Set(prev).add(requestId));
 
@@ -480,6 +565,7 @@ export function MyRequestsPage() {
       setRequests((prev) =>
         prev.map((request) => (request.id === requestId ? updated : request)),
       );
+      setRequestPendingCancellation(null);
     } catch (err) {
       setCancelError(
         err instanceof Error
@@ -497,6 +583,9 @@ export function MyRequestsPage() {
 
   const activeRequests = requests.filter((request) => !request.archived);
   const archivedRequests = requests.filter((request) => request.archived);
+  const isCancellingPendingRequest =
+    requestPendingCancellation !== null &&
+    cancellingRequestIds.has(requestPendingCancellation.id);
 
   if (loading) {
     return (
@@ -665,6 +754,13 @@ export function MyRequestsPage() {
           </div>
         )}
       </div>
+      <CancelRequestDialog
+        request={requestPendingCancellation}
+        isCancelling={isCancellingPendingRequest}
+        formatDate={formatDate}
+        onClose={() => setRequestPendingCancellation(null)}
+        onConfirm={confirmCancelRequest}
+      />
     </div>
   );
 }
