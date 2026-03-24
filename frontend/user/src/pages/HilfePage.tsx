@@ -12,6 +12,21 @@ export function HilfePage() {
             </p>
           </div>
 
+          {/* Tutorial Video */}
+          <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
+            <h2 className="text-xl font-semibold text-secondary mb-4">
+              Video-Anleitung
+            </h2>
+            <video
+              className="w-full rounded-lg"
+              controls
+              preload="metadata"
+            >
+              <source src="/tutorial.mp4" type="video/mp4" />
+              Ihr Browser unterstützt das Video-Element nicht.
+            </video>
+          </div>
+
           {/* Step 1: Browse Materials */}
           <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
             <div className="flex items-start gap-4">
