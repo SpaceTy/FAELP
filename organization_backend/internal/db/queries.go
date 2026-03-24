@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -14,6 +15,7 @@ import (
 	"organization_backend/internal/domain"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 	"github.com/workos/workos-go/v4/pkg/usermanagement"
 )
 
@@ -99,6 +101,7 @@ func scanCustomer(scanner rowScanner, user *domain.Customer) error {
 func scanDonationBankTransferForm(scanner rowScanner, form *domain.DonationBankTransferForm) error {
 	return scanner.Scan(
 		&form.ID,
+		&form.MatchingCode,
 		&form.Name,
 		&form.Address,
 		&form.Email,
@@ -109,6 +112,25 @@ func scanDonationBankTransferForm(scanner rowScanner, form *domain.DonationBankT
 		&form.PrivacyConsentAt,
 		&form.CreatedAt,
 	)
+}
+
+const donationBankTransferMatchingCodeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+
+func generateDonationBankTransferMatchingCode() (string, error) {
+	const codeLength = 10
+
+	bytes := make([]byte, codeLength)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", fmt.Errorf("generate random matching code: %w", err)
+	}
+
+	var builder strings.Builder
+	builder.Grow(codeLength)
+	for _, b := range bytes {
+		builder.WriteByte(donationBankTransferMatchingCodeAlphabet[int(b)%len(donationBankTransferMatchingCodeAlphabet)])
+	}
+
+	return builder.String(), nil
 }
 
 func (s *Store) CreateDonationBankTransferForm(ctx context.Context, input domain.CreateDonationBankTransferFormInput) (domain.DonationBankTransferForm, error) {
@@ -137,38 +159,53 @@ func (s *Store) CreateDonationBankTransferForm(ctx context.Context, input domain
 		return domain.DonationBankTransferForm{}, ErrDonationFormCooldown
 	}
 
-	var created domain.DonationBankTransferForm
-	if err := scanDonationBankTransferForm(tx.QueryRowContext(ctx, `
-		INSERT INTO donation_bank_transfer_forms (
-			name,
-			address,
-			email,
-			phone_number,
-			submitted_ip,
-			privacy_consent_accepted,
-			privacy_consent_text,
-			privacy_consent_at
-		)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-		RETURNING id, name, address, email, phone_number, submitted_ip::text, privacy_consent_accepted, privacy_consent_text, privacy_consent_at, created_at
-	`,
-		input.Name,
-		input.Address,
-		input.Email,
-		input.PhoneNumber,
-		input.SubmittedIP,
-		input.PrivacyConsentAccepted,
-		input.PrivacyConsentText,
-		input.PrivacyConsentAt,
-	), &created); err != nil {
-		return domain.DonationBankTransferForm{}, fmt.Errorf("insert donation form: %w", err)
+	for i := 0; i < 5; i++ {
+		matchingCode, err := generateDonationBankTransferMatchingCode()
+		if err != nil {
+			return domain.DonationBankTransferForm{}, err
+		}
+
+		var created domain.DonationBankTransferForm
+		if err := scanDonationBankTransferForm(tx.QueryRowContext(ctx, `
+			INSERT INTO donation_bank_transfer_forms (
+				matching_code,
+				name,
+				address,
+				email,
+				phone_number,
+				submitted_ip,
+				privacy_consent_accepted,
+				privacy_consent_text,
+				privacy_consent_at
+			)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+			RETURNING id, matching_code, name, address, email, phone_number, submitted_ip::text, privacy_consent_accepted, privacy_consent_text, privacy_consent_at, created_at
+		`,
+			matchingCode,
+			input.Name,
+			input.Address,
+			input.Email,
+			input.PhoneNumber,
+			input.SubmittedIP,
+			input.PrivacyConsentAccepted,
+			input.PrivacyConsentText,
+			input.PrivacyConsentAt,
+		), &created); err != nil {
+			var pqErr *pq.Error
+			if errors.As(err, &pqErr) && pqErr.Code == "23505" && pqErr.Constraint == "donation_bank_transfer_forms_matching_code_idx" {
+				continue
+			}
+			return domain.DonationBankTransferForm{}, fmt.Errorf("insert donation form: %w", err)
+		}
+
+		if err := tx.Commit(); err != nil {
+			return domain.DonationBankTransferForm{}, err
+		}
+
+		return created, nil
 	}
 
-	if err := tx.Commit(); err != nil {
-		return domain.DonationBankTransferForm{}, err
-	}
-
-	return created, nil
+	return domain.DonationBankTransferForm{}, errors.New("failed to generate unique donation matching code")
 }
 
 func (s *Store) ensureUser(ctx context.Context, tx *sql.Tx, input CreateRequestInput) (userRow, error) {

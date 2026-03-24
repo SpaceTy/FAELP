@@ -4,6 +4,7 @@ import "time"
 
 type DonationBankTransferForm struct {
 	ID                     string    `json:"id"`
+	MatchingCode           string    `json:"matchingCode"`
 	Name                   string    `json:"name"`
 	Address                string    `json:"address"`
 	Email                  string    `json:"email"`

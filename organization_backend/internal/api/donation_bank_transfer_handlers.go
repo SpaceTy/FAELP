@@ -92,8 +92,8 @@ func (h *DonationBankTransferHandler) CreateDonationBankTransferForm(w http.Resp
 	}
 
 	writeJSON(w, http.StatusCreated, map[string]any{
-		"status":             "ok",
-		"id":                 created.ID,
-		"privacyConsentText": donationBankTransferPrivacyConsentText,
+		"status":       "ok",
+		"id":           created.ID,
+		"matchingCode": created.MatchingCode,
 	})
 }
