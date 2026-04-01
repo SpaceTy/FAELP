@@ -23,6 +23,12 @@ export interface Cart {
   items: Record<string, CartItem>;
 }
 
+export const MATERIAL_CATEGORY_TRANSLATION_KEYS: Record<MaterialCategory, string> = {
+  Reanimation: 'materialCategories.Reanimation',
+  'Wundversorgung&Trauma': 'materialCategories.Wundversorgung&Trauma',
+  Zubehoer: 'materialCategories.Zubehoer'
+};
+
 export const MATERIAL_CATALOG: Material[] = [
   // Reanimation
   {
@@ -140,9 +146,3 @@ export const MATERIAL_CATALOG: Material[] = [
     availableCount: 0
   }
 ];
-
-export const CATEGORY_LABELS: Record<MaterialCategory, string> = {
-  'Reanimation': 'Reanimation',
-  'Wundversorgung&Trauma': 'Wundversorgung & Trauma',
-  'Zubehoer': 'Zubehör'
-};

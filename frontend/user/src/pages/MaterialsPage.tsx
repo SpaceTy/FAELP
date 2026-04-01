@@ -1,18 +1,24 @@
 import { useState, useMemo } from 'preact/hooks';
 import { MaterialCard } from '@/components/Material/MaterialCard';
 import { useMaterialTypes } from '@/context/MaterialTypesContext';
-import { CATEGORY_LABELS, type Material, type MaterialCategory } from '@/types/material';
+import { useI18n } from '@/i18n';
+import { MATERIAL_CATEGORY_TRANSLATION_KEYS, type Material, type MaterialCategory } from '@/types/material';
 
 type MaterialSortOption = 'relevance' | 'name-asc' | 'category';
 
-function compareByName(a: Material, b: Material) {
-  return a.name.localeCompare(b.name, 'de', { sensitivity: 'base' });
+function compareByName(a: Material, b: Material, locale: string) {
+  return a.name.localeCompare(b.name, locale, { sensitivity: 'base' });
 }
 
-function compareByCategory(a: Material, b: Material) {
-  const categoryComparison = CATEGORY_LABELS[a.category].localeCompare(
-    CATEGORY_LABELS[b.category],
-    'de',
+function compareByCategory(
+  a: Material,
+  b: Material,
+  locale: string,
+  getCategoryLabel: (category: MaterialCategory) => string
+) {
+  const categoryComparison = getCategoryLabel(a.category).localeCompare(
+    getCategoryLabel(b.category),
+    locale,
     { sensitivity: 'base' }
   );
 
@@ -20,7 +26,7 @@ function compareByCategory(a: Material, b: Material) {
     return categoryComparison;
   }
 
-  return compareByName(a, b);
+  return compareByName(a, b, locale);
 }
 
 function compareByAvailability(a: Material, b: Material) {
@@ -61,6 +67,7 @@ function getRelevanceRank(material: Material, normalizedQuery: string) {
 }
 
 export function MaterialsPage() {
+  const { locale, t } = useI18n();
   const { materials, isLoading, error } = useMaterialTypes();
   const showCategorySidebar = false;
   const [selectedCategories, setSelectedCategories] = useState<MaterialCategory[]>([
@@ -70,6 +77,9 @@ export function MaterialsPage() {
   ]);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOption, setSortOption] = useState<MaterialSortOption>('relevance');
+  const localeCode = locale === 'de' ? 'de' : 'en';
+  const getCategoryLabel = (category: MaterialCategory) =>
+    t(MATERIAL_CATEGORY_TRANSLATION_KEYS[category]);
 
   const filteredMaterials = useMemo(() => {
     if (!materials) return [];
@@ -88,9 +98,9 @@ export function MaterialsPage() {
     return [...filteredMaterials].sort((a, b) => {
       switch (sortOption) {
         case 'name-asc':
-          return compareByName(a, b);
+          return compareByName(a, b, localeCode);
         case 'category':
-          return compareByCategory(a, b);
+          return compareByCategory(a, b, localeCode, getCategoryLabel);
         case 'relevance':
         default: {
           const relevanceDifference =
@@ -105,11 +115,11 @@ export function MaterialsPage() {
             return availabilityDifference;
           }
 
-          return compareByName(a, b);
+          return compareByName(a, b, localeCode);
         }
       }
     });
-  }, [filteredMaterials, searchQuery, sortOption]);
+  }, [filteredMaterials, getCategoryLabel, localeCode, searchQuery, sortOption]);
 
   const toggleCategory = (category: MaterialCategory) => {
     setSelectedCategories(prev => 
@@ -125,9 +135,9 @@ export function MaterialsPage() {
           /* Sidebar Filters kept in place for future reuse */
           <aside className="w-64 bg-white p-6 overflow-y-auto shadow-sm">
             <div className="mb-6">
-              <h3 className="text-lg font-semibold text-secondary mb-4">Kategorien</h3>
+              <h3 className="text-lg font-semibold text-secondary mb-4">{t('materialsPage.categories')}</h3>
               <div className="space-y-3">
-                {(Object.keys(CATEGORY_LABELS) as MaterialCategory[]).map(category => (
+                {(Object.keys(MATERIAL_CATEGORY_TRANSLATION_KEYS) as MaterialCategory[]).map(category => (
                   <label key={category} className="flex items-center cursor-pointer">
                     <input
                       type="checkbox"
@@ -135,7 +145,7 @@ export function MaterialsPage() {
                       onChange={() => toggleCategory(category)}
                       className="w-4 h-4 mr-3 text-primary rounded focus:ring-primary"
                     />
-                    <span className="text-text-primary">{CATEGORY_LABELS[category]}</span>
+                    <span className="text-text-primary">{getCategoryLabel(category)}</span>
                   </label>
                 ))}
               </div>
@@ -148,27 +158,27 @@ export function MaterialsPage() {
           <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-semibold text-secondary">
-                Erste-Hilfe-Bildungsmaterialien
+                {t('materialsPage.title')}
               </h2>
               <div className="flex items-center gap-4">
                 <span className="text-text-secondary">
-                  {sortedMaterials.length} Materialien
+                  {t('materialsPage.count', { count: sortedMaterials.length })}
                 </span>
                 <select
                   value={sortOption}
                   onChange={(e) => setSortOption((e.target as HTMLSelectElement).value as MaterialSortOption)}
                   className="px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary"
                 >
-                  <option value="relevance">Sortieren nach: Relevanz</option>
-                  <option value="name-asc">Name (A-Z)</option>
-                  <option value="category">Kategorie</option>
+                  <option value="relevance">{t('materialsPage.sortRelevance')}</option>
+                  <option value="name-asc">{t('materialsPage.sortName')}</option>
+                  <option value="category">{t('materialsPage.sortCategory')}</option>
                 </select>
               </div>
             </div>
             <div className="mt-4">
               <input
                 type="text"
-                placeholder="Materialien suchen..."
+                placeholder={t('materialsPage.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery((e.target as HTMLInputElement).value)}
                 className="w-full max-w-md px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary"
@@ -179,13 +189,13 @@ export function MaterialsPage() {
           {isLoading && (
             <div className="text-center py-12">
               <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent"></div>
-              <p className="text-text-secondary mt-4">Materialien werden geladen...</p>
+              <p className="text-text-secondary mt-4">{t('materialsPage.loading')}</p>
             </div>
           )}
 
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg mb-6">
-              <p>Fehler beim Laden der Materialien: {error}</p>
+              <p>{t('materialsPage.loadError', { error })}</p>
             </div>
           )}
 
@@ -200,7 +210,7 @@ export function MaterialsPage() {
               {sortedMaterials.length === 0 && (
                 <div className="text-center py-12">
                   <p className="text-text-secondary text-lg">
-                    Keine Materialien gefunden.
+                    {t('materialsPage.empty')}
                   </p>
                 </div>
               )}

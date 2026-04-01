@@ -3,9 +3,11 @@ import { cartSignal, getItemCount, updateQuantity, removeItem, clearCart } from 
 import { useMaterialTypes } from '@/context/MaterialTypesContext';
 import { useAuth } from '@/context/AuthContext';
 import { RequestForm } from '@/components/Cart/RequestForm';
+import { useI18n } from '@/i18n';
 import type { RequestItem } from '@/types/request';
 
 export function CartPage() {
+  const { t } = useI18n();
   const items = cartSignal.value.items;
   const itemCount = getItemCount();
   const { materialsById } = useMaterialTypes();
@@ -35,16 +37,16 @@ export function CartPage() {
         <div className="bg-white p-8 rounded-lg shadow-sm text-center max-w-md">
           <div className="text-6xl mb-4">✓</div>
           <h2 className="text-2xl font-semibold text-secondary mb-2">
-            Anfrage erfolgreich gesendet
+            {t('cart.successTitle')}
           </h2>
           <p className="text-text-secondary mb-6">
-            Ihre Anfrage wurde erfolgreich übermittelt. Sie erhalten eine Bestätigung per E-Mail.
+            {t('cart.successBody')}
           </p>
           <a
             href="/my-requests"
             className="inline-block px-6 py-2 bg-primary text-white font-medium rounded hover:bg-primary-hover transition-colors"
           >
-            Zu meinen Anfragen
+            {t('cart.toMyRequests')}
           </a>
         </div>
       </main>
@@ -57,16 +59,16 @@ export function CartPage() {
           <div className="bg-white p-8 rounded-lg shadow-sm text-center">
             <div className="text-6xl mb-4">🛒</div>
             <h2 className="text-2xl font-semibold text-secondary mb-2">
-              Ihr Warenkorb ist leer
+              {t('cart.emptyTitle')}
             </h2>
             <p className="text-text-secondary mb-6">
-              Durchsuchen Sie unsere Materialien und fügen Sie Artikel zu Ihrem Warenkorb hinzu.
+              {t('cart.emptyBody')}
             </p>
             <a
               href="/materials"
               className="inline-block px-6 py-2 bg-primary text-secondary font-medium rounded hover:bg-primary-hover transition-colors"
             >
-              Materialien durchsuchen
+              {t('cart.browseMaterials')}
             </a>
           </div>
         </main>
@@ -79,17 +81,17 @@ export function CartPage() {
           <div className="bg-white p-6 rounded-lg shadow-sm mb-6 flex justify-between items-center">
             <div>
               <h2 className="text-2xl font-semibold text-secondary">
-                Warenkorb
+                {t('cart.title')}
               </h2>
               <p className="text-text-secondary">
-                {itemCount} Artikel im Warenkorb
+                {t('cart.itemsInCart', { count: itemCount })}
               </p>
             </div>
             <button
               onClick={clearCart}
               className="px-4 py-2 text-red-600 border border-red-600 rounded hover:bg-red-50 dark:hover:bg-red-950 transition-colors"
             >
-              Warenkorb leeren
+              {t('cart.clear')}
             </button>
           </div>
 
@@ -126,7 +128,7 @@ export function CartPage() {
                       onClick={() => removeItem(material.id)}
                       className="text-red-600 hover:text-red-700 text-sm"
                     >
-                      Entfernen
+                      {t('cart.remove')}
                     </button>
                   </div>
                 </div>
@@ -137,16 +139,16 @@ export function CartPage() {
 
         <aside className="w-96 bg-white p-6 overflow-y-auto shadow-sm">
           <h3 className="text-lg font-semibold text-secondary mb-4">
-            Zusammenfassung
+            {t('cart.summary')}
           </h3>
 
           <div className="space-y-3 mb-6">
             <div className="flex justify-between">
-              <span className="text-text-secondary">Artikel:</span>
+              <span className="text-text-secondary">{t('cart.items')}</span>
               <span className="font-medium">{cartMaterials.length}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-text-secondary">Einheiten:</span>
+              <span className="text-text-secondary">{t('cart.units')}</span>
               <span className="font-medium">{totalUnits}</span>
             </div>
           </div>
@@ -157,13 +159,13 @@ export function CartPage() {
             ) : (
               <div className="text-center">
                 <p className="text-sm text-text-secondary mb-4">
-                  Bitte melden Sie sich an, um eine Anfrage zu senden.
+                  {t('cart.loginPrompt')}
                 </p>
                 <a
                   href="/login"
                   className="block w-full py-3 bg-primary text-white font-semibold rounded hover:bg-primary-hover transition-colors text-center"
                 >
-                  Anmelden
+                  {t('cart.loginButton')}
                 </a>
               </div>
             )}

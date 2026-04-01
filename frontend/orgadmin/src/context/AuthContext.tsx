@@ -2,6 +2,7 @@ import { createContext, ComponentChildren } from 'preact';
 import { useContext, useState, useEffect, useCallback } from 'preact/hooks';
 import { signal } from '@preact/signals';
 import type { Customer, AuthSession } from '@/types/auth';
+import { useI18n } from '@/i18n';
 import { authService } from '@/services/auth';
 
 interface AuthContextType {
@@ -22,6 +23,7 @@ export const authSignal = signal<AuthSession | null>(null);
 
 export function AuthProvider({ children }: { children: ComponentChildren }) {
   const [isLoading, setIsLoading] = useState(true);
+  const { t } = useI18n();
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -64,7 +66,7 @@ export function AuthProvider({ children }: { children: ComponentChildren }) {
     const session = await authService.verifyMagicLink(code, email);
     // Check if user is admin
     if (!session.customer?.isAdmin) {
-      throw new Error('Admin access required');
+      throw new Error(t('auth.adminAccessRequired'));
     }
     const sessionWithUserId = {
       ...session,
@@ -72,7 +74,7 @@ export function AuthProvider({ children }: { children: ComponentChildren }) {
     };
     authSignal.value = sessionWithUserId;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(sessionWithUserId));
-  }, []);
+  }, [t]);
 
   const logout = useCallback(() => {
     authSignal.value = null;

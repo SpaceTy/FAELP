@@ -2,6 +2,8 @@ import { useEffect, useState, useRef } from 'preact/hooks';
 import { cartSignal, getItemCount } from '@/hooks/useCart';
 import { useAuth } from '@/context/AuthContext';
 import { UserMenu } from '@/components/Auth/UserMenu';
+import { LocaleSwitcher } from '@/components/Layout/LocaleSwitcher';
+import { useI18n } from '@/i18n';
 
 interface HeaderProps {
   currentPath: string;
@@ -10,6 +12,7 @@ interface HeaderProps {
 export function Header({ currentPath }: HeaderProps) {
   const itemCount = getItemCount();
   const { isAuthenticated, customer } = useAuth();
+  const { t } = useI18n();
   const [isFlashing, setIsFlashing] = useState(false);
   const prevCountRef = useRef(itemCount);
   const [isDark, setIsDark] = useState(
@@ -17,8 +20,8 @@ export function Header({ currentPath }: HeaderProps) {
   );
 
   const navItems = [
-    { href: '/materials', label: 'Materialien durchsuchen' },
-    { href: '/my-requests', label: 'Meine Anfragen' },
+    { href: '/materials', label: t('header.nav.materials') },
+    { href: '/my-requests', label: t('header.nav.requests') },
   ];
 
   useEffect(() => {
@@ -51,7 +54,7 @@ export function Header({ currentPath }: HeaderProps) {
           <a href="/" className="flex items-baseline gap-2 no-underline">
             <h1 className="text-xl font-bold leading-none tracking-tight text-primary">EHALP</h1>
             <p className="hidden text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-slate-300 xl:block">
-              Ausbildungslogistik
+              {t('header.tagline')}
             </p>
           </a>
         </div>
@@ -75,11 +78,12 @@ export function Header({ currentPath }: HeaderProps) {
         </div>
 
         <div className="ml-auto flex flex-shrink-0 items-center justify-end gap-2">
+          <LocaleSwitcher tone="dark" />
           <a
             href="/hilfe"
             className="inline-flex h-9 items-center rounded-lg border border-white/20 px-3.5 text-sm font-medium text-white transition-colors hover:bg-white/10"
           >
-            Hilfe
+            {t('header.help')}
           </a>
           <a
             href="/cart"
@@ -87,17 +91,17 @@ export function Header({ currentPath }: HeaderProps) {
               isFlashing ? 'animate-cart-flash scale-110' : ''
             }`}
           >
-            Warenkorb ({itemCount})
+            {t('header.cart', { count: itemCount })}
           </a>
           {isAuthenticated && <UserMenu />}
           {isAuthenticated && customer && !customer.emailVerified && (
             <span className="hidden xl:inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
-              Nicht verifiziert
+              {t('header.unverifiedBadge')}
             </span>
           )}
           <button
             onClick={toggleDark}
-            title={isDark ? 'Hellmodus' : 'Dunkelmodus'}
+            title={isDark ? t('header.themeLight') : t('header.themeDark')}
             className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
           >
             {isDark ? (

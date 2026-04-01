@@ -1,30 +1,35 @@
 import { useEffect, useMemo, useState } from 'preact/hooks';
+import { useI18n, type Locale } from '@/i18n';
 import { userService } from '@/services/users';
 import type { UserImportResult, UserRecord } from '@/types/user';
 
-function formatDate(dateString: string) {
-  return new Date(dateString).toLocaleDateString('de-DE', {
+function formatDate(dateString: string, locale: Locale) {
+  return new Date(dateString).toLocaleDateString(locale === 'de' ? 'de-DE' : 'en-US', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
   });
 }
 
-function buildImportMessage(result: UserImportResult) {
+function buildImportMessage(
+  result: UserImportResult,
+  t: (key: string, params?: Record<string, string | number>) => string
+) {
   const parts = [
-    `${result.createdCount} neu angelegt`,
-    `${result.verifiedCount} bestehend verifiziert`,
-    `${result.alreadyVerifiedCount} bereits verifiziert`,
+    t('users.import.result.created', { count: result.createdCount }),
+    t('users.import.result.verified', { count: result.verifiedCount }),
+    t('users.import.result.alreadyVerified', { count: result.alreadyVerifiedCount }),
   ];
 
   if (result.invalidEmails.length > 0) {
-    parts.push(`${result.invalidEmails.length} ungueltig`);
+    parts.push(t('users.import.result.invalid', { count: result.invalidEmails.length }));
   }
 
   return parts.join(' | ');
 }
 
 export function UsersPage() {
+  const { locale, t } = useI18n();
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -41,7 +46,7 @@ export function UsersPage() {
       const data = await userService.listUsers();
       setUsers(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Laden der Benutzer');
+      setError(err instanceof Error ? err.message : t('users.loadError'));
     } finally {
       setIsLoading(false);
     }
@@ -58,9 +63,9 @@ export function UsersPage() {
     try {
       const updatedUser = await userService.verifyUser(userId);
       setUsers((prev) => prev.map((user) => (user.id === userId ? updatedUser : user)));
-      setSuccess(`Benutzer ${updatedUser.email} wurde verifiziert.`);
+      setSuccess(t('users.verifySuccess', { email: updatedUser.email }));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Benutzer konnte nicht verifiziert werden');
+      setError(err instanceof Error ? err.message : t('users.verifyError'));
     } finally {
       setMutatingUserId(null);
     }
@@ -73,9 +78,9 @@ export function UsersPage() {
     try {
       const updatedUser = await userService.unverifyUser(userId);
       setUsers((prev) => prev.map((user) => (user.id === userId ? updatedUser : user)));
-      setSuccess(`Benutzer ${updatedUser.email} wurde auf unverifiziert gesetzt.`);
+      setSuccess(t('users.unverifySuccess', { email: updatedUser.email }));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Benutzer konnte nicht auf unverifiziert gesetzt werden');
+      setError(err instanceof Error ? err.message : t('users.unverifyError'));
     } finally {
       setMutatingUserId(null);
     }
@@ -84,7 +89,7 @@ export function UsersPage() {
   const handleImport = async (e: Event) => {
     e.preventDefault();
     if (!importFile && importText.trim() === '') {
-      setError('Bitte CSV-Datei auswaehlen oder E-Mails einfuegen.');
+      setError(t('users.importRequired'));
       return;
     }
 
@@ -93,15 +98,15 @@ export function UsersPage() {
     setSuccess('');
     try {
       const result = await userService.importUsers({ emailsText: importText, file: importFile });
-      setSuccess(buildImportMessage(result));
+      setSuccess(buildImportMessage(result, t));
       if (result.invalidEmails.length > 0) {
-        setError(`Ungueltige E-Mails uebersprungen: ${result.invalidEmails.join(', ')}`);
+        setError(t('users.invalidSkipped', { emails: result.invalidEmails.join(', ') }));
       }
       setImportText('');
       setImportFile(null);
       await loadUsers();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Import fehlgeschlagen');
+      setError(err instanceof Error ? err.message : t('users.importFailed'));
     } finally {
       setIsImporting(false);
     }
@@ -123,28 +128,28 @@ export function UsersPage() {
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-text-primary">Benutzer</h1>
+            <h1 className="text-2xl font-bold text-text-primary">{t('users.title')}</h1>
             <p className="text-sm text-text-secondary mt-1">
-              Unverifizierte Konten pruefen und registrierte Schul-E-Mails gesammelt freischalten.
+              {t('users.subtitle')}
             </p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="bg-white rounded-lg shadow-sm p-4">
-            <div className="text-sm text-text-secondary">Gesamt</div>
+            <div className="text-sm text-text-secondary">{t('users.summary.total')}</div>
             <div className="text-2xl font-semibold text-text-primary mt-1">{summary.total}</div>
           </div>
           <div className="bg-white rounded-lg shadow-sm p-4">
-            <div className="text-sm text-text-secondary">Verifiziert</div>
+            <div className="text-sm text-text-secondary">{t('users.summary.verified')}</div>
             <div className="text-2xl font-semibold text-emerald-600 mt-1">{summary.verified}</div>
           </div>
           <div className="bg-white rounded-lg shadow-sm p-4">
-            <div className="text-sm text-text-secondary">Unverifiziert</div>
+            <div className="text-sm text-text-secondary">{t('users.summary.unverified')}</div>
             <div className="text-2xl font-semibold text-amber-600 mt-1">{summary.unverified}</div>
           </div>
           <div className="bg-white rounded-lg shadow-sm p-4">
-            <div className="text-sm text-text-secondary">Admins</div>
+            <div className="text-sm text-text-secondary">{t('users.summary.admins')}</div>
             <div className="text-2xl font-semibold text-text-primary mt-1">{summary.admins}</div>
           </div>
         </div>
@@ -152,9 +157,9 @@ export function UsersPage() {
         <form onSubmit={handleImport} className="bg-white rounded-lg shadow-sm p-6 space-y-4">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <h2 className="text-lg font-semibold text-text-primary">Verifizierte E-Mails importieren</h2>
+              <h2 className="text-lg font-semibold text-text-primary">{t('users.import.title')}</h2>
               <p className="text-sm text-text-secondary mt-1">
-                CSV-Datei hochladen oder E-Mails zeilenweise einfuegen. Bereits angemeldete Benutzer werden direkt freigeschaltet.
+                {t('users.import.description')}
               </p>
             </div>
             <button
@@ -162,14 +167,14 @@ export function UsersPage() {
               disabled={isImporting}
               className="px-4 py-2 bg-primary text-white font-medium rounded hover:bg-primary-hover transition-colors disabled:opacity-50"
             >
-              {isImporting ? 'Import laeuft...' : 'Import starten'}
+              {isImporting ? t('users.import.submitting') : t('users.import.submit')}
             </button>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-text-primary mb-2">
-                E-Mails direkt einfuegen
+                {t('users.import.textareaLabel')}
               </label>
               <textarea
                 value={importText}
@@ -182,7 +187,7 @@ export function UsersPage() {
 
             <div>
               <label className="block text-sm font-medium text-text-primary mb-2">
-                CSV-Datei
+                {t('users.import.fileLabel')}
               </label>
               <label className="flex min-h-[176px] cursor-pointer items-center justify-center rounded border border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-center text-sm text-text-secondary hover:border-primary hover:text-text-primary">
                 <input
@@ -191,7 +196,9 @@ export function UsersPage() {
                   className="hidden"
                   onChange={(e) => setImportFile((e.currentTarget as HTMLInputElement).files?.[0] || null)}
                 />
-                {importFile ? `${importFile.name} ausgewaehlt` : 'CSV-Datei auswaehlen'}
+                {importFile
+                  ? t('users.import.fileSelected', { name: importFile.name })
+                  : t('users.import.fileEmpty')}
               </label>
             </div>
           </div>
@@ -212,7 +219,7 @@ export function UsersPage() {
         {isLoading ? (
           <div className="text-center py-12">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent"></div>
-            <p className="mt-2 text-text-secondary">Wird geladen...</p>
+            <p className="mt-2 text-text-secondary">{t('common.loading')}</p>
           </div>
         ) : (
           <div className="bg-white shadow overflow-hidden rounded-lg">
@@ -220,22 +227,22 @@ export function UsersPage() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                    Benutzer
+                    {t('users.table.user')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                    Status
+                    {t('users.table.status')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                    Rolle
+                    {t('users.table.role')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                    WorkOS
+                    {t('users.table.workos')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                    Erstellt
+                    {t('users.table.created')}
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-text-secondary uppercase tracking-wider">
-                    Aktionen
+                    {t('users.table.actions')}
                   </th>
                 </tr>
               </thead>
@@ -249,30 +256,30 @@ export function UsersPage() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       {user.emailVerified ? (
                         <span className="inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800">
-                          Verifiziert
+                          {t('users.table.verified')}
                         </span>
                       ) : (
                         <span className="inline-flex rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800">
-                          Unverifiziert
+                          {t('users.table.unverified')}
                         </span>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {user.isAdmin ? (
                         <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
-                          Admin
+                          {t('users.table.admin')}
                         </span>
                       ) : (
-                        <span className="text-sm text-text-secondary">Benutzer</span>
+                        <span className="text-sm text-text-secondary">{t('users.table.userRole')}</span>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="text-sm text-text-secondary">
-                        {user.workosUserId ? 'Verbunden' : 'Noch nicht registriert'}
+                        {user.workosUserId ? t('users.table.connected') : t('users.table.notRegistered')}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">
-                      {formatDate(user.createdAt)}
+                      {formatDate(user.createdAt, locale)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       {user.emailVerified ? (
@@ -281,7 +288,7 @@ export function UsersPage() {
                           disabled={mutatingUserId === user.id}
                           className="text-amber-600 hover:text-amber-700 disabled:text-gray-400"
                         >
-                          {mutatingUserId === user.id ? 'Aktualisiere...' : 'Unverify'}
+                          {mutatingUserId === user.id ? t('users.table.updating') : t('users.table.unverify')}
                         </button>
                       ) : (
                         <button
@@ -289,7 +296,7 @@ export function UsersPage() {
                           disabled={mutatingUserId === user.id}
                           className="text-primary hover:text-primary-hover disabled:text-gray-400"
                         >
-                          {mutatingUserId === user.id ? 'Aktualisiere...' : 'Verifizieren'}
+                          {mutatingUserId === user.id ? t('users.table.updating') : t('users.table.verify')}
                         </button>
                       )}
                     </td>
@@ -300,7 +307,7 @@ export function UsersPage() {
 
             {users.length === 0 && (
               <div className="text-center py-12 text-text-secondary">
-                Keine Benutzer gefunden.
+                {t('users.table.empty')}
               </div>
             )}
           </div>

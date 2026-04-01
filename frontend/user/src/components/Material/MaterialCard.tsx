@@ -1,5 +1,6 @@
 import type { Material } from '@/types/material';
 import { addItem, getItem, updateQuantity } from '@/hooks/useCart';
+import { useI18n } from '@/i18n';
 import { resolveAssetUrl } from '@/utils/url';
 
 interface MaterialCardProps {
@@ -11,6 +12,7 @@ function getFullImageUrl(imageUrl: string | undefined): string {
 }
 
 export function MaterialCard({ material }: MaterialCardProps) {
+  const { t } = useI18n();
   const cartItem = getItem(material.id);
 
   const handleAddToCart = () => {
@@ -42,12 +44,12 @@ export function MaterialCard({ material }: MaterialCardProps) {
         />
         {isAvailable && (
           <div className={`absolute top-2 right-2 text-white text-xs px-2 py-1 rounded-full ${cartItem && cartItem.quantity >= material.availableCount ? 'bg-amber-500' : 'bg-green-500'}`}>
-            {material.availableCount} verfügbar
+            {t('materialCard.available', { count: material.availableCount })}
           </div>
         )}
         {!isAvailable && (
           <div className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
-            Nicht verfügbar
+            {t('materialCard.unavailable')}
           </div>
         )}
       </div>
@@ -57,17 +59,17 @@ export function MaterialCard({ material }: MaterialCardProps) {
         </h3>
         <div className="flex gap-2 mb-2">
           <span className="text-xs px-2 py-1 bg-gray-100 rounded text-text-secondary">
-            Übungs-Set
+            {t('materialCard.practiceSet')}
           </span>
           <span className="text-xs px-2 py-1 bg-gray-100 rounded text-text-secondary">
-            Alle Niveaus
+            {t('materialCard.allLevels')}
           </span>
         </div>
         <p className="text-sm text-text-secondary mb-4 flex-1 line-clamp-3">
           {material.description}
         </p>
         <div className="text-xs text-text-secondary mb-3">
-          Physische Ausrüstung
+          {t('materialCard.physicalEquipment')}
         </div>
         <div className="flex flex-col gap-2">
           {cartItem ? (
@@ -75,7 +77,7 @@ export function MaterialCard({ material }: MaterialCardProps) {
               <button
                 onClick={handleDecreaseQuantity}
                 className="w-10 h-full flex items-center justify-center bg-gray-100 hover:bg-gray-200 transition-colors text-secondary font-bold"
-                aria-label="Menge verringern"
+                aria-label={t('materialCard.decreaseQuantity')}
               >
                 −
               </button>
@@ -90,7 +92,7 @@ export function MaterialCard({ material }: MaterialCardProps) {
                     ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                     : 'bg-primary text-secondary hover:bg-primary-hover'
                 }`}
-                aria-label="Menge erhöhen"
+                aria-label={t('materialCard.increaseQuantity')}
               >
                 +
               </button>
@@ -105,11 +107,11 @@ export function MaterialCard({ material }: MaterialCardProps) {
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
             >
-              Material anfragen
+              {t('materialCard.requestMaterial')}
             </button>
           )}
           <button className="w-full py-2 bg-white border border-gray-300 text-text-primary rounded hover:bg-gray-50 transition-colors">
-            Details anzeigen
+            {t('materialCard.showDetails')}
           </button>
         </div>
       </div>

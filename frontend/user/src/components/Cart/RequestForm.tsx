@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks';
 import { api, ApiError } from '@/services/api';
 import { authSignal } from '@/context/AuthContext';
+import { useI18n } from '@/i18n';
 import type { CreateRequestInput, RequestItem } from '@/types/request';
 
 interface RequestFormProps {
@@ -16,6 +17,7 @@ function formatDateForInput(date: Date): string {
 }
 
 export function RequestForm({ items, onSuccess }: RequestFormProps) {
+  const { t } = useI18n();
   const [deliveryDate, setDeliveryDate] = useState('');
   const [plannedReturnDate, setPlannedReturnDate] = useState('');
   const [intendedStudents, setIntendedStudents] = useState('1');
@@ -42,12 +44,12 @@ export function RequestForm({ items, onSuccess }: RequestFormProps) {
 
     const token = authSignal.value?.token;
     if (!token) {
-      setError('Sie müssen angemeldet sein, um eine Anfrage zu senden.');
+      setError(t('requestForm.errors.notLoggedIn'));
       setIsSubmitting(false);
       return;
     }
     if (!dataProcessingConsent) {
-      setError('Bitte bestätigen Sie die Verarbeitung Ihrer Angaben zur Bearbeitung der Anfrage.');
+      setError(t('requestForm.errors.privacyRequired'));
       setIsSubmitting(false);
       return;
     }
@@ -55,12 +57,12 @@ export function RequestForm({ items, onSuccess }: RequestFormProps) {
       shareIntendedStudents &&
       (!Number.isFinite(parsedIntendedStudents) || parsedIntendedStudents <= 0)
     ) {
-      setError('Bitte geben Sie eine gültige Anzahl geplanter Schüler:innen an.');
+      setError(t('requestForm.errors.invalidStudents'));
       setIsSubmitting(false);
       return;
     }
     if (deliveryDate && deliveryDate < minDateStr) {
-      setError('Das Lieferdatum muss mindestens 3 Tage in der Zukunft liegen.');
+      setError(t('requestForm.errors.deliveryTooSoon'));
       setIsSubmitting(false);
       return;
     }
@@ -88,7 +90,7 @@ export function RequestForm({ items, onSuccess }: RequestFormProps) {
       if (err instanceof ApiError) {
         setError(err.message);
       } else {
-        setError('Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.');
+        setError(t('requestForm.errors.generic'));
       }
     } finally {
       setIsSubmitting(false);
@@ -99,7 +101,7 @@ export function RequestForm({ items, onSuccess }: RequestFormProps) {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <label className="block text-sm font-medium text-text-primary mb-1">
-          Lieferdatum
+          {t('requestForm.deliveryDate')}
         </label>
         <input
           type="date"
@@ -113,7 +115,7 @@ export function RequestForm({ items, onSuccess }: RequestFormProps) {
 
       <div>
         <label className="block text-sm font-medium text-text-primary mb-1">
-          Geplantes Rückgabedatum
+          {t('requestForm.plannedReturnDate')}
         </label>
         <input
           type="date"
@@ -127,10 +129,10 @@ export function RequestForm({ items, onSuccess }: RequestFormProps) {
 
       <div>
         <label className="block text-sm font-medium text-text-primary mb-1">
-          Geplante Anzahl Schüler:innen
+          {t('requestForm.plannedStudents')}
         </label>
         <p className="text-sm text-text-secondary mb-3">
-          Diese Angabe ist freiwillig. Sie hilft bei der bedarfsgerechten Bearbeitung Ihrer Anfrage.
+          {t('requestForm.plannedStudentsHelp')}
         </p>
         <div className="space-y-3 rounded-md border border-gray-300 p-3 mb-3">
           <label className="flex items-start gap-3">
@@ -142,8 +144,7 @@ export function RequestForm({ items, onSuccess }: RequestFormProps) {
               className="mt-1 h-4 w-4 text-primary focus:ring-primary"
             />
             <span className="text-sm text-text-primary">
-              Ich willige ein, dass die geplante Anzahl der Schüler:innen zur Bearbeitung meiner Anfrage
-              übermittelt wird.
+              {t('requestForm.shareStudents')}
             </span>
           </label>
           <label className="flex items-start gap-3">
@@ -155,8 +156,7 @@ export function RequestForm({ items, onSuccess }: RequestFormProps) {
               className="mt-1 h-4 w-4 text-primary focus:ring-primary"
             />
             <span className="text-sm text-text-primary">
-              Ich möchte die geplante Anzahl der Schüler:innen nicht übermitteln. In diesem Fall wird der
-              Wert <span className="font-semibold">0</span> gesendet.
+              {t('requestForm.doNotShareStudents')}
             </span>
           </label>
         </div>
@@ -172,21 +172,20 @@ export function RequestForm({ items, onSuccess }: RequestFormProps) {
         />
         {!shareIntendedStudents && (
           <p className="text-sm text-text-secondary mt-2">
-            Die Schülerzahl wird in diesem Fall nicht verwendet und mit <span className="font-semibold">0</span>{' '}
-            übermittelt.
+            {t('requestForm.studentsNotUsed')}
           </p>
         )}
       </div>
 
       <div>
         <label className="block text-sm font-medium text-text-primary mb-1">
-          Name (Empfänger)
+          {t('requestForm.shippingName')}
         </label>
         <input
           type="text"
           value={shippingName}
           onInput={(e) => setShippingName(e.currentTarget.value)}
-          placeholder="Max Mustermann"
+          placeholder={t('requestForm.shippingNamePlaceholder')}
           required
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
         />
@@ -194,13 +193,13 @@ export function RequestForm({ items, onSuccess }: RequestFormProps) {
 
       <div>
         <label className="block text-sm font-medium text-text-primary mb-1">
-          Straße und Hausnummer
+          {t('requestForm.addressLine1')}
         </label>
         <input
           type="text"
           value={addressLine1}
           onInput={(e) => setAddressLine1(e.currentTarget.value)}
-          placeholder="Musterstraße 123"
+          placeholder={t('requestForm.addressLine1Placeholder')}
           required
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
         />
@@ -208,13 +207,13 @@ export function RequestForm({ items, onSuccess }: RequestFormProps) {
 
       <div>
         <label className="block text-sm font-medium text-text-primary mb-1">
-          Adresszusatz (optional)
+          {t('requestForm.addressLine2')}
         </label>
         <input
           type="text"
           value={addressLine2}
           onInput={(e) => setAddressLine2(e.currentTarget.value)}
-          placeholder="z.B. 2. OG"
+          placeholder={t('requestForm.addressLine2Placeholder')}
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
         />
       </div>
@@ -222,26 +221,26 @@ export function RequestForm({ items, onSuccess }: RequestFormProps) {
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-text-primary mb-1">
-            PLZ
+            {t('requestForm.zipCode')}
           </label>
           <input
             type="text"
             value={zipCode}
             onInput={(e) => setZipCode(e.currentTarget.value)}
-            placeholder="12345"
+            placeholder={t('requestForm.zipCodePlaceholder')}
             required
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
           />
         </div>
         <div>
           <label className="block text-sm font-medium text-text-primary mb-1">
-            Stadt
+            {t('requestForm.city')}
           </label>
           <input
             type="text"
             value={city}
             onInput={(e) => setCity(e.currentTarget.value)}
-            placeholder="Berlin"
+            placeholder={t('requestForm.cityPlaceholder')}
             required
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
           />
@@ -250,12 +249,12 @@ export function RequestForm({ items, onSuccess }: RequestFormProps) {
 
       <div>
         <label className="block text-sm font-medium text-text-primary mb-1">
-          Anmerkung (optional)
+          {t('requestForm.note')}
         </label>
         <textarea
           value={note}
           onInput={(e) => setNote(e.currentTarget.value)}
-          placeholder="Weitere Informationen zur Lieferung..."
+          placeholder={t('requestForm.notePlaceholder')}
           rows={3}
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary resize-none"
         />
@@ -269,11 +268,9 @@ export function RequestForm({ items, onSuccess }: RequestFormProps) {
 
       <div className="rounded-md border border-gray-300 bg-gray-50 p-4 space-y-3">
         <div>
-          <h3 className="text-sm font-semibold text-text-primary">Datenschutzbestätigung</h3>
+          <h3 className="text-sm font-semibold text-text-primary">{t('requestForm.privacyTitle')}</h3>
           <p className="text-sm text-text-secondary mt-1">
-            Mit dem Absenden Ihrer Anfrage werden Ihre im Formular angegebenen personenbezogenen Daten zum Zweck
-            der Prüfung, Bearbeitung, Durchführung und Dokumentation Ihrer Anfrage verarbeitet. Dazu gehören
-            insbesondere Kontakt-, Liefer- und Anfragedaten.
+            {t('requestForm.privacyBody')}
           </p>
         </div>
         <label className="flex items-start gap-3">
@@ -284,8 +281,7 @@ export function RequestForm({ items, onSuccess }: RequestFormProps) {
             className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
           />
           <span className="text-sm text-text-primary">
-            Ich bestätige, dass meine Angaben zu diesen Zwecken verarbeitet werden dürfen, damit meine Anfrage
-            bearbeitet und abgewickelt werden kann.
+            {t('requestForm.privacyConsent')}
           </span>
         </label>
       </div>
@@ -295,7 +291,7 @@ export function RequestForm({ items, onSuccess }: RequestFormProps) {
         disabled={isSubmitting}
         className="w-full bg-primary hover:bg-primary-hover text-white font-semibold py-3 px-4 rounded-md transition-colors disabled:opacity-50"
       >
-        {isSubmitting ? 'Wird gesendet...' : 'Anfrage senden'}
+        {isSubmitting ? t('requestForm.submitting') : t('requestForm.submit')}
       </button>
     </form>
   );

@@ -1,5 +1,7 @@
 import { useState } from 'preact/hooks';
 import { useAuth } from '@/context/AuthContext';
+import { LocaleSwitcher } from '@/components/LocaleSwitcher';
+import { useI18n } from '@/i18n';
 
 interface HeaderProps {
   currentPath: string;
@@ -7,14 +9,15 @@ interface HeaderProps {
 
 export function Header({ currentPath }: HeaderProps) {
   const { isAuthenticated, logout, customer } = useAuth();
+  const { t } = useI18n();
   const [isDark, setIsDark] = useState(
     document.documentElement.classList.contains('dark')
   );
 
   const navItems = [
-    { href: '/', label: 'Materialtypen' },
-    { href: '/distribution-centers', label: 'Vertriebszentren' },
-    { href: '/users', label: 'Benutzer' },
+    { href: '/', label: t('header.nav.materialTypes') },
+    { href: '/distribution-centers', label: t('header.nav.distributionCenters') },
+    { href: '/users', label: t('header.nav.users') },
   ];
 
   const toggleDark = () => {
@@ -38,7 +41,7 @@ export function Header({ currentPath }: HeaderProps) {
           <a href="/" className="flex items-baseline gap-2 no-underline">
             <h1 className="text-xl font-bold leading-none tracking-tight text-primary">EHALP</h1>
             <p className="hidden text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-slate-300 xl:block">
-              Verwaltung
+              {t('header.admin')}
             </p>
           </a>
         </div>
@@ -62,6 +65,7 @@ export function Header({ currentPath }: HeaderProps) {
         </div>
 
         <div className="ml-auto flex flex-shrink-0 items-center justify-end gap-2">
+          <LocaleSwitcher tone="dark" />
           {isAuthenticated && customer && (
             <div className="hidden text-right lg:block">
               <div className="text-sm font-medium text-white">{customer.name}</div>
@@ -72,12 +76,12 @@ export function Header({ currentPath }: HeaderProps) {
               onClick={logout}
               className="inline-flex h-9 items-center rounded-lg border border-white/20 px-3.5 text-sm font-medium text-white transition-colors hover:bg-white/10"
             >
-              Abmelden
+              {t('header.logout')}
             </button>
           )}
           <button
             onClick={toggleDark}
-            title={isDark ? 'Hellmodus' : 'Dunkelmodus'}
+            title={isDark ? t('header.themeLight') : t('header.themeDark')}
             className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
           >
             {isDark ? (

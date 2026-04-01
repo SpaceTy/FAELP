@@ -1,0 +1,176 @@
+{
+  "common": {
+    "loading": "Wird geladen...",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "edit": "Bearbeiten",
+    "create": "Erstellen",
+    "update": "Aktualisieren",
+    "save": "Speichern",
+    "languageSwitcher": "Sprache wechseln",
+    "locale": {
+      "de": "Deutsch",
+      "en": "Englisch"
+    }
+  },
+  "auth": {
+    "adminAccessRequired": "Admin-Zugriff erforderlich"
+  },
+  "app": {
+    "loading": "Wird geladen..."
+  },
+  "header": {
+    "admin": "Verwaltung",
+    "logout": "Abmelden",
+    "themeLight": "Hellmodus",
+    "themeDark": "Dunkelmodus",
+    "nav": {
+      "materialTypes": "Materialtypen",
+      "distributionCenters": "Vertriebszentren",
+      "users": "Benutzer"
+    }
+  },
+  "login": {
+    "title": "EHALP Verwaltung",
+    "subtitleEmail": "Anmelden zur Verwaltung der Plattform",
+    "subtitleCode": "Geben Sie den Code aus Ihrer E-Mail ein",
+    "emailLabel": "E-Mail-Adresse",
+    "emailPlaceholder": "admin@beispiel.de",
+    "sendMagicLink": "Magic Link senden",
+    "sendingMagicLink": "Wird gesendet...",
+    "codeLabel": "Verifizierungscode",
+    "codePlaceholder": "Code aus der E-Mail eingeben",
+    "verifyCode": "Code überprüfen",
+    "verifyingCode": "Wird überprüft...",
+    "backToEmail": "Zurück zur E-Mail",
+    "errorSendMagicLink": "Fehler beim Senden des Magic Links",
+    "errorInvalidCode": "Ungültiger Code"
+  },
+  "materialCategories": {
+    "Reanimation": "Reanimation",
+    "Wundversorgung&Trauma": "Wundversorgung & Trauma",
+    "Zubehoer": "Zubehör"
+  },
+  "materialTypes": {
+    "title": "Materialtypen",
+    "new": "Neuer Materialtyp",
+    "loadError": "Fehler beim Laden der Materialtypen",
+    "deleteError": "Fehler beim Löschen des Materialtyps",
+    "imageUploadFailed": "Materialtyp erstellt, aber Bild-Upload fehlgeschlagen: {error}. Bitte über \"Bearbeiten\" erneut versuchen.",
+    "table": {
+      "image": "Bild",
+      "name": "Name",
+      "description": "Beschreibung",
+      "category": "Kategorie",
+      "actions": "Aktionen",
+      "id": "ID: {id}",
+      "noImage": "Kein Bild"
+    },
+    "empty": "Keine Materialtypen gefunden. Klicken Sie auf \"Neuer Materialtyp\", um einen zu erstellen.",
+    "deleteTitle": "Materialtyp löschen",
+    "deleteMessage": "Sind Sie sicher, dass Sie \"{name}\" löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden."
+  },
+  "materialTypeForm": {
+    "titleCreate": "Materialtyp erstellen",
+    "titleEdit": "Materialtyp bearbeiten",
+    "nameLabel": "Name",
+    "namePlaceholder": "z.B. AED Trainer",
+    "generatedId": "ID wird aus dem Namen generiert: {id}",
+    "descriptionLabel": "Beschreibung",
+    "descriptionPlaceholder": "Geben Sie eine detaillierte Beschreibung ein...",
+    "categoryLabel": "Kategorie",
+    "imageLabel": "Bild",
+    "imageDropzone": "Bild hierher ziehen oder zum Auswählen klicken",
+    "chooseFile": "Datei auswählen",
+    "previewAlt": "Vorschau",
+    "submitCreate": "Erstellen",
+    "submitEdit": "Aktualisieren",
+    "submitting": "Wird gespeichert...",
+    "unknownError": "Ein Fehler ist aufgetreten"
+  },
+  "distributionCenters": {
+    "title": "Vertriebszentren",
+    "new": "Neues Vertriebszentrum",
+    "loadError": "Fehler beim Laden der Vertriebszentren",
+    "deleteError": "Fehler beim Löschen des Vertriebszentrums",
+    "table": {
+      "name": "Name",
+      "address": "Adresse",
+      "socketPath": "Socket-Pfad",
+      "actions": "Aktionen",
+      "id": "ID: {id}",
+      "localConnected": "Lokal verbunden",
+      "remote": "Remote"
+    },
+    "empty": "Keine Vertriebszentren gefunden. Klicken Sie auf \"Neues Vertriebszentrum\", um eines zu erstellen.",
+    "deleteTitle": "Vertriebszentrum löschen",
+    "deleteMessage": "Sind Sie sicher, dass Sie \"{name}\" löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden."
+  },
+  "distributionCenterForm": {
+    "titleCreate": "Neues Vertriebszentrum",
+    "titleEdit": "Vertriebszentrum bearbeiten",
+    "nameLabel": "Name *",
+    "namePlaceholder": "z.B. Hauptlager Nord",
+    "addressLabel": "Adresse *",
+    "addressPlaceholder": "Straße, PLZ Ort",
+    "nameRequired": "Name ist erforderlich",
+    "addressRequired": "Adresse ist erforderlich",
+    "socketConnected": "Lokal verbunden: Dieses Vertriebszentrum ist über Unix Socket verbunden ({path}).",
+    "submitCreate": "Erstellen",
+    "submitEdit": "Aktualisieren",
+    "submitting": "Wird gespeichert...",
+    "unknownError": "Ein Fehler ist aufgetreten"
+  },
+  "users": {
+    "title": "Benutzer",
+    "subtitle": "Unverifizierte Konten prüfen und registrierte Schul-E-Mails gesammelt freischalten.",
+    "loadError": "Fehler beim Laden der Benutzer",
+    "verifyError": "Benutzer konnte nicht verifiziert werden",
+    "unverifyError": "Benutzer konnte nicht auf unverifiziert gesetzt werden",
+    "importRequired": "Bitte CSV-Datei auswählen oder E-Mails einfügen.",
+    "importFailed": "Import fehlgeschlagen",
+    "verifySuccess": "Benutzer {email} wurde verifiziert.",
+    "unverifySuccess": "Benutzer {email} wurde auf unverifiziert gesetzt.",
+    "invalidSkipped": "Ungültige E-Mails übersprungen: {emails}",
+    "summary": {
+      "total": "Gesamt",
+      "verified": "Verifiziert",
+      "unverified": "Unverifiziert",
+      "admins": "Admins"
+    },
+    "import": {
+      "title": "Verifizierte E-Mails importieren",
+      "description": "CSV-Datei hochladen oder E-Mails zeilenweise einfügen. Bereits angemeldete Benutzer werden direkt freigeschaltet.",
+      "submit": "Import starten",
+      "submitting": "Import läuft...",
+      "textareaLabel": "E-Mails direkt einfügen",
+      "fileLabel": "CSV-Datei",
+      "fileSelected": "{name} ausgewählt",
+      "fileEmpty": "CSV-Datei auswählen",
+      "result": {
+        "created": "{count} neu angelegt",
+        "verified": "{count} bestehend verifiziert",
+        "alreadyVerified": "{count} bereits verifiziert",
+        "invalid": "{count} ungültig"
+      }
+    },
+    "table": {
+      "user": "Benutzer",
+      "status": "Status",
+      "role": "Rolle",
+      "workos": "WorkOS",
+      "created": "Erstellt",
+      "actions": "Aktionen",
+      "verified": "Verifiziert",
+      "unverified": "Unverifiziert",
+      "admin": "Admin",
+      "userRole": "Benutzer",
+      "connected": "Verbunden",
+      "notRegistered": "Noch nicht registriert",
+      "verify": "Verifizieren",
+      "unverify": "Zurücksetzen",
+      "updating": "Aktualisiere...",
+      "empty": "Keine Benutzer gefunden."
+    }
+  }
+}

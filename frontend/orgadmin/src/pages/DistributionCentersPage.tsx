@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'preact/hooks';
+import { useI18n } from '@/i18n';
 import type { DistributionCenter, CreateDistributionCenterInput, UpdateDistributionCenterInput } from '@/types/distributionCenter';
 import { distributionCenterService } from '@/services/distributionCenters';
 import { DistributionCenterFormModal } from '@/components/DistributionCenterFormModal';
 import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 
 export function DistributionCentersPage() {
+  const { t } = useI18n();
   const [centers, setCenters] = useState<DistributionCenter[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -23,7 +25,7 @@ export function DistributionCentersPage() {
       const data = await distributionCenterService.listDistributionCenters();
       setCenters(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Laden der Vertriebszentren');
+      setError(err instanceof Error ? err.message : t('distributionCenters.loadError'));
     } finally {
       setIsLoading(false);
     }
@@ -56,7 +58,7 @@ export function DistributionCentersPage() {
       await loadCenters();
       setDeletingCenter(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Löschen des Vertriebszentrums');
+      setError(err instanceof Error ? err.message : t('distributionCenters.deleteError'));
     }
   };
 
@@ -64,12 +66,12 @@ export function DistributionCentersPage() {
     <div className="flex-1 overflow-auto bg-background p-6">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-text-primary">Vertriebszentren</h1>
+          <h1 className="text-2xl font-bold text-text-primary">{t('distributionCenters.title')}</h1>
           <button
             onClick={() => setIsFormModalOpen(true)}
             className="px-4 py-2 bg-primary text-white font-medium rounded hover:bg-primary-hover transition-colors"
           >
-            Neues Vertriebszentrum
+            {t('distributionCenters.new')}
           </button>
         </div>
 
@@ -82,7 +84,7 @@ export function DistributionCentersPage() {
         {isLoading ? (
           <div className="text-center py-12">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent"></div>
-            <p className="mt-2 text-text-secondary">Wird geladen...</p>
+            <p className="mt-2 text-text-secondary">{t('common.loading')}</p>
           </div>
         ) : (
           <div className="bg-white shadow overflow-hidden rounded-lg">
@@ -90,16 +92,16 @@ export function DistributionCentersPage() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                    Name
+                    {t('distributionCenters.table.name')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                    Adresse
+                    {t('distributionCenters.table.address')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                    Socket-Pfad
+                    {t('distributionCenters.table.socketPath')}
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-text-secondary uppercase tracking-wider">
-                    Aktionen
+                    {t('distributionCenters.table.actions')}
                   </th>
                 </tr>
               </thead>
@@ -108,7 +110,7 @@ export function DistributionCentersPage() {
                   <tr key={center.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-text-primary">{center.name}</div>
-                      <div className="text-xs text-text-secondary">ID: {center.id}</div>
+                      <div className="text-xs text-text-secondary">{t('distributionCenters.table.id', { id: center.id })}</div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm text-text-primary">{center.address}</div>
@@ -117,11 +119,11 @@ export function DistributionCentersPage() {
                       <div className="text-sm text-text-secondary">
                         {center.socketPath ? (
                           <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
-                            Lokal verbunden
+                            {t('distributionCenters.table.localConnected')}
                           </span>
                         ) : (
                           <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800">
-                            Remote
+                            {t('distributionCenters.table.remote')}
                           </span>
                         )}
                       </div>
@@ -134,13 +136,13 @@ export function DistributionCentersPage() {
                         onClick={() => setEditingCenter(center)}
                         className="text-primary hover:text-primary-hover mr-4"
                       >
-                        Bearbeiten
+                        {t('common.edit')}
                       </button>
                       <button
                         onClick={() => setDeletingCenter(center)}
                         className="text-red-600 hover:text-red-800"
                       >
-                        Löschen
+                        {t('common.delete')}
                       </button>
                     </td>
                   </tr>
@@ -150,7 +152,7 @@ export function DistributionCentersPage() {
 
             {(!centers || centers.length === 0) && (
               <div className="text-center py-12 text-text-secondary">
-                Keine Vertriebszentren gefunden. Klicken Sie auf "Neues Vertriebszentrum", um eines zu erstellen.
+                {t('distributionCenters.empty')}
               </div>
             )}
           </div>
@@ -173,8 +175,8 @@ export function DistributionCentersPage() {
 
       {deletingCenter && (
         <DeleteConfirmationModal
-          title="Vertriebszentrum löschen"
-          message={`Sind Sie sicher, dass Sie "${deletingCenter.name}" löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.`}
+          title={t('distributionCenters.deleteTitle')}
+          message={t('distributionCenters.deleteMessage', { name: deletingCenter.name })}
           onConfirm={handleDelete}
           onCancel={() => setDeletingCenter(null)}
         />

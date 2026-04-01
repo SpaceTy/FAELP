@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'preact/hooks';
-import { CATEGORY_LABELS, type MaterialType, type CreateMaterialTypeInput, type UpdateMaterialTypeInput, type MaterialCategory } from '@/types/material';
+import { useI18n } from '@/i18n';
+import { MATERIAL_CATEGORY_TRANSLATION_KEYS, type MaterialType, type CreateMaterialTypeInput, type UpdateMaterialTypeInput, type MaterialCategory } from '@/types/material';
 import { resolveAssetUrl } from '@/utils/url';
 
 interface MaterialTypeFormModalProps {
@@ -14,6 +15,7 @@ function getFullImageUrl(imageUrl: string | undefined): string | null {
 }
 
 export function MaterialTypeFormModal({ materialType, onSubmit, onClose }: MaterialTypeFormModalProps) {
+  const { t } = useI18n();
   const isEditing = !!materialType;
   const [name, setName] = useState(materialType?.name || '');
   const [description, setDescription] = useState(materialType?.description || '');
@@ -67,7 +69,7 @@ export function MaterialTypeFormModal({ materialType, onSubmit, onClose }: Mater
       const input = { name, description, category };
       await onSubmit(input, imageFile || undefined);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ein Fehler ist aufgetreten');
+      setError(err instanceof Error ? err.message : t('materialTypeForm.unknownError'));
     } finally {
       setIsSubmitting(false);
     }
@@ -78,7 +80,7 @@ export function MaterialTypeFormModal({ materialType, onSubmit, onClose }: Mater
       <div className="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <h2 className="text-xl font-bold text-secondary mb-4">
-            {isEditing ? 'Materialtyp bearbeiten' : 'Materialtyp erstellen'}
+            {isEditing ? t('materialTypeForm.titleEdit') : t('materialTypeForm.titleCreate')}
           </h2>
 
           {error && (
@@ -90,7 +92,7 @@ export function MaterialTypeFormModal({ materialType, onSubmit, onClose }: Mater
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-text-primary mb-1">
-                Name
+                {t('materialTypeForm.nameLabel')}
               </label>
               <input
                 type="text"
@@ -98,16 +100,18 @@ export function MaterialTypeFormModal({ materialType, onSubmit, onClose }: Mater
                 value={name}
                 onChange={(e) => setName((e.target as HTMLInputElement).value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="z.B. AED Trainer"
+                placeholder={t('materialTypeForm.namePlaceholder')}
               />
               <p className="text-xs text-text-secondary mt-1">
-                ID wird aus dem Namen generiert: {name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')}
+                {t('materialTypeForm.generatedId', {
+                  id: name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')
+                })}
               </p>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-text-primary mb-1">
-                Beschreibung
+                {t('materialTypeForm.descriptionLabel')}
               </label>
               <textarea
                 required
@@ -115,13 +119,13 @@ export function MaterialTypeFormModal({ materialType, onSubmit, onClose }: Mater
                 onChange={(e) => setDescription((e.target as HTMLTextAreaElement).value)}
                 rows={4}
                 className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="Geben Sie eine detaillierte Beschreibung ein..."
+                placeholder={t('materialTypeForm.descriptionPlaceholder')}
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-text-primary mb-1">
-                Kategorie
+                {t('materialTypeForm.categoryLabel')}
               </label>
               <select
                 required
@@ -129,9 +133,9 @@ export function MaterialTypeFormModal({ materialType, onSubmit, onClose }: Mater
                 onChange={(e) => setCategory((e.target as HTMLSelectElement).value as MaterialCategory)}
                 className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                {(Object.keys(CATEGORY_LABELS) as MaterialCategory[]).map((option) => (
+                {(Object.keys(MATERIAL_CATEGORY_TRANSLATION_KEYS) as MaterialCategory[]).map((option) => (
                   <option key={option} value={option}>
-                    {CATEGORY_LABELS[option]}
+                    {t(MATERIAL_CATEGORY_TRANSLATION_KEYS[option])}
                   </option>
                 ))}
               </select>
@@ -139,7 +143,7 @@ export function MaterialTypeFormModal({ materialType, onSubmit, onClose }: Mater
 
             <div>
               <label className="block text-sm font-medium text-text-primary mb-1">
-                Bild
+                {t('materialTypeForm.imageLabel')}
               </label>
               <div
                 onDrop={handleDrop}
@@ -155,7 +159,7 @@ export function MaterialTypeFormModal({ materialType, onSubmit, onClose }: Mater
                   <div className="relative inline-block">
                     <img
                       src={imagePreview}
-                      alt="Vorschau"
+                      alt={t('materialTypeForm.previewAlt')}
                       className="h-32 w-32 object-cover rounded"
                     />
                     <button
@@ -169,7 +173,7 @@ export function MaterialTypeFormModal({ materialType, onSubmit, onClose }: Mater
                 ) : (
                   <>
                     <p className="text-text-secondary mb-2">
-                      Bild hierher ziehen oder zum Auswählen klicken
+                      {t('materialTypeForm.imageDropzone')}
                     </p>
                     <input
                       type="file"
@@ -182,7 +186,7 @@ export function MaterialTypeFormModal({ materialType, onSubmit, onClose }: Mater
                       htmlFor="image-input"
                       className="inline-block px-4 py-2 bg-gray-100 text-text-primary rounded hover:bg-gray-200 cursor-pointer transition-colors"
                     >
-                      Datei auswählen
+                      {t('materialTypeForm.chooseFile')}
                     </label>
                   </>
                 )}
@@ -196,14 +200,18 @@ export function MaterialTypeFormModal({ materialType, onSubmit, onClose }: Mater
                 disabled={isSubmitting}
                 className="px-4 py-2 text-text-secondary hover:text-text-primary transition-colors"
               >
-                Abbrechen
+                {t('common.cancel')}
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
                 className="px-4 py-2 bg-primary text-white font-medium rounded hover:bg-primary-hover transition-colors disabled:opacity-50"
               >
-                {isSubmitting ? 'Wird gespeichert...' : isEditing ? 'Aktualisieren' : 'Erstellen'}
+                {isSubmitting
+                  ? t('materialTypeForm.submitting')
+                  : isEditing
+                    ? t('materialTypeForm.submitEdit')
+                    : t('materialTypeForm.submitCreate')}
               </button>
             </div>
           </form>

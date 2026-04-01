@@ -1,0 +1,268 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "cancel": "Cancel",
+    "close": "Close",
+    "back": "Back",
+    "logout": "Log out",
+    "retry": "Try again",
+    "languageSwitcher": "Switch language",
+    "locale": {
+      "de": "German",
+      "en": "English"
+    }
+  },
+  "app": {
+    "unverifiedBannerTitle": "Account not yet verified",
+    "unverifiedBannerBody": "You can sign in and explore the platform, but you can only submit material requests after an administrator has approved your account."
+  },
+  "header": {
+    "tagline": "Training logistics",
+    "help": "Help",
+    "cart": "Cart ({count})",
+    "unverifiedBadge": "Unverified",
+    "themeLight": "Light mode",
+    "themeDark": "Dark mode",
+    "nav": {
+      "materials": "Browse materials",
+      "requests": "My requests"
+    }
+  },
+  "login": {
+    "title": "Sign in",
+    "subtitle": "Sign in to request materials",
+    "emailLabel": "Email address",
+    "emailPlaceholder": "your@email.com",
+    "sendMagicLink": "Send magic link",
+    "sendingMagicLink": "Sending...",
+    "emailHelp": "No password required. We will send you a secure sign-in link.",
+    "errorSendMagicLink": "Failed to send the magic link. Please try again.",
+    "codeTitle": "Enter code",
+    "codeSent": "We sent a 6-digit code to {email}.",
+    "codeLabel": "One-time code",
+    "codePlaceholder": "123456",
+    "errorCodeExpired": "The code has expired (valid for 10 minutes). Please request a new code.",
+    "errorCodeInvalid": "The code is invalid. Please check your entry.",
+    "verifyingCode": "Verifying...",
+    "signIn": "Sign in",
+    "noEmailHint": "Did not receive an email? Check your spam folder.",
+    "retryWithDifferentEmail": "Try another email"
+  },
+  "callback": {
+    "invalidLink": "Invalid magic link. Please request a new one.",
+    "expiredLink": "The magic link is invalid or expired.",
+    "verifying": "Verifying sign-in...",
+    "failedTitle": "Sign-in failed",
+    "backToLogin": "Back to sign in"
+  },
+  "userMenu": {
+    "unverified": "Account not verified"
+  },
+  "verifiedRoute": {
+    "title": "Account not yet verified",
+    "body": "Your account already exists, but it has not yet been approved by an administrator. Until then, you can only browse the materials.",
+    "backToMaterials": "Back to materials"
+  },
+  "materialCategories": {
+    "Reanimation": "Resuscitation",
+    "Wundversorgung&Trauma": "Wound care & trauma",
+    "Zubehoer": "Accessories"
+  },
+  "materialsPage": {
+    "categories": "Categories",
+    "title": "First-aid training materials",
+    "count": "{count} materials",
+    "sortRelevance": "Sort by: relevance",
+    "sortName": "Name (A-Z)",
+    "sortCategory": "Category",
+    "searchPlaceholder": "Search materials...",
+    "loading": "Loading materials...",
+    "loadError": "Failed to load materials: {error}",
+    "empty": "No materials found."
+  },
+  "materialCard": {
+    "available": "{count} available",
+    "unavailable": "Unavailable",
+    "practiceSet": "Practice set",
+    "allLevels": "All levels",
+    "physicalEquipment": "Physical equipment",
+    "decreaseQuantity": "Decrease quantity",
+    "increaseQuantity": "Increase quantity",
+    "requestMaterial": "Request material",
+    "showDetails": "Show details"
+  },
+  "cart": {
+    "successTitle": "Request sent successfully",
+    "successBody": "Your request was submitted successfully. You will receive a confirmation by email.",
+    "toMyRequests": "Go to my requests",
+    "emptyTitle": "Your cart is empty",
+    "emptyBody": "Browse our materials and add items to your cart.",
+    "browseMaterials": "Browse materials",
+    "title": "Cart",
+    "itemsInCart": "{count} items in cart",
+    "clear": "Clear cart",
+    "remove": "Remove",
+    "summary": "Summary",
+    "items": "Items:",
+    "units": "Units:",
+    "loginPrompt": "Please sign in to submit a request.",
+    "loginButton": "Sign in"
+  },
+  "requestForm": {
+    "deliveryDate": "Delivery date",
+    "plannedReturnDate": "Planned return date",
+    "plannedStudents": "Planned number of students",
+    "plannedStudentsHelp": "This information is optional. It helps us process your request appropriately.",
+    "shareStudents": "I consent to sending the planned number of students for processing my request.",
+    "doNotShareStudents": "I do not want to send the planned number of students. In that case, the value 0 will be sent.",
+    "studentsNotUsed": "In that case, the student count is not used and will be sent as 0.",
+    "shippingName": "Recipient name",
+    "shippingNamePlaceholder": "Max Mustermann",
+    "addressLine1": "Street and house number",
+    "addressLine1Placeholder": "Example Street 123",
+    "addressLine2": "Address line 2 (optional)",
+    "addressLine2Placeholder": "e.g. 2nd floor",
+    "zipCode": "ZIP code",
+    "zipCodePlaceholder": "12345",
+    "city": "City",
+    "cityPlaceholder": "Berlin",
+    "note": "Note (optional)",
+    "notePlaceholder": "Additional delivery information...",
+    "privacyTitle": "Data processing confirmation",
+    "privacyBody": "When you submit your request, the personal data entered in this form is processed for reviewing, handling, fulfilling, and documenting your request. This includes in particular contact, delivery, and request data.",
+    "privacyConsent": "I confirm that my information may be processed for these purposes so that my request can be handled and fulfilled.",
+    "submit": "Send request",
+    "submitting": "Sending...",
+    "errors": {
+      "notLoggedIn": "You must be signed in to send a request.",
+      "privacyRequired": "Please confirm the processing of your information to handle the request.",
+      "invalidStudents": "Please enter a valid planned number of students.",
+      "deliveryTooSoon": "The delivery date must be at least 3 days in the future.",
+      "generic": "An error occurred. Please try again."
+    }
+  },
+  "myRequests": {
+    "noImages": "No images available",
+    "archivedBadge": "Archived",
+    "received": "Received",
+    "cancelling": "Cancelling...",
+    "cancelRequest": "Cancel request",
+    "delivery": "Delivery",
+    "deliveryDate": "Delivery date",
+    "plannedReturn": "Planned return",
+    "notProvided": "Not provided",
+    "plannedStudents": "Planned students",
+    "shippingAddress": "Shipping address",
+    "tracking": "DHL tracking",
+    "materials": "Materials",
+    "itemsCountOne": "{count} item",
+    "itemsCountOther": "{count} items",
+    "cancelDialogClose": "Close dialog",
+    "cancelDialogEyebrow": "Cancel request",
+    "cancelDialogTitle": "Cancel this request?",
+    "cancelDialogBody": "Request #{id} with delivery date {date} will then be marked as archived.",
+    "cancelDialogAddress": "Shipping address",
+    "cancelDialogConfirm": "Cancel now",
+    "loadError": "Failed to load requests: {error}",
+    "loadErrorGeneric": "Failed to load requests.",
+    "cancelError": "The request could not be cancelled",
+    "title": "My requests",
+    "subtitle": "Overview of your current material requests and their status",
+    "emptyTitle": "No requests yet",
+    "emptyBody": "You have not submitted any material requests yet.",
+    "browseMaterials": "Browse materials",
+    "emptyActiveTitle": "No active requests",
+    "emptyActiveBody": "You can find your archived requests below.",
+    "archivedTitle": "Archived requests",
+    "archivedCountOne": "{count} entry",
+    "archivedCountOther": "{count} entries",
+    "statuses": {
+      "pending": "Pending",
+      "inAction": "Shipped",
+      "approved": "Approved",
+      "returned": "Completed",
+      "cancelled": "Cancelled"
+    }
+  },
+  "notFound": {
+    "title": "Page not found",
+    "body": "The requested page does not exist.",
+    "backToMaterials": "Back to materials"
+  },
+  "help": {
+    "title": "Help & guide",
+    "intro": "Welcome to EHALP. Here you can find a step-by-step guide for using the platform.",
+    "contactTitle": "More questions?",
+    "contactBody": "For technical issues or further questions, send an email to peselis20100@gmail.com.",
+    "steps": {
+      "browse": {
+        "title": "Browse materials",
+        "intro": "On the \"Browse materials\" page you will find all available first-aid training materials.",
+        "item1Label": "Filter categories:",
+        "item1Text": "Use the checkboxes in the sidebar to filter by categories such as \"Resuscitation\", \"Wound care & trauma\", or \"Accessories\".",
+        "item2Label": "Search:",
+        "item2Text": "Use the search field at the top to look for specific materials.",
+        "item3Label": "View details:",
+        "item3Text": "Click a material to see more information."
+      },
+      "cart": {
+        "title": "Add items to the cart",
+        "intro": "Add the materials you need to your cart.",
+        "item1Label": "Choose quantity:",
+        "item1Text": "Enter the quantity you need.",
+        "item2Label": "Add to cart:",
+        "item2Text": "Click the \"Add to cart\" button.",
+        "item3Label": "View cart:",
+        "item3Text": "The current number of items is shown in the header."
+      },
+      "submit": {
+        "title": "Submit a request",
+        "intro": "In the cart you can create and submit your request.",
+        "item1Label": "Adjust quantities:",
+        "item1Text": "Change quantities directly in the cart or remove items.",
+        "item2Label": "Delivery date:",
+        "item2Text": "Choose your preferred delivery date.",
+        "item3Label": "Return date:",
+        "item3Text": "Specify when you can return the materials.",
+        "item4Label": "Student count:",
+        "item4Text": "Enter the number of participating students.",
+        "item5Label": "Delivery address:",
+        "item5Text": "Enter the full delivery address.",
+        "item6Label": "Send request:",
+        "item6Text": "Click \"Send request\" to submit the request."
+      },
+      "after": {
+        "title": "After submission",
+        "intro": "What happens after you submit your request?",
+        "item1Label": "Confirmation:",
+        "item1Text": "You will receive a confirmation by email.",
+        "item2Label": "Approval process:",
+        "item2Text": "Your request is reviewed by the organization.",
+        "item3Label": "Packaging:",
+        "item3Text": "After approval, the materials are prepared for shipping.",
+        "item4Label": "Shipping:",
+        "item4Text": "The materials are shipped to the specified address."
+      },
+      "status": {
+        "title": "Track request status",
+        "intro": "Under \"My requests\" you can view all your requests.",
+        "item1Label": "Status overview:",
+        "item1Text": "See the current status of each request.",
+        "item2Label": "Possible statuses:",
+        "item2Text": "Pending, approved, rejected, shipped, completed.",
+        "item3Label": "Details:",
+        "item3Text": "Click a request to view all details."
+      },
+      "cancel": {
+        "title": "Cancel a request",
+        "intro": "You can cancel a request as long as it has not been shipped yet.",
+        "item1Label": "Go to \"My requests\".",
+        "item1Text": "",
+        "item2Label": "Cancel button:",
+        "item2Text": "For pending or approved requests, you will find a cancel button.",
+        "item3Label": "Confirmation:",
+        "item3Text": "The cancellation is processed immediately."
+      }
+    }
+  }
+}

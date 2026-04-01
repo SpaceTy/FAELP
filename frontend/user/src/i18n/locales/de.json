@@ -1,0 +1,268 @@
+{
+  "common": {
+    "loading": "Wird geladen...",
+    "cancel": "Abbrechen",
+    "close": "Schließen",
+    "back": "Zurück",
+    "logout": "Abmelden",
+    "retry": "Erneut versuchen",
+    "languageSwitcher": "Sprache wechseln",
+    "locale": {
+      "de": "Deutsch",
+      "en": "Englisch"
+    }
+  },
+  "app": {
+    "unverifiedBannerTitle": "Konto noch nicht verifiziert",
+    "unverifiedBannerBody": "Sie koennen sich anmelden und die Plattform ansehen, aber erst nach Freischaltung durch einen Administrator Materialanfragen stellen."
+  },
+  "header": {
+    "tagline": "Ausbildungslogistik",
+    "help": "Hilfe",
+    "cart": "Warenkorb ({count})",
+    "unverifiedBadge": "Nicht verifiziert",
+    "themeLight": "Hellmodus",
+    "themeDark": "Dunkelmodus",
+    "nav": {
+      "materials": "Materialien durchsuchen",
+      "requests": "Meine Anfragen"
+    }
+  },
+  "login": {
+    "title": "Anmelden",
+    "subtitle": "Melden Sie sich an, um Materialien anzufordern",
+    "emailLabel": "E-Mail-Adresse",
+    "emailPlaceholder": "ihre@email.de",
+    "sendMagicLink": "Magic Link senden",
+    "sendingMagicLink": "Wird gesendet...",
+    "emailHelp": "Kein Passwort erforderlich. Wir senden Ihnen einen sicheren Anmeldelink.",
+    "errorSendMagicLink": "Fehler beim Senden des Magic Links. Bitte versuchen Sie es erneut.",
+    "codeTitle": "Code eingeben",
+    "codeSent": "Wir haben einen 6-stelligen Code an {email} gesendet.",
+    "codeLabel": "Einmalcode",
+    "codePlaceholder": "123456",
+    "errorCodeExpired": "Der Code ist abgelaufen (gueltig fuer 10 Minuten). Bitte fordern Sie einen neuen Code an.",
+    "errorCodeInvalid": "Der Code ist ungueltig. Bitte ueberpruefen Sie die Eingabe.",
+    "verifyingCode": "Wird geprueft...",
+    "signIn": "Anmelden",
+    "noEmailHint": "Haben Sie keine E-Mail erhalten? Ueberpruefen Sie Ihren Spam-Ordner.",
+    "retryWithDifferentEmail": "Mit anderer E-Mail versuchen"
+  },
+  "callback": {
+    "invalidLink": "Ungueltiger Magic Link. Bitte fordern Sie einen neuen an.",
+    "expiredLink": "Der Magic Link ist ungueltig oder abgelaufen.",
+    "verifying": "Anmeldung wird ueberprueft...",
+    "failedTitle": "Anmeldung fehlgeschlagen",
+    "backToLogin": "Zurueck zur Anmeldung"
+  },
+  "userMenu": {
+    "unverified": "Konto nicht verifiziert"
+  },
+  "verifiedRoute": {
+    "title": "Konto noch nicht verifiziert",
+    "body": "Ihr Konto ist bereits angelegt, wurde aber noch nicht von einem Administrator freigeschaltet. Bis dahin koennen Sie die Materialien nur durchsuchen.",
+    "backToMaterials": "Zur Materialuebersicht"
+  },
+  "materialCategories": {
+    "Reanimation": "Reanimation",
+    "Wundversorgung&Trauma": "Wundversorgung & Trauma",
+    "Zubehoer": "Zubehoer"
+  },
+  "materialsPage": {
+    "categories": "Kategorien",
+    "title": "Erste-Hilfe-Bildungsmaterialien",
+    "count": "{count} Materialien",
+    "sortRelevance": "Sortieren nach: Relevanz",
+    "sortName": "Name (A-Z)",
+    "sortCategory": "Kategorie",
+    "searchPlaceholder": "Materialien suchen...",
+    "loading": "Materialien werden geladen...",
+    "loadError": "Fehler beim Laden der Materialien: {error}",
+    "empty": "Keine Materialien gefunden."
+  },
+  "materialCard": {
+    "available": "{count} verfuegbar",
+    "unavailable": "Nicht verfuegbar",
+    "practiceSet": "Uebungs-Set",
+    "allLevels": "Alle Niveaus",
+    "physicalEquipment": "Physische Ausruestung",
+    "decreaseQuantity": "Menge verringern",
+    "increaseQuantity": "Menge erhoehen",
+    "requestMaterial": "Material anfragen",
+    "showDetails": "Details anzeigen"
+  },
+  "cart": {
+    "successTitle": "Anfrage erfolgreich gesendet",
+    "successBody": "Ihre Anfrage wurde erfolgreich uebermittelt. Sie erhalten eine Bestaetigung per E-Mail.",
+    "toMyRequests": "Zu meinen Anfragen",
+    "emptyTitle": "Ihr Warenkorb ist leer",
+    "emptyBody": "Durchsuchen Sie unsere Materialien und fuegen Sie Artikel zu Ihrem Warenkorb hinzu.",
+    "browseMaterials": "Materialien durchsuchen",
+    "title": "Warenkorb",
+    "itemsInCart": "{count} Artikel im Warenkorb",
+    "clear": "Warenkorb leeren",
+    "remove": "Entfernen",
+    "summary": "Zusammenfassung",
+    "items": "Artikel:",
+    "units": "Einheiten:",
+    "loginPrompt": "Bitte melden Sie sich an, um eine Anfrage zu senden.",
+    "loginButton": "Anmelden"
+  },
+  "requestForm": {
+    "deliveryDate": "Lieferdatum",
+    "plannedReturnDate": "Geplantes Rueckgabedatum",
+    "plannedStudents": "Geplante Anzahl Schueler:innen",
+    "plannedStudentsHelp": "Diese Angabe ist freiwillig. Sie hilft bei der bedarfsgerechten Bearbeitung Ihrer Anfrage.",
+    "shareStudents": "Ich willige ein, dass die geplante Anzahl der Schueler:innen zur Bearbeitung meiner Anfrage uebermittelt wird.",
+    "doNotShareStudents": "Ich moechte die geplante Anzahl der Schueler:innen nicht uebermitteln. In diesem Fall wird der Wert 0 gesendet.",
+    "studentsNotUsed": "Die Schuelerzahl wird in diesem Fall nicht verwendet und mit 0 uebermittelt.",
+    "shippingName": "Name (Empfaenger)",
+    "shippingNamePlaceholder": "Max Mustermann",
+    "addressLine1": "Strasse und Hausnummer",
+    "addressLine1Placeholder": "Musterstrasse 123",
+    "addressLine2": "Adresszusatz (optional)",
+    "addressLine2Placeholder": "z.B. 2. OG",
+    "zipCode": "PLZ",
+    "zipCodePlaceholder": "12345",
+    "city": "Stadt",
+    "cityPlaceholder": "Berlin",
+    "note": "Anmerkung (optional)",
+    "notePlaceholder": "Weitere Informationen zur Lieferung...",
+    "privacyTitle": "Datenschutzbestaetigung",
+    "privacyBody": "Mit dem Absenden Ihrer Anfrage werden Ihre im Formular angegebenen personenbezogenen Daten zum Zweck der Pruefung, Bearbeitung, Durchfuehrung und Dokumentation Ihrer Anfrage verarbeitet. Dazu gehoeren insbesondere Kontakt-, Liefer- und Anfragedaten.",
+    "privacyConsent": "Ich bestaetige, dass meine Angaben zu diesen Zwecken verarbeitet werden duerfen, damit meine Anfrage bearbeitet und abgewickelt werden kann.",
+    "submit": "Anfrage senden",
+    "submitting": "Wird gesendet...",
+    "errors": {
+      "notLoggedIn": "Sie muessen angemeldet sein, um eine Anfrage zu senden.",
+      "privacyRequired": "Bitte bestaetigen Sie die Verarbeitung Ihrer Angaben zur Bearbeitung der Anfrage.",
+      "invalidStudents": "Bitte geben Sie eine gueltige Anzahl geplanter Schueler:innen an.",
+      "deliveryTooSoon": "Das Lieferdatum muss mindestens 3 Tage in der Zukunft liegen.",
+      "generic": "Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut."
+    }
+  },
+  "myRequests": {
+    "noImages": "Keine Bilder verfuegbar",
+    "archivedBadge": "Archiviert",
+    "received": "Eingegangen",
+    "cancelling": "Storniere...",
+    "cancelRequest": "Anfrage stornieren",
+    "delivery": "Lieferung",
+    "deliveryDate": "Lieferdatum",
+    "plannedReturn": "Geplante Rueckgabe",
+    "notProvided": "Nicht angegeben",
+    "plannedStudents": "Geplante Schueler:innen",
+    "shippingAddress": "Lieferadresse",
+    "tracking": "DHL Tracking",
+    "materials": "Materialien",
+    "itemsCountOne": "{count} Artikel",
+    "itemsCountOther": "{count} Artikel",
+    "cancelDialogClose": "Dialog schliessen",
+    "cancelDialogEyebrow": "Anfrage stornieren",
+    "cancelDialogTitle": "Wirklich stornieren?",
+    "cancelDialogBody": "Die Anfrage #{id} mit Lieferdatum {date} wird danach als archiviert markiert.",
+    "cancelDialogAddress": "Lieferadresse",
+    "cancelDialogConfirm": "Jetzt stornieren",
+    "loadError": "Fehler beim Laden der Anfragen: {error}",
+    "loadErrorGeneric": "Fehler beim Laden der Anfragen.",
+    "cancelError": "Anfrage konnte nicht storniert werden",
+    "title": "Meine Anfragen",
+    "subtitle": "Uebersicht ueber Ihre aktuellen Materialanfragen und deren Status",
+    "emptyTitle": "Keine Anfragen vorhanden",
+    "emptyBody": "Sie haben noch keine Materialanfragen gestellt.",
+    "browseMaterials": "Materialien durchsuchen",
+    "emptyActiveTitle": "Keine aktiven Anfragen",
+    "emptyActiveBody": "Ihre archivierten Anfragen finden Sie weiter unten.",
+    "archivedTitle": "Archivierte Anfragen",
+    "archivedCountOne": "{count} Eintrag",
+    "archivedCountOther": "{count} Eintraege",
+    "statuses": {
+      "pending": "Ausstehend",
+      "inAction": "Versendet",
+      "approved": "Angenommen",
+      "returned": "Abgeschlossen",
+      "cancelled": "Storniert"
+    }
+  },
+  "notFound": {
+    "title": "Seite nicht gefunden",
+    "body": "Die angeforderte Seite existiert nicht.",
+    "backToMaterials": "Zurueck zu Materialien"
+  },
+  "help": {
+    "title": "Hilfe & Anleitung",
+    "intro": "Willkommen bei EHALP! Hier finden Sie eine Schritt-fuer-Schritt-Anleitung zur Nutzung der Plattform.",
+    "contactTitle": "Weitere Fragen?",
+    "contactBody": "Bei technischen Problemen oder weiteren Fragen senden Sie eine E-Mail an peselis20100@gmail.com.",
+    "steps": {
+      "browse": {
+        "title": "Materialien durchsuchen",
+        "intro": "Auf der Seite \"Materialien durchsuchen\" finden Sie alle verfuegbaren Erste-Hilfe-Bildungsmaterialien.",
+        "item1Label": "Kategorien filtern:",
+        "item1Text": "Verwenden Sie die Checkboxen in der Seitenleiste, um nach Kategorien wie \"Reanimation\", \"Wundversorgung & Trauma\" oder \"Zubehoer\" zu filtern.",
+        "item2Label": "Suchen:",
+        "item2Text": "Nutzen Sie das Suchfeld oben, um nach bestimmten Materialien zu suchen.",
+        "item3Label": "Details anzeigen:",
+        "item3Text": "Klicken Sie auf ein Material, um mehr Informationen zu sehen."
+      },
+      "cart": {
+        "title": "Artikel in den Warenkorb legen",
+        "intro": "Fuegen Sie die benoetigten Materialien zu Ihrem Warenkorb hinzu.",
+        "item1Label": "Menge waehlen:",
+        "item1Text": "Geben Sie die gewuenschte Anzahl ein.",
+        "item2Label": "Zum Warenkorb hinzufuegen:",
+        "item2Text": "Klicken Sie auf den \"Zum Warenkorb\"-Button.",
+        "item3Label": "Warenkorb anzeigen:",
+        "item3Text": "Die aktuelle Anzahl der Artikel wird im Header angezeigt."
+      },
+      "submit": {
+        "title": "Anfrage absenden",
+        "intro": "Im Warenkorb koennen Sie Ihre Anfrage erstellen und absenden.",
+        "item1Label": "Mengen anpassen:",
+        "item1Text": "Aendern Sie die Mengen direkt im Warenkorb oder entfernen Sie Artikel.",
+        "item2Label": "Lieferdatum:",
+        "item2Text": "Waehlen Sie das gewuenschte Lieferdatum aus.",
+        "item3Label": "Rueckgabedatum:",
+        "item3Text": "Geben Sie an, wann Sie die Materialien zurueckgeben koennen.",
+        "item4Label": "Schueleranzahl:",
+        "item4Text": "Geben Sie die Anzahl der teilnehmenden Schueler an.",
+        "item5Label": "Lieferadresse:",
+        "item5Text": "Tragen Sie die vollstaendige Lieferadresse ein.",
+        "item6Label": "Anfrage senden:",
+        "item6Text": "Klicken Sie auf \"Anfrage senden\", um die Anfrage abzuschicken."
+      },
+      "after": {
+        "title": "Nach der Einreichung",
+        "intro": "Was passiert, nachdem Sie Ihre Anfrage abgeschickt haben?",
+        "item1Label": "Bestaetigung:",
+        "item1Text": "Sie erhalten eine Bestaetigung per E-Mail.",
+        "item2Label": "Genehmigungsprozess:",
+        "item2Text": "Ihre Anfrage wird von der Organisation geprueft.",
+        "item3Label": "Verpackung:",
+        "item3Text": "Nach Genehmigung werden die Materialien fuer den Versand vorbereitet.",
+        "item4Label": "Versand:",
+        "item4Text": "Die Materialien werden an die angegebene Adresse versendet."
+      },
+      "status": {
+        "title": "Anfragenstatus verfolgen",
+        "intro": "Unter \"Meine Anfragen\" koennen Sie alle Ihre Anfragen einsehen.",
+        "item1Label": "Statusuebersicht:",
+        "item1Text": "Sehen Sie den aktuellen Status jeder Anfrage.",
+        "item2Label": "Moegliche Status:",
+        "item2Text": "Ausstehend, Genehmigt, Abgelehnt, Versendet, Abgeschlossen.",
+        "item3Label": "Details:",
+        "item3Text": "Klicken Sie auf eine Anfrage, um alle Details anzuzeigen."
+      },
+      "cancel": {
+        "title": "Anfrage stornieren",
+        "intro": "Sie koennen eine Anfrage stornieren, solange sie noch nicht versendet wurde.",
+        "item1Label": "Gehen Sie zu \"Meine Anfragen\".",
+        "item1Text": "",
+        "item2Label": "Stornieren-Button:",
+        "item2Text": "Bei ausstehenden oder genehmigten Anfragen finden Sie einen Stornieren-Button.",
+        "item3Label": "Bestaetigung:",
+        "item3Text": "Die Stornierung wird umgehend bearbeitet."
+      }
+    }
+  }
+}

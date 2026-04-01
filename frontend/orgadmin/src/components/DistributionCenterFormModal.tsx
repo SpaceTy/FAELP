@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'preact/hooks';
+import { useI18n } from '@/i18n';
 import type { DistributionCenter, CreateDistributionCenterInput, UpdateDistributionCenterInput } from '@/types/distributionCenter';
 
 interface DistributionCenterFormModalProps {
@@ -8,6 +9,7 @@ interface DistributionCenterFormModalProps {
 }
 
 export function DistributionCenterFormModal({ center, onSubmit, onClose }: DistributionCenterFormModalProps) {
+  const { t } = useI18n();
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
   const [error, setError] = useState('');
@@ -29,10 +31,10 @@ export function DistributionCenterFormModal({ center, onSubmit, onClose }: Distr
 
     try {
       if (!name.trim()) {
-        throw new Error('Name ist erforderlich');
+        throw new Error(t('distributionCenterForm.nameRequired'));
       }
       if (!address.trim()) {
-        throw new Error('Adresse ist erforderlich');
+        throw new Error(t('distributionCenterForm.addressRequired'));
       }
 
       await onSubmit({
@@ -40,7 +42,7 @@ export function DistributionCenterFormModal({ center, onSubmit, onClose }: Distr
         address: address.trim(),
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ein Fehler ist aufgetreten');
+      setError(err instanceof Error ? err.message : t('distributionCenterForm.unknownError'));
     } finally {
       setIsSubmitting(false);
     }
@@ -51,7 +53,7 @@ export function DistributionCenterFormModal({ center, onSubmit, onClose }: Distr
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
         <div className="px-6 py-4 border-b">
           <h2 className="text-lg font-semibold text-text-primary">
-            {isEditing ? 'Vertriebszentrum bearbeiten' : 'Neues Vertriebszentrum'}
+            {isEditing ? t('distributionCenterForm.titleEdit') : t('distributionCenterForm.titleCreate')}
           </h2>
         </div>
 
@@ -64,27 +66,27 @@ export function DistributionCenterFormModal({ center, onSubmit, onClose }: Distr
 
           <div>
             <label className="block text-sm font-medium text-text-secondary mb-1">
-              Name *
+              {t('distributionCenterForm.nameLabel')}
             </label>
             <input
               type="text"
               value={name}
               onInput={(e) => setName((e.target as HTMLInputElement).value)}
               className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="z.B. Hauptlager Nord"
+              placeholder={t('distributionCenterForm.namePlaceholder')}
               required
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-text-secondary mb-1">
-              Adresse *
+              {t('distributionCenterForm.addressLabel')}
             </label>
             <textarea
               value={address}
               onInput={(e) => setAddress((e.target as HTMLTextAreaElement).value)}
               className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="Straße, PLZ Ort"
+              placeholder={t('distributionCenterForm.addressPlaceholder')}
               rows={3}
               required
             />
@@ -92,8 +94,7 @@ export function DistributionCenterFormModal({ center, onSubmit, onClose }: Distr
 
           {center?.socketPath && (
             <div className="bg-blue-50 text-blue-700 p-3 rounded text-sm">
-              <strong>Lokal verbunden:</strong> Dieses Vertriebszentrum ist über Unix Socket verbunden
-              ({center.socketPath}).
+              {t('distributionCenterForm.socketConnected', { path: center.socketPath })}
             </div>
           )}
 
@@ -103,14 +104,18 @@ export function DistributionCenterFormModal({ center, onSubmit, onClose }: Distr
               onClick={onClose}
               className="px-4 py-2 border rounded hover:bg-gray-50 transition-colors"
             >
-              Abbrechen
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
               className="px-4 py-2 bg-primary text-white rounded hover:bg-primary-hover transition-colors disabled:opacity-50"
             >
-              {isSubmitting ? 'Wird gespeichert...' : (isEditing ? 'Aktualisieren' : 'Erstellen')}
+              {isSubmitting
+                ? t('distributionCenterForm.submitting')
+                : isEditing
+                  ? t('distributionCenterForm.submitEdit')
+                  : t('distributionCenterForm.submitCreate')}
             </button>
           </div>
         </form>

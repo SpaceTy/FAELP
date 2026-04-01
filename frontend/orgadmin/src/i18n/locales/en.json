@@ -1,0 +1,176 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "update": "Update",
+    "save": "Save",
+    "languageSwitcher": "Switch language",
+    "locale": {
+      "de": "German",
+      "en": "English"
+    }
+  },
+  "auth": {
+    "adminAccessRequired": "Admin access required"
+  },
+  "app": {
+    "loading": "Loading..."
+  },
+  "header": {
+    "admin": "Admin",
+    "logout": "Log out",
+    "themeLight": "Light mode",
+    "themeDark": "Dark mode",
+    "nav": {
+      "materialTypes": "Material types",
+      "distributionCenters": "Distribution centers",
+      "users": "Users"
+    }
+  },
+  "login": {
+    "title": "EHALP Admin",
+    "subtitleEmail": "Sign in to manage the platform",
+    "subtitleCode": "Enter the code from your email",
+    "emailLabel": "Email address",
+    "emailPlaceholder": "admin@example.com",
+    "sendMagicLink": "Send magic link",
+    "sendingMagicLink": "Sending...",
+    "codeLabel": "Verification code",
+    "codePlaceholder": "Enter the code from the email",
+    "verifyCode": "Verify code",
+    "verifyingCode": "Verifying...",
+    "backToEmail": "Back to email",
+    "errorSendMagicLink": "Failed to send magic link",
+    "errorInvalidCode": "Invalid code"
+  },
+  "materialCategories": {
+    "Reanimation": "Resuscitation",
+    "Wundversorgung&Trauma": "Wound care & trauma",
+    "Zubehoer": "Accessories"
+  },
+  "materialTypes": {
+    "title": "Material types",
+    "new": "New material type",
+    "loadError": "Failed to load material types",
+    "deleteError": "Failed to delete material type",
+    "imageUploadFailed": "Material type created, but image upload failed: {error}. Please try again via \"Edit\".",
+    "table": {
+      "image": "Image",
+      "name": "Name",
+      "description": "Description",
+      "category": "Category",
+      "actions": "Actions",
+      "id": "ID: {id}",
+      "noImage": "No image"
+    },
+    "empty": "No material types found. Click \"New material type\" to create one.",
+    "deleteTitle": "Delete material type",
+    "deleteMessage": "Are you sure you want to delete \"{name}\"? This action cannot be undone."
+  },
+  "materialTypeForm": {
+    "titleCreate": "Create material type",
+    "titleEdit": "Edit material type",
+    "nameLabel": "Name",
+    "namePlaceholder": "e.g. AED trainer",
+    "generatedId": "ID generated from name: {id}",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "Enter a detailed description...",
+    "categoryLabel": "Category",
+    "imageLabel": "Image",
+    "imageDropzone": "Drop an image here or click to choose one",
+    "chooseFile": "Choose file",
+    "previewAlt": "Preview",
+    "submitCreate": "Create",
+    "submitEdit": "Update",
+    "submitting": "Saving...",
+    "unknownError": "An error occurred"
+  },
+  "distributionCenters": {
+    "title": "Distribution centers",
+    "new": "New distribution center",
+    "loadError": "Failed to load distribution centers",
+    "deleteError": "Failed to delete distribution center",
+    "table": {
+      "name": "Name",
+      "address": "Address",
+      "socketPath": "Socket path",
+      "actions": "Actions",
+      "id": "ID: {id}",
+      "localConnected": "Locally connected",
+      "remote": "Remote"
+    },
+    "empty": "No distribution centers found. Click \"New distribution center\" to create one.",
+    "deleteTitle": "Delete distribution center",
+    "deleteMessage": "Are you sure you want to delete \"{name}\"? This action cannot be undone."
+  },
+  "distributionCenterForm": {
+    "titleCreate": "New distribution center",
+    "titleEdit": "Edit distribution center",
+    "nameLabel": "Name *",
+    "namePlaceholder": "e.g. Main warehouse north",
+    "addressLabel": "Address *",
+    "addressPlaceholder": "Street, ZIP code city",
+    "nameRequired": "Name is required",
+    "addressRequired": "Address is required",
+    "socketConnected": "Locally connected: this distribution center is connected via Unix socket ({path}).",
+    "submitCreate": "Create",
+    "submitEdit": "Update",
+    "submitting": "Saving...",
+    "unknownError": "An error occurred"
+  },
+  "users": {
+    "title": "Users",
+    "subtitle": "Review unverified accounts and bulk-approve registered school email addresses.",
+    "loadError": "Failed to load users",
+    "verifyError": "User could not be verified",
+    "unverifyError": "User could not be set back to unverified",
+    "importRequired": "Please select a CSV file or paste email addresses.",
+    "importFailed": "Import failed",
+    "verifySuccess": "User {email} was verified.",
+    "unverifySuccess": "User {email} was set back to unverified.",
+    "invalidSkipped": "Skipped invalid emails: {emails}",
+    "summary": {
+      "total": "Total",
+      "verified": "Verified",
+      "unverified": "Unverified",
+      "admins": "Admins"
+    },
+    "import": {
+      "title": "Import verified email addresses",
+      "description": "Upload a CSV file or paste email addresses line by line. Users who already signed up will be approved immediately.",
+      "submit": "Start import",
+      "submitting": "Importing...",
+      "textareaLabel": "Paste email addresses",
+      "fileLabel": "CSV file",
+      "fileSelected": "{name} selected",
+      "fileEmpty": "Choose CSV file",
+      "result": {
+        "created": "{count} newly created",
+        "verified": "{count} existing verified",
+        "alreadyVerified": "{count} already verified",
+        "invalid": "{count} invalid"
+      }
+    },
+    "table": {
+      "user": "User",
+      "status": "Status",
+      "role": "Role",
+      "workos": "WorkOS",
+      "created": "Created",
+      "actions": "Actions",
+      "verified": "Verified",
+      "unverified": "Unverified",
+      "admin": "Admin",
+      "userRole": "User",
+      "connected": "Connected",
+      "notRegistered": "Not registered yet",
+      "verify": "Verify",
+      "unverify": "Reset",
+      "updating": "Updating...",
+      "empty": "No users found."
+    }
+  }
+}

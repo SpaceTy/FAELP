@@ -4,6 +4,7 @@ import { useState } from 'preact/hooks';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Header } from '@/components/Header';
+import { I18nProvider, useI18n } from '@/i18n';
 import { LoginPage } from '@/pages/LoginPage';
 import { MaterialTypesPage } from '@/pages/MaterialTypesPage';
 import { DistributionCentersPage } from '@/pages/DistributionCentersPage';
@@ -32,6 +33,7 @@ const UsersPageWrapper = (_props: RoutableProps) => (
 
 function AppContent() {
   const { isAuthenticated, isLoading } = useAuth();
+  const { t } = useI18n();
   const [currentPath, setCurrentPath] = useState(() => window.location.pathname);
 
   if (isLoading) {
@@ -39,7 +41,7 @@ function AppContent() {
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent"></div>
-          <p className="mt-2 text-text-secondary">Wird geladen...</p>
+          <p className="mt-2 text-text-secondary">{t('app.loading')}</p>
         </div>
       </div>
     );
@@ -63,8 +65,10 @@ function AppContent() {
 
 export function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <I18nProvider>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </I18nProvider>
   );
 }

@@ -13,6 +13,7 @@ import { HilfePage } from '@/pages/HilfePage';
 import { MyRequestsPage } from '@/pages/MyRequestsPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { Header } from '@/components/Layout/Header';
+import { I18nProvider, useI18n } from '@/i18n';
 
 // Wrapper components to handle RoutableProps
 const MaterialsPageWrapper = (_props: RoutableProps) => <MaterialsPage />;
@@ -31,6 +32,7 @@ const ProtectedMyRequestsWrapper = (_props: RoutableProps) => (
 
 function VerificationBanner() {
   const { isAuthenticated, customer } = useAuth();
+  const { t } = useI18n();
 
   if (!isAuthenticated || customer?.emailVerified) {
     return null;
@@ -43,9 +45,9 @@ function VerificationBanner() {
           !
         </div>
         <div>
-          <p className="font-semibold text-amber-900">Konto noch nicht verifiziert</p>
+          <p className="font-semibold text-amber-900">{t('app.unverifiedBannerTitle')}</p>
           <p className="text-sm text-amber-900/90">
-            Sie koennen sich anmelden und die Plattform ansehen, aber erst nach Freischaltung durch einen Administrator Materialanfragen stellen.
+            {t('app.unverifiedBannerBody')}
           </p>
         </div>
       </div>
@@ -78,10 +80,12 @@ function AppRoutes() {
 
 export function App() {
   return (
-    <AuthProvider>
-      <MaterialTypesProvider>
-        <AppRoutes />
-      </MaterialTypesProvider>
-    </AuthProvider>
+    <I18nProvider>
+      <AuthProvider>
+        <MaterialTypesProvider>
+          <AppRoutes />
+        </MaterialTypesProvider>
+      </AuthProvider>
+    </I18nProvider>
   );
 }

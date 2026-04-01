@@ -1,7 +1,9 @@
 import { useState } from 'preact/hooks';
 import { useAuth } from '@/context/AuthContext';
+import { useI18n } from '@/i18n';
 
 export function UserMenu() {
+  const { t } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
   const { customer, logout } = useAuth();
 
@@ -28,7 +30,7 @@ export function UserMenu() {
               <p className="text-xs text-text-secondary truncate">{customer.email}</p>
               {!customer.emailVerified && (
                 <p className="mt-2 inline-flex rounded-full bg-amber-100 px-2 py-1 text-[11px] font-medium text-amber-800">
-                  Konto nicht verifiziert
+                  {t('userMenu.unverified')}
                 </p>
               )}
             </div>
@@ -36,7 +38,7 @@ export function UserMenu() {
               onClick={() => { logout(); window.location.href = '/'; }}
               className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
             >
-              Abmelden
+              {t('common.logout')}
             </button>
           </div>
         </>

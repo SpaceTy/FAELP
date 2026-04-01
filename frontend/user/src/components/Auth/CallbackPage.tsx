@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import { route } from 'preact-router';
 import { useAuth } from '@/context/AuthContext';
+import { useI18n } from '@/i18n';
 import { consumePostLoginRedirect } from '@/utils/postLoginRedirect';
 
 interface CallbackPageProps {
@@ -8,13 +9,14 @@ interface CallbackPageProps {
 }
 
 export function CallbackPage({ code }: CallbackPageProps) {
+  const { t } = useI18n();
   const [error, setError] = useState('');
   const [isVerifying, setIsVerifying] = useState(true);
   const { verifyCode } = useAuth();
 
   useEffect(() => {
     if (!code) {
-      setError('Ungültiger Magic Link. Bitte fordern Sie einen neuen an.');
+      setError(t('callback.invalidLink'));
       setIsVerifying(false);
       return;
     }
@@ -22,16 +24,16 @@ export function CallbackPage({ code }: CallbackPageProps) {
     verifyCode(code)
       .then(() => route(consumePostLoginRedirect()))
       .catch(() => {
-        setError('Der Magic Link ist ungültig oder abgelaufen.');
+        setError(t('callback.expiredLink'));
         setIsVerifying(false);
       });
-  }, [code, verifyCode]);
+  }, [code, t, verifyCode]);
 
   if (isVerifying) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
-        <p className="text-text-secondary">Anmeldung wird überprüft...</p>
+        <p className="text-text-secondary">{t('callback.verifying')}</p>
       </div>
     );
   }
@@ -40,9 +42,9 @@ export function CallbackPage({ code }: CallbackPageProps) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4">
         <div className="text-red-600 text-5xl mb-4">✗</div>
-        <h2 className="text-xl font-semibold text-secondary mb-2">Anmeldung fehlgeschlagen</h2>
+        <h2 className="text-xl font-semibold text-secondary mb-2">{t('callback.failedTitle')}</h2>
         <p className="text-text-secondary mb-4">{error}</p>
-        <a href="/login" className="text-primary hover:underline">Zurück zur Anmeldung</a>
+        <a href="/login" className="text-primary hover:underline">{t('callback.backToLogin')}</a>
       </div>
     );
   }

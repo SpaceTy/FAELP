@@ -1,5 +1,7 @@
 import { useState } from 'preact/hooks';
+import { LocaleSwitcher } from '@/components/LocaleSwitcher';
 import { useAuth } from '@/context/AuthContext';
+import { useI18n } from '@/i18n';
 
 export function LoginPage() {
   const [email, setEmail] = useState('');
@@ -8,6 +10,7 @@ export function LoginPage() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { login, verifyCode } = useAuth();
+  const { t } = useI18n();
 
   const handleEmailSubmit = async (e: Event) => {
     e.preventDefault();
@@ -18,7 +21,7 @@ export function LoginPage() {
       await login(email);
       setStep('code');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Senden des Magic Links');
+      setError(err instanceof Error ? err.message : t('login.errorSendMagicLink'));
     } finally {
       setIsLoading(false);
     }
@@ -32,7 +35,7 @@ export function LoginPage() {
     try {
       await verifyCode(code, email);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ungültiger Code');
+      setError(err instanceof Error ? err.message : t('login.errorInvalidCode'));
     } finally {
       setIsLoading(false);
     }
@@ -41,12 +44,15 @@ export function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow">
+        <div className="flex items-center justify-end">
+          <LocaleSwitcher />
+        </div>
         <div>
           <h2 className="text-3xl font-bold text-center text-secondary">
-            EHALP Verwaltung
+            {t('login.title')}
           </h2>
           <p className="mt-2 text-center text-text-secondary">
-            {step === 'email' ? 'Anmelden zur Verwaltung der Plattform' : 'Geben Sie den Code aus Ihrer E-Mail ein'}
+            {step === 'email' ? t('login.subtitleEmail') : t('login.subtitleCode')}
           </p>
         </div>
 
@@ -60,7 +66,7 @@ export function LoginPage() {
           <form onSubmit={handleEmailSubmit} className="space-y-6">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-text-primary">
-                E-Mail-Adresse
+                {t('login.emailLabel')}
               </label>
               <input
                 id="email"
@@ -69,7 +75,7 @@ export function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail((e.target as HTMLInputElement).value)}
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="admin@beispiel.de"
+                placeholder={t('login.emailPlaceholder')}
               />
             </div>
             <button
@@ -77,14 +83,14 @@ export function LoginPage() {
               disabled={isLoading}
               className="w-full py-2 px-4 bg-primary text-white font-medium rounded hover:bg-primary-hover transition-colors disabled:opacity-50"
             >
-              {isLoading ? 'Wird gesendet...' : 'Magic Link senden'}
+              {isLoading ? t('login.sendingMagicLink') : t('login.sendMagicLink')}
             </button>
           </form>
         ) : (
           <form onSubmit={handleCodeSubmit} className="space-y-6">
             <div>
               <label htmlFor="code" className="block text-sm font-medium text-text-primary">
-                Verifizierungscode
+                {t('login.codeLabel')}
               </label>
               <input
                 id="code"
@@ -93,7 +99,7 @@ export function LoginPage() {
                 value={code}
                 onChange={(e) => setCode((e.target as HTMLInputElement).value)}
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="Code aus der E-Mail eingeben"
+                placeholder={t('login.codePlaceholder')}
               />
             </div>
             <button
@@ -101,14 +107,14 @@ export function LoginPage() {
               disabled={isLoading}
               className="w-full py-2 px-4 bg-primary text-white font-medium rounded hover:bg-primary-hover transition-colors disabled:opacity-50"
             >
-              {isLoading ? 'Wird überprüft...' : 'Code überprüfen'}
+              {isLoading ? t('login.verifyingCode') : t('login.verifyCode')}
             </button>
             <button
               type="button"
               onClick={() => setStep('email')}
               className="w-full py-2 px-4 text-text-secondary hover:text-text-primary transition-colors"
             >
-              Zurück zur E-Mail
+              {t('login.backToEmail')}
             </button>
           </form>
         )}

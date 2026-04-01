@@ -1,3 +1,5 @@
+import { useI18n } from '@/i18n';
+
 interface DeleteConfirmationModalProps {
   title: string;
   message: string;
@@ -6,6 +8,8 @@ interface DeleteConfirmationModalProps {
 }
 
 export function DeleteConfirmationModal({ title, message, onConfirm, onCancel }: DeleteConfirmationModalProps) {
+  const { t } = useI18n();
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
@@ -18,13 +22,13 @@ export function DeleteConfirmationModal({ title, message, onConfirm, onCancel }:
               onClick={onCancel}
               className="px-4 py-2 text-text-secondary hover:text-text-primary transition-colors"
             >
-              Abbrechen
+              {t('common.cancel')}
             </button>
             <button
               onClick={onConfirm}
               className="px-4 py-2 bg-red-600 text-white font-medium rounded hover:bg-red-700 transition-colors"
             >
-              Löschen
+              {t('common.delete')}
             </button>
           </div>
         </div>

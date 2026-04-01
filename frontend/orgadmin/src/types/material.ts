@@ -1,9 +1,9 @@
 export type MaterialCategory = 'Reanimation' | 'Wundversorgung&Trauma' | 'Zubehoer';
 
-export const CATEGORY_LABELS: Record<MaterialCategory, string> = {
-  Reanimation: 'Reanimation',
-  'Wundversorgung&Trauma': 'Wundversorgung & Trauma',
-  Zubehoer: 'Zubehör',
+export const MATERIAL_CATEGORY_TRANSLATION_KEYS: Record<MaterialCategory, string> = {
+  Reanimation: 'materialCategories.Reanimation',
+  'Wundversorgung&Trauma': 'materialCategories.Wundversorgung&Trauma',
+  Zubehoer: 'materialCategories.Zubehoer',
 };
 
 export interface MaterialType {
