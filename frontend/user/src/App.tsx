@@ -46,9 +46,7 @@ function VerificationBanner() {
         </div>
         <div>
           <p className="font-semibold text-amber-900">{t('app.unverifiedBannerTitle')}</p>
-          <p className="text-sm text-amber-900/90">
-            {t('app.unverifiedBannerBody')}
-          </p>
+          <p className="text-sm text-amber-900/90">{t('app.unverifiedBannerBody')}</p>
         </div>
       </div>
     </div>

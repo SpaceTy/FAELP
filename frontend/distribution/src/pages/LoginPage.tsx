@@ -27,6 +27,11 @@ export function LoginPage() {
     <div className="login-page">
       <div className="login-container">
         <div className="login-logo">
+          <img
+            src="/logo.jpg"
+            alt="EHALP Logo"
+            className="mx-auto mb-4 h-20 w-auto rounded-lg object-contain"
+          />
           <h1>EHALP</h1>
           <p className="tagline">Logistics Portal</p>
         </div>

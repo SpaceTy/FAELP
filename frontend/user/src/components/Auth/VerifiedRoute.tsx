@@ -38,9 +38,7 @@ export function VerifiedRoute({ children }: VerifiedRouteProps) {
           <h1 className="text-2xl font-semibold text-secondary mb-3">
             {t('verifiedRoute.title')}
           </h1>
-          <p className="text-text-secondary mb-6">
-            {t('verifiedRoute.body')}
-          </p>
+          <p className="text-text-secondary mb-6">{t('verifiedRoute.body')}</p>
           <a
             href="/materials"
             className="inline-flex items-center rounded-lg bg-primary px-5 py-3 font-semibold text-secondary hover:bg-primary-hover transition-colors"

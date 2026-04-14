@@ -192,6 +192,8 @@
   "help": {
     "title": "Help & guide",
     "intro": "Welcome to EHALP. Here you can find a step-by-step guide for using the platform.",
+    "videoTitle": "Video guide",
+    "videoUnsupported": "Your browser does not support the video element.",
     "contactTitle": "More questions?",
     "contactBody": "For technical issues or further questions, send an email to peselis20100@gmail.com.",
     "steps": {

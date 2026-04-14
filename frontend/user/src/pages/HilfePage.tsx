@@ -82,6 +82,20 @@ export function HilfePage() {
             <p className="text-text-secondary">{t('help.intro')}</p>
           </div>
 
+          <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
+            <h2 className="text-xl font-semibold text-secondary mb-4">
+              {t('help.videoTitle')}
+            </h2>
+            <video
+              className="w-full rounded-lg"
+              controls
+              preload="metadata"
+            >
+              <source src="/tutorial.mp4" type="video/mp4" />
+              {t('help.videoUnsupported')}
+            </video>
+          </div>
+
           {steps.map((step) => (
             <div key={step.number} className="bg-white p-6 rounded-lg shadow-sm mb-6">
               <div className="flex items-start gap-4">

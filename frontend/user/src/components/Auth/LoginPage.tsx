@@ -11,6 +11,11 @@ export function LoginPage() {
         <div className="mb-4 flex justify-end">
           <LocaleSwitcher />
         </div>
+        <img
+          src="/logo.jpg"
+          alt="EHALP Logo"
+          className="mx-auto mb-4 h-20 w-auto rounded-lg object-contain"
+        />
         <h1 className="text-2xl font-bold text-secondary mb-2 text-center">{t('login.title')}</h1>
         <p className="text-text-secondary text-center mb-6">
           {t('login.subtitle')}

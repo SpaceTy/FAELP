@@ -30,6 +30,11 @@ export function LoginPage() {
         <div className="bg-white rounded-lg shadow-lg p-8">
           {/* Logo */}
           <div className="text-center mb-8">
+            <img
+              src="/logo.jpg"
+              alt="EHALP Logo"
+              className="mx-auto mb-4 h-20 w-auto rounded-lg object-contain"
+            />
             <h1 className="text-3xl font-bold text-logistics-accent">EHALP</h1>
             <p className="text-gray-500 mt-1">Distribution Admin</p>
           </div>

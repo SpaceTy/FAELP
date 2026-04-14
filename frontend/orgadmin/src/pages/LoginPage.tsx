@@ -48,6 +48,11 @@ export function LoginPage() {
           <LocaleSwitcher />
         </div>
         <div>
+          <img
+            src="/logo.jpg"
+            alt="EHALP Logo"
+            className="mx-auto mb-4 h-20 w-auto rounded-lg object-contain"
+          />
           <h2 className="text-3xl font-bold text-center text-secondary">
             {t('login.title')}
           </h2>
